@@ -1,0 +1,14 @@
+{"level":"info","time":"2026-01-09T14:00:56.800+0800","caller":"event/component.go:76","msg":"✅ 事件组件初始化完成 (pool_size=50)","module":"yogan","app_name":""}
+{"level":"info","time":"2026-01-09T14:00:56.800+0800","caller":"event/component.go:76","msg":"✅ 事件组件初始化完成 (pool_size=100)","module":"yogan","app_name":""}
+{"level":"info","time":"2026-01-09T14:00:56.800+0800","caller":"event/component.go:69","msg":"⏭️ 事件组件已禁用","module":"yogan","app_name":""}
+{"level":"info","time":"2026-01-09T14:00:56.800+0800","caller":"event/component.go:76","msg":"✅ 事件组件初始化完成 (pool_size=50)","module":"yogan","app_name":""}
+{"level":"info","time":"2026-01-09T14:00:56.800+0800","caller":"event/component.go:89","msg":"✅ 事件组件已停止","module":"yogan","app_name":""}
+{"level":"info","time":"2026-01-09T14:00:56.800+0800","caller":"event/component.go:76","msg":"✅ 事件组件初始化完成 (pool_size=50)","module":"yogan","app_name":""}
+{"level":"info","time":"2026-01-09T14:00:56.800+0800","caller":"event/component.go:76","msg":"✅ 事件组件初始化完成 (pool_size=50)","module":"yogan","app_name":""}
+{"level":"info","time":"2026-01-09T14:01:02.777+0800","caller":"event/component.go:76","msg":"✅ 事件组件初始化完成 (pool_size=50)","module":"yogan","app_name":""}
+{"level":"info","time":"2026-01-09T14:01:02.777+0800","caller":"event/component.go:76","msg":"✅ 事件组件初始化完成 (pool_size=100)","module":"yogan","app_name":""}
+{"level":"info","time":"2026-01-09T14:01:02.777+0800","caller":"event/component.go:69","msg":"⏭️ 事件组件已禁用","module":"yogan","app_name":""}
+{"level":"info","time":"2026-01-09T14:01:02.777+0800","caller":"event/component.go:76","msg":"✅ 事件组件初始化完成 (pool_size=50)","module":"yogan","app_name":""}
+{"level":"info","time":"2026-01-09T14:01:02.777+0800","caller":"event/component.go:89","msg":"✅ 事件组件已停止","module":"yogan","app_name":""}
+{"level":"info","time":"2026-01-09T14:01:02.777+0800","caller":"event/component.go:76","msg":"✅ 事件组件初始化完成 (pool_size=50)","module":"yogan","app_name":""}
+{"level":"info","time":"2026-01-09T14:01:02.777+0800","caller":"event/component.go:76","msg":"✅ 事件组件初始化完成 (pool_size=50)","module":"yogan","app_name":""}

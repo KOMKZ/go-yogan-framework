@@ -1,0 +1,170 @@
+{"level":"info","time":"2025-12-28T20:46:56.593+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000000625}
+{"level":"info","time":"2025-12-28T20:46:56.593+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:63166","duration":0.000761042}
+{"level":"info","time":"2025-12-28T20:47:02.104+0800","caller":"grpc/server.go:79","msg":"⏹️  停止 gRPC Server...","module":"yogan"}
+{"level":"info","time":"2025-12-28T20:47:02.206+0800","caller":"grpc/client_manager.go:68","msg":"🔗 开始预连接 gRPC 客户端...","module":"yogan","count":1,"timeout":3}
+{"level":"info","time":"2025-12-28T20:47:02.206+0800","caller":"grpc/client_manager.go:303","msg":"✅ 预连接成功（直连模式）","module":"yogan","service":"test-service","target":"127.0.0.1:63189"}
+{"level":"info","time":"2025-12-28T20:47:02.206+0800","caller":"grpc/client_manager.go:89","msg":"🔗 预连接完成","module":"yogan","conns":1,"total":1}
+{"level":"info","time":"2025-12-28T20:47:02.206+0800","caller":"grpc/component.go:82","msg":"🔗 gRPC 客户端预连接已完成","module":"yogan"}
+{"level":"info","time":"2025-12-28T20:47:02.207+0800","caller":"grpc/client_manager.go:428","msg":"🔌 关闭 gRPC 连接","module":"yogan","conn":"test-service"}
+{"level":"info","time":"2025-12-28T20:47:02.307+0800","caller":"grpc/client_manager.go:68","msg":"🔗 开始预连接 gRPC 客户端...","module":"yogan","count":1,"timeout":3}
+{"level":"info","time":"2025-12-28T20:47:05.308+0800","caller":"grpc/client_manager.go:89","msg":"🔗 预连接完成","module":"yogan","conns":0,"total":1}
+{"level":"info","time":"2025-12-28T20:47:05.308+0800","caller":"grpc/component.go:82","msg":"🔗 gRPC 客户端预连接已完成","module":"yogan"}
+{"level":"info","time":"2025-12-28T20:47:10.309+0800","caller":"grpc/server.go:79","msg":"⏹️  停止 gRPC Server...","module":"yogan"}
+{"level":"info","time":"2025-12-28T20:47:10.982+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000001292}
+{"level":"info","time":"2025-12-28T20:47:21.199+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000000625}
+{"level":"info","time":"2025-12-28T20:47:21.200+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:63505","duration":0.000663583}
+{"level":"info","time":"2025-12-28T20:47:26.716+0800","caller":"grpc/server.go:79","msg":"⏹️  停止 gRPC Server...","module":"yogan"}
+{"level":"info","time":"2025-12-28T20:47:26.817+0800","caller":"grpc/client_manager.go:68","msg":"🔗 开始预连接 gRPC 客户端...","module":"yogan","count":1,"timeout":3}
+{"level":"info","time":"2025-12-28T20:47:26.819+0800","caller":"grpc/client_manager.go:303","msg":"✅ 预连接成功（直连模式）","module":"yogan","service":"test-service","target":"127.0.0.1:63518"}
+{"level":"info","time":"2025-12-28T20:47:26.819+0800","caller":"grpc/client_manager.go:89","msg":"🔗 预连接完成","module":"yogan","conns":1,"total":1}
+{"level":"info","time":"2025-12-28T20:47:26.819+0800","caller":"grpc/component.go:82","msg":"🔗 gRPC 客户端预连接已完成","module":"yogan"}
+{"level":"info","time":"2025-12-28T20:47:26.820+0800","caller":"grpc/client_manager.go:428","msg":"🔌 关闭 gRPC 连接","module":"yogan","conn":"test-service"}
+{"level":"info","time":"2025-12-28T20:47:26.921+0800","caller":"grpc/client_manager.go:68","msg":"🔗 开始预连接 gRPC 客户端...","module":"yogan","count":1,"timeout":3}
+{"level":"info","time":"2025-12-28T20:47:29.921+0800","caller":"grpc/client_manager.go:89","msg":"🔗 预连接完成","module":"yogan","conns":0,"total":1}
+{"level":"info","time":"2025-12-28T20:47:29.921+0800","caller":"grpc/component.go:82","msg":"🔗 gRPC 客户端预连接已完成","module":"yogan"}
+{"level":"info","time":"2025-12-28T20:47:34.922+0800","caller":"grpc/server.go:79","msg":"⏹️  停止 gRPC Server...","module":"yogan"}
+{"level":"info","time":"2025-12-28T20:47:35.597+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000000583}
+{"level":"info","time":"2025-12-28T20:47:50.301+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000074833}
+{"level":"info","time":"2025-12-28T20:47:50.301+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:63686","duration":0.001117875}
+{"level":"info","time":"2025-12-28T20:51:50.789+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.00000075}
+{"level":"info","time":"2025-12-28T20:51:50.790+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:64834","duration":0.00094175}
+{"level":"info","time":"2025-12-28T20:51:56.305+0800","caller":"grpc/server.go:79","msg":"⏹️  停止 gRPC Server...","module":"yogan"}
+{"level":"info","time":"2025-12-28T20:51:56.407+0800","caller":"grpc/client_manager.go:68","msg":"🔗 开始预连接 gRPC 客户端...","module":"yogan","count":1,"timeout":3}
+{"level":"info","time":"2025-12-28T20:51:56.410+0800","caller":"grpc/client_manager.go:303","msg":"✅ 预连接成功（直连模式）","module":"yogan","service":"test-service","target":"127.0.0.1:64846"}
+{"level":"info","time":"2025-12-28T20:51:56.410+0800","caller":"grpc/client_manager.go:89","msg":"🔗 预连接完成","module":"yogan","conns":1,"total":1}
+{"level":"info","time":"2025-12-28T20:51:56.411+0800","caller":"grpc/component.go:82","msg":"🔗 gRPC 客户端预连接已完成","module":"yogan"}
+{"level":"info","time":"2025-12-28T20:51:56.411+0800","caller":"grpc/client_manager.go:428","msg":"🔌 关闭 gRPC 连接","module":"yogan","conn":"test-service"}
+{"level":"info","time":"2025-12-28T20:51:56.512+0800","caller":"grpc/client_manager.go:68","msg":"🔗 开始预连接 gRPC 客户端...","module":"yogan","count":1,"timeout":3}
+{"level":"info","time":"2025-12-28T20:51:59.513+0800","caller":"grpc/client_manager.go:89","msg":"🔗 预连接完成","module":"yogan","conns":0,"total":1}
+{"level":"info","time":"2025-12-28T20:51:59.513+0800","caller":"grpc/component.go:82","msg":"🔗 gRPC 客户端预连接已完成","module":"yogan"}
+{"level":"info","time":"2025-12-28T20:52:04.515+0800","caller":"grpc/server.go:79","msg":"⏹️  停止 gRPC Server...","module":"yogan"}
+{"level":"info","time":"2025-12-28T20:52:05.199+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000000709}
+{"level":"info","time":"2025-12-28T22:22:03.732+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000000916}
+{"level":"info","time":"2025-12-28T22:22:03.733+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:60222","duration":0.00281875}
+{"level":"info","time":"2025-12-28T22:22:03.734+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000000792}
+{"level":"info","time":"2025-12-28T22:22:03.734+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:60222","duration":0.000308667}
+{"level":"info","time":"2025-12-28T22:22:03.735+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000000208}
+{"level":"info","time":"2025-12-28T22:22:03.735+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:60222","duration":0.000414666}
+{"level":"info","time":"2025-12-28T22:22:03.838+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000001084}
+{"level":"info","time":"2025-12-28T22:22:03.838+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:60227","duration":0.000460792}
+{"level":"info","time":"2025-12-28T22:22:03.838+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000000958}
+{"level":"info","time":"2025-12-28T22:22:03.839+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:60227","duration":0.000366167}
+{"level":"info","time":"2025-12-28T22:22:11.133+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000001333}
+{"level":"info","time":"2025-12-28T22:22:11.133+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:60433","duration":0.001484625}
+{"level":"info","time":"2025-12-28T22:22:28.654+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000001042}
+{"level":"info","time":"2025-12-28T22:22:28.654+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:60470","duration":0.000567291}
+{"level":"info","time":"2025-12-28T22:22:28.656+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000000542}
+{"level":"info","time":"2025-12-28T22:22:28.656+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:60470","duration":0.000408542}
+{"level":"info","time":"2025-12-28T22:22:28.657+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000000375}
+{"level":"info","time":"2025-12-28T22:22:28.657+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:60470","duration":0.000286084}
+{"level":"info","time":"2025-12-28T22:22:28.761+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000001709}
+{"level":"info","time":"2025-12-28T22:22:28.761+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:60474","duration":0.000668083}
+{"level":"info","time":"2025-12-28T22:22:28.761+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000000208}
+{"level":"info","time":"2025-12-28T22:22:28.761+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:60474","duration":0.00028975}
+{"level":"info","time":"2025-12-28T22:22:28.865+0800","caller":"grpc/server.go:79","msg":"⏹️  停止 gRPC Server...","module":"yogan"}
+{"level":"info","time":"2025-12-28T22:22:28.972+0800","caller":"grpc/client_manager.go:68","msg":"🔗 开始预连接 gRPC 客户端...","module":"yogan","count":1,"timeout":3}
+{"level":"info","time":"2025-12-28T22:22:28.973+0800","caller":"grpc/client_manager.go:303","msg":"✅ 预连接成功（直连模式）","module":"yogan","service":"test-service","target":"127.0.0.1:60477"}
+{"level":"info","time":"2025-12-28T22:22:28.973+0800","caller":"grpc/client_manager.go:89","msg":"🔗 预连接完成","module":"yogan","conns":1,"total":1}
+{"level":"info","time":"2025-12-28T22:22:28.973+0800","caller":"grpc/component.go:82","msg":"🔗 gRPC 客户端预连接已完成","module":"yogan"}
+{"level":"info","time":"2025-12-28T22:22:28.973+0800","caller":"grpc/client_manager.go:431","msg":"🔌 关闭 gRPC 连接","module":"yogan","conn":"test-service"}
+{"level":"info","time":"2025-12-28T22:22:29.074+0800","caller":"grpc/client_manager.go:68","msg":"🔗 开始预连接 gRPC 客户端...","module":"yogan","count":1,"timeout":3}
+{"level":"info","time":"2025-12-28T22:22:32.077+0800","caller":"grpc/client_manager.go:89","msg":"🔗 预连接完成","module":"yogan","conns":0,"total":1}
+{"level":"info","time":"2025-12-28T22:22:32.078+0800","caller":"grpc/component.go:82","msg":"🔗 gRPC 客户端预连接已完成","module":"yogan"}
+{"level":"info","time":"2025-12-28T22:22:37.079+0800","caller":"grpc/server.go:79","msg":"⏹️  停止 gRPC Server...","module":"yogan"}
+{"level":"info","time":"2025-12-28T22:22:37.750+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000000792}
+{"level":"info","time":"2025-12-28T22:22:44.215+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000000625}
+{"level":"info","time":"2025-12-28T22:22:44.216+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:60605","duration":0.001151958}
+{"level":"info","time":"2025-12-28T22:23:01.735+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000002}
+{"level":"info","time":"2025-12-28T22:23:01.735+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:60689","duration":0.000861083}
+{"level":"info","time":"2025-12-28T22:23:01.736+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000000291}
+{"level":"info","time":"2025-12-28T22:23:01.736+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:60689","duration":0.000476208}
+{"level":"info","time":"2025-12-28T22:23:01.738+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000000667}
+{"level":"info","time":"2025-12-28T22:23:01.738+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:60689","duration":0.000413625}
+{"level":"info","time":"2025-12-28T22:23:01.842+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000000916}
+{"level":"info","time":"2025-12-28T22:23:01.842+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:60693","duration":0.000818833}
+{"level":"info","time":"2025-12-28T22:23:01.842+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000001208}
+{"level":"info","time":"2025-12-28T22:23:01.843+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:60693","duration":0.000445667}
+{"level":"info","time":"2025-12-28T22:23:01.944+0800","caller":"grpc/server.go:79","msg":"⏹️  停止 gRPC Server...","module":"yogan"}
+{"level":"info","time":"2025-12-28T22:23:02.046+0800","caller":"grpc/client_manager.go:68","msg":"🔗 开始预连接 gRPC 客户端...","module":"yogan","count":1,"timeout":3}
+{"level":"info","time":"2025-12-28T22:23:02.047+0800","caller":"grpc/client_manager.go:303","msg":"✅ 预连接成功（直连模式）","module":"yogan","service":"test-service","target":"127.0.0.1:60695"}
+{"level":"info","time":"2025-12-28T22:23:02.047+0800","caller":"grpc/client_manager.go:89","msg":"🔗 预连接完成","module":"yogan","conns":1,"total":1}
+{"level":"info","time":"2025-12-28T22:23:02.047+0800","caller":"grpc/component.go:82","msg":"🔗 gRPC 客户端预连接已完成","module":"yogan"}
+{"level":"info","time":"2025-12-28T22:23:02.047+0800","caller":"grpc/client_manager.go:431","msg":"🔌 关闭 gRPC 连接","module":"yogan","conn":"test-service"}
+{"level":"info","time":"2025-12-28T22:23:02.148+0800","caller":"grpc/client_manager.go:68","msg":"🔗 开始预连接 gRPC 客户端...","module":"yogan","count":1,"timeout":3}
+{"level":"info","time":"2025-12-28T22:23:05.149+0800","caller":"grpc/client_manager.go:89","msg":"🔗 预连接完成","module":"yogan","conns":0,"total":1}
+{"level":"info","time":"2025-12-28T22:23:05.149+0800","caller":"grpc/component.go:82","msg":"🔗 gRPC 客户端预连接已完成","module":"yogan"}
+{"level":"info","time":"2025-12-28T22:23:10.151+0800","caller":"grpc/server.go:79","msg":"⏹️  停止 gRPC Server...","module":"yogan"}
+{"level":"info","time":"2025-12-28T22:23:10.824+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.00000125}
+{"level":"info","time":"2025-12-28T22:23:18.242+0800","caller":"grpc/server.go:79","msg":"⏹️  停止 gRPC Server...","module":"yogan"}
+{"level":"info","time":"2025-12-28T22:23:18.345+0800","caller":"grpc/client_manager.go:68","msg":"🔗 开始预连接 gRPC 客户端...","module":"yogan","count":1,"timeout":3}
+{"level":"info","time":"2025-12-28T22:23:21.347+0800","caller":"grpc/client_manager.go:89","msg":"🔗 预连接完成","module":"yogan","conns":0,"total":1}
+{"level":"info","time":"2025-12-28T22:23:21.347+0800","caller":"grpc/component.go:82","msg":"🔗 gRPC 客户端预连接已完成","module":"yogan"}
+{"level":"info","time":"2025-12-28T22:23:26.348+0800","caller":"grpc/server.go:79","msg":"⏹️  停止 gRPC Server...","module":"yogan"}
+{"level":"info","time":"2025-12-28T22:23:50.186+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000001625}
+{"level":"info","time":"2025-12-28T22:23:50.188+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:61170","duration":0.00463175}
+{"level":"info","time":"2025-12-28T22:23:50.190+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000000709}
+{"level":"info","time":"2025-12-28T22:23:50.190+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:61170","duration":0.000294}
+{"level":"info","time":"2025-12-28T22:23:50.191+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000000292}
+{"level":"info","time":"2025-12-28T22:23:50.191+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:61170","duration":0.000227625}
+{"level":"info","time":"2025-12-28T22:23:50.294+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000000917}
+{"level":"info","time":"2025-12-28T22:23:50.294+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:61175","duration":0.000438666}
+{"level":"info","time":"2025-12-28T22:23:50.294+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000000875}
+{"level":"info","time":"2025-12-28T22:23:50.294+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:61175","duration":0.000347}
+{"level":"info","time":"2025-12-28T22:37:05.149+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":10.000796583}
+{"level":"info","time":"2025-12-28T22:37:16.799+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":3.001066125}
+{"level":"info","time":"2025-12-28T22:37:17.802+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":3.000274416}
+{"level":"info","time":"2025-12-28T22:37:17.803+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:49239","duration":3.002596709}
+{"level":"info","time":"2025-12-28T22:57:12.731+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000011708}
+{"level":"info","time":"2025-12-28T22:57:12.732+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:56388","duration":0.000942833}
+{"level":"info","time":"2025-12-28T22:57:24.248+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":10.000925708}
+{"level":"info","time":"2025-12-28T22:57:27.351+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":3.00108075}
+{"level":"info","time":"2025-12-28T22:57:28.356+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":3.001093375}
+{"level":"info","time":"2025-12-28T22:57:28.357+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:56496","duration":3.002643}
+{"level":"info","time":"2025-12-28T22:57:44.475+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000001333}
+{"level":"info","time":"2025-12-28T22:57:44.477+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:56585","duration":0.004367125}
+{"level":"info","time":"2025-12-28T22:57:44.490+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000001584}
+{"level":"info","time":"2025-12-28T22:57:44.492+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:56585","duration":0.004792625}
+{"level":"info","time":"2025-12-28T22:57:44.502+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000002042}
+{"level":"info","time":"2025-12-28T22:57:44.503+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:56585","duration":0.003810667}
+{"level":"info","time":"2025-12-28T22:57:44.613+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000000917}
+{"level":"info","time":"2025-12-28T22:57:44.613+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:56590","duration":0.000338292}
+{"level":"info","time":"2025-12-28T22:57:44.613+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.00000025}
+{"level":"info","time":"2025-12-28T22:57:44.613+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:56590","duration":0.000202333}
+{"level":"info","time":"2025-12-28T22:57:44.715+0800","caller":"grpc/server.go:79","msg":"⏹️  停止 gRPC Server...","module":"yogan"}
+{"level":"info","time":"2025-12-28T22:57:44.817+0800","caller":"grpc/client_manager.go:77","msg":"🔗 开始预连接 gRPC 客户端...","module":"yogan","count":1,"timeout":3}
+{"level":"info","time":"2025-12-28T22:57:44.819+0800","caller":"grpc/client_manager.go:302","msg":"✅ 预连接成功（直连模式）","module":"yogan","service":"test-service","target":"127.0.0.1:56593"}
+{"level":"info","time":"2025-12-28T22:57:44.819+0800","caller":"grpc/client_manager.go:98","msg":"🔗 预连接完成","module":"yogan","conns":1,"total":1}
+{"level":"info","time":"2025-12-28T22:57:44.819+0800","caller":"grpc/component.go:82","msg":"🔗 gRPC 客户端预连接已完成","module":"yogan"}
+{"level":"info","time":"2025-12-28T22:57:44.819+0800","caller":"grpc/client_manager.go:429","msg":"🔌 关闭 gRPC 连接","module":"yogan","conn":"test-service"}
+{"level":"info","time":"2025-12-28T22:57:44.921+0800","caller":"grpc/client_manager.go:77","msg":"🔗 开始预连接 gRPC 客户端...","module":"yogan","count":1,"timeout":3}
+{"level":"info","time":"2025-12-28T22:57:47.922+0800","caller":"grpc/client_manager.go:98","msg":"🔗 预连接完成","module":"yogan","conns":0,"total":1}
+{"level":"info","time":"2025-12-28T22:57:47.922+0800","caller":"grpc/component.go:82","msg":"🔗 gRPC 客户端预连接已完成","module":"yogan"}
+{"level":"info","time":"2025-12-28T22:57:52.923+0800","caller":"grpc/server.go:79","msg":"⏹️  停止 gRPC Server...","module":"yogan"}
+{"level":"info","time":"2025-12-28T22:57:53.602+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000000875}
+{"level":"info","time":"2025-12-28T22:58:00.471+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000010791}
+{"level":"info","time":"2025-12-28T22:58:00.472+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:56673","duration":0.001216292}
+{"level":"info","time":"2025-12-28T22:58:11.987+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":10.00104975}
+{"level":"info","time":"2025-12-28T22:58:15.091+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":3.001111709}
+{"level":"info","time":"2025-12-28T22:58:16.096+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":3.001071666}
+{"level":"info","time":"2025-12-28T22:58:16.097+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:56767","duration":3.002048417}
+{"level":"info","time":"2025-12-28T22:58:32.206+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000000833}
+{"level":"info","time":"2025-12-28T22:58:32.207+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:56918","duration":0.000372625}
+{"level":"info","time":"2025-12-28T22:58:32.207+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000000542}
+{"level":"info","time":"2025-12-28T22:58:32.207+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:56918","duration":0.000285917}
+{"level":"info","time":"2025-12-28T22:58:32.208+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000000459}
+{"level":"info","time":"2025-12-28T22:58:32.208+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:56918","duration":0.000265958}
+{"level":"info","time":"2025-12-28T22:58:32.311+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000000959}
+{"level":"info","time":"2025-12-28T22:58:32.311+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:56931","duration":0.000346167}
+{"level":"info","time":"2025-12-28T22:58:32.311+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.000000458}
+{"level":"info","time":"2025-12-28T22:58:32.311+0800","caller":"grpc/interceptor.go:76","msg":"gRPC 调用","module":"yogan","method":"/grpc.health.v1.Health/Check","target":"127.0.0.1:56931","duration":0.000254625}
+{"level":"info","time":"2025-12-28T22:58:32.413+0800","caller":"grpc/server.go:79","msg":"⏹️  停止 gRPC Server...","module":"yogan"}
+{"level":"info","time":"2025-12-28T22:58:32.516+0800","caller":"grpc/client_manager.go:77","msg":"🔗 开始预连接 gRPC 客户端...","module":"yogan","count":1,"timeout":3}
+{"level":"info","time":"2025-12-28T22:58:32.517+0800","caller":"grpc/client_manager.go:302","msg":"✅ 预连接成功（直连模式）","module":"yogan","service":"test-service","target":"127.0.0.1:56936"}
+{"level":"info","time":"2025-12-28T22:58:32.517+0800","caller":"grpc/client_manager.go:98","msg":"🔗 预连接完成","module":"yogan","conns":1,"total":1}
+{"level":"info","time":"2025-12-28T22:58:32.517+0800","caller":"grpc/component.go:82","msg":"🔗 gRPC 客户端预连接已完成","module":"yogan"}
+{"level":"info","time":"2025-12-28T22:58:32.517+0800","caller":"grpc/client_manager.go:429","msg":"🔌 关闭 gRPC 连接","module":"yogan","conn":"test-service"}
+{"level":"info","time":"2025-12-28T22:58:32.618+0800","caller":"grpc/client_manager.go:77","msg":"🔗 开始预连接 gRPC 客户端...","module":"yogan","count":1,"timeout":3}
+{"level":"info","time":"2025-12-28T22:58:35.618+0800","caller":"grpc/client_manager.go:98","msg":"🔗 预连接完成","module":"yogan","conns":0,"total":1}
+{"level":"info","time":"2025-12-28T22:58:35.618+0800","caller":"grpc/component.go:82","msg":"🔗 gRPC 客户端预连接已完成","module":"yogan"}
+{"level":"info","time":"2025-12-28T22:58:40.619+0800","caller":"grpc/server.go:79","msg":"⏹️  停止 gRPC Server...","module":"yogan"}
+{"level":"info","time":"2025-12-28T22:58:41.298+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"yogan","method":"/grpc.health.v1.Health/Check","duration":0.00000125}

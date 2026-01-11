@@ -1,0 +1,7 @@
+grpc:
+  server:
+    port: 9999
+
+api_server:
+  port: 8888
+

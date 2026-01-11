@@ -1,0 +1,2 @@
+{"level":"error","time":"2025-12-28T22:57:13.105+0800","caller":"logger/manager.go:367","msg":"HTTP 请求","module":"gin-http","status":500,"latency":0.000005292,"client_ip":"192.0.2.1","method":"GET","path":"/error","body_size":26}
+{"level":"error","time":"2025-12-28T22:58:00.616+0800","caller":"logger/manager.go:367","msg":"HTTP 请求","module":"gin-http","status":500,"latency":0.000006166,"client_ip":"192.0.2.1","method":"GET","path":"/error","body_size":26}
