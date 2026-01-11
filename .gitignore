@@ -1,0 +1,19 @@
+# 日志文件
+logs/
+*.log
+
+# 测试覆盖率
+*.out
+coverage.html
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# 系统文件
+.DS_Store
+
+# 编译产物
+*.exe
+*.test

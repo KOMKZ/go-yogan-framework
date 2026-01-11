@@ -1,4 +1,0 @@
-{"level":"info","time":"2025-12-27T23:00:24.900+0800","caller":"grpc/interceptor.go:28","msg":"gRPC 请求","module":"grpc_test","method":"/test.Service/Method","duration":0.000000208}
-{"level":"info","time":"2025-12-27T23:00:50.379+0800","caller":"grpc/interceptor.go:28","msg":"gRPC 请求","module":"grpc_test","method":"/test.Service/Method","duration":0.000000084}
-{"level":"info","time":"2025-12-27T23:10:31.442+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"grpc_test","method":"/test.Service/Method","duration":0.000126958}
-{"level":"info","time":"2025-12-27T23:11:28.999+0800","caller":"grpc/interceptor.go:30","msg":"gRPC 请求","module":"grpc_test","method":"/test.Service/Method","duration":0.000008833}
