@@ -65,6 +65,12 @@ func (a *Application) Register(components ...component.Component) *Application {
 	return a
 }
 
+// WithVersion 设置应用版本号（链式调用）
+func (a *Application) WithVersion(version string) *Application {
+	a.BaseApplication.WithVersion(version)
+	return a
+}
+
 // Run 启动 HTTP 应用（阻塞直到收到关闭信号）
 func (a *Application) Run() error {
 	// 执行非阻塞启动
@@ -101,7 +107,11 @@ func (a *Application) RunNonBlocking() error {
 	}
 
 	logger := a.MustGetLogger()
-	logger.InfoCtx(a.ctx, "✅ HTTP application started", zap.String("state", a.GetState().String()))
+	if version := a.GetVersion(); version != "" {
+		logger.InfoCtx(a.ctx, "✅ HTTP application started", zap.String("version", version), zap.String("state", a.GetState().String()))
+	} else {
+		logger.InfoCtx(a.ctx, "✅ HTTP application started", zap.String("state", a.GetState().String()))
+	}
 
 	return nil
 }

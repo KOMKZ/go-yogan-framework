@@ -48,6 +48,9 @@ type BaseApplication struct {
 	state  AppState
 	mu     sync.RWMutex
 
+	// 应用元信息
+	version string // 应用版本号
+
 	// 回调函数（应用自定义逻辑）
 	onSetup        func(*BaseApplication) error // Setup 阶段回调
 	onReady        func(*BaseApplication) error // 启动完成回调
@@ -167,6 +170,18 @@ func (b *BaseApplication) Register(components ...component.Component) *BaseAppli
 		}
 	}
 	return b
+}
+
+// WithVersion 设置应用版本号（链式调用）
+// 版本号将在应用启动时自动打印
+func (b *BaseApplication) WithVersion(version string) *BaseApplication {
+	b.version = version
+	return b
+}
+
+// GetVersion 获取应用版本号
+func (b *BaseApplication) GetVersion() string {
+	return b.version
 }
 
 // Setup 初始化所有组件（核心逻辑）
