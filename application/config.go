@@ -35,7 +35,6 @@ type MiddlewareConfig struct {
 	CORS       *CORSConfig       `mapstructure:"cors,omitempty"`
 	TraceID    *TraceIDConfig    `mapstructure:"trace_id,omitempty"`
 	RequestLog *RequestLogConfig `mapstructure:"request_log,omitempty"`
-	RateLimit  *RateLimitConfig  `mapstructure:"rate_limit,omitempty"`
 }
 
 // TraceIDConfig TraceID 中间件配置
@@ -94,18 +93,6 @@ type CORSConfig struct {
 	MaxAge int `mapstructure:"max_age"`
 }
 
-// RateLimitConfig 限流中间件配置
-type RateLimitConfig struct {
-	// Enable 是否启用限流中间件（默认 false）
-	Enable bool `mapstructure:"enable"`
-
-	// KeyFunc 资源键生成方式（默认 "path"）
-	// 可选值：path, ip, user, path_ip, api_key
-	KeyFunc string `mapstructure:"key_func"`
-
-	// SkipPaths 跳过限流的路径列表（例如健康检查）
-	SkipPaths []string `mapstructure:"skip_paths"`
-}
 
 // ApplyDefaults 应用默认值
 func (c *MiddlewareConfig) ApplyDefaults() {

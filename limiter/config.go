@@ -18,6 +18,13 @@ type Config struct {
 	// EventBusBuffer 事件总线缓冲区大小
 	EventBusBuffer int `mapstructure:"event_bus_buffer"`
 
+	// KeyFunc 资源键生成方式（用于中间件）
+	// 可选值：path, ip, user, path_ip, api_key（默认 path）
+	KeyFunc string `mapstructure:"key_func"`
+
+	// SkipPaths 跳过限流的路径列表（用于中间件）
+	SkipPaths []string `mapstructure:"skip_paths"`
+
 	// Default 默认资源配置（如果配置了有效的 default，自动应用到未配置资源）
 	Default ResourceConfig `mapstructure:"default"`
 
@@ -65,6 +72,8 @@ func DefaultConfig() Config {
 		Enabled:        false,
 		StoreType:      "memory",
 		EventBusBuffer: 500,
+		KeyFunc:        "path",
+		SkipPaths:      []string{},
 		Default:        DefaultResourceConfig(),
 		Resources:      make(map[string]ResourceConfig),
 	}
