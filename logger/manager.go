@@ -52,6 +52,10 @@ func InitManager(cfg ManagerConfig) {
 	})
 }
 
+func MustResetManager(cfg ManagerConfig) {
+	globalManager = NewManager(cfg)
+}
+
 func getSelfLogger() *CtxZapLogger {
 	return GetLogger(globalManager.baseConfig.LoggerName)
 }

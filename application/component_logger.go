@@ -32,7 +32,7 @@ func (l *LoggerComponent) Init(ctx context.Context, loader component.ConfigLoade
 	// 读取 Logger 配置
 	var loggerCfg *logger.ManagerConfig
 	if err := loader.Unmarshal("logger", &loggerCfg); err == nil && loggerCfg != nil {
-		logger.InitManager(*loggerCfg)
+		logger.MustResetManager(*loggerCfg)
 	} else {
 		logger.InitManager(logger.DefaultManagerConfig())
 	}
