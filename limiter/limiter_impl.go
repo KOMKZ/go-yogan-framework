@@ -305,6 +305,11 @@ func (m *Manager) IsEnabled() bool {
 	return m.config.Enabled
 }
 
+// GetConfig 获取限流器配置
+func (m *Manager) GetConfig() Config {
+	return m.config
+}
+
 // getOrCreateLimiter 获取或创建限流器（线程安全）
 func (m *Manager) getOrCreateLimiter(resource string) *rateLimiter {
 	// 先尝试读取

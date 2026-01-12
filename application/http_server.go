@@ -80,16 +80,17 @@ func NewHTTPServer(cfg ApiServerConfig, middlewareCfg *MiddlewareConfig, httpxCf
 	}
 
 	// 限流中间件：全局应用限流（在日志中间件之前，这样限流事件也会被记录）
-	if middlewareCfg != nil && middlewareCfg.RateLimit != nil && middlewareCfg.RateLimit.Enable && limiterManager != nil && limiterManager.IsEnabled() {
+	if limiterManager != nil && limiterManager.IsEnabled() {
+		limiterCfg := limiterManager.GetConfig()
 		rateLimiterCfg := middleware.DefaultRateLimiterConfig(limiterManager)
 
 		// 跳过限流的路径
-		if len(middlewareCfg.RateLimit.SkipPaths) > 0 {
-			rateLimiterCfg.SkipPaths = middlewareCfg.RateLimit.SkipPaths
+		if len(limiterCfg.SkipPaths) > 0 {
+			rateLimiterCfg.SkipPaths = limiterCfg.SkipPaths
 		}
 
 		// 根据配置选择键函数
-		switch middlewareCfg.RateLimit.KeyFunc {
+		switch limiterCfg.KeyFunc {
 		case "ip":
 			rateLimiterCfg.KeyFunc = middleware.RateLimiterKeyByIP
 		case "user":
@@ -102,12 +103,12 @@ func NewHTTPServer(cfg ApiServerConfig, middlewareCfg *MiddlewareConfig, httpxCf
 			// 默认：METHOD:PATH（已在 DefaultRateLimiterConfig 中设置）
 		default:
 			logger.Warn("yogan", "Unknown KeyFunc config, using default",
-				zap.String("key_func", middlewareCfg.RateLimit.KeyFunc))
+				zap.String("key_func", limiterCfg.KeyFunc))
 		}
 
 		engine.Use(middleware.RateLimiterWithConfig(rateLimiterCfg))
 		logger.Debug("yogan", "✅ Rate limiter middleware globally enabled",
-			zap.String("key_func", middlewareCfg.RateLimit.KeyFunc))
+			zap.String("key_func", limiterCfg.KeyFunc))
 	}
 
 	// HTTP 请求日志中间件：记录所有 HTTP 请求到 gin-http 模块（自动关联 TraceID）
@@ -291,15 +292,18 @@ func NewHTTPServerWithTelemetry(
 		engine.Use(middleware.TraceID(traceCfg))
 	}
 
-	// 限流中间件：全局应用限流
-	if middlewareCfg != nil && middlewareCfg.RateLimit != nil && middlewareCfg.RateLimit.Enable && limiterManager != nil && limiterManager.IsEnabled() {
+	// 限流中间件：全局应用限流（在日志中间件之前，这样限流事件也会被记录）
+	if limiterManager != nil && limiterManager.IsEnabled() {
+		limiterCfg := limiterManager.GetConfig()
 		rateLimiterCfg := middleware.DefaultRateLimiterConfig(limiterManager)
 
-		if len(middlewareCfg.RateLimit.SkipPaths) > 0 {
-			rateLimiterCfg.SkipPaths = middlewareCfg.RateLimit.SkipPaths
+		// 跳过限流的路径
+		if len(limiterCfg.SkipPaths) > 0 {
+			rateLimiterCfg.SkipPaths = limiterCfg.SkipPaths
 		}
 
-		switch middlewareCfg.RateLimit.KeyFunc {
+		// 根据配置选择键函数
+		switch limiterCfg.KeyFunc {
 		case "ip":
 			rateLimiterCfg.KeyFunc = middleware.RateLimiterKeyByIP
 		case "user":
@@ -309,15 +313,15 @@ func NewHTTPServerWithTelemetry(
 		case "api_key":
 			rateLimiterCfg.KeyFunc = middleware.RateLimiterKeyByAPIKey("X-API-Key")
 		case "path", "":
-			// 默认：METHOD:PATH
+			// 默认：METHOD:PATH（已在 DefaultRateLimiterConfig 中设置）
 		default:
 			logger.Warn("yogan", "Unknown KeyFunc config, using default",
-				zap.String("key_func", middlewareCfg.RateLimit.KeyFunc))
+				zap.String("key_func", limiterCfg.KeyFunc))
 		}
 
 		engine.Use(middleware.RateLimiterWithConfig(rateLimiterCfg))
 		logger.Debug("yogan", "✅ Rate limiter middleware globally enabled",
-			zap.String("key_func", middlewareCfg.RateLimit.KeyFunc))
+			zap.String("key_func", limiterCfg.KeyFunc))
 	}
 
 	// HTTP 请求日志中间件

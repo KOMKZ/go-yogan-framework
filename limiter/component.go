@@ -67,7 +67,7 @@ func (c *Component) Init(ctx context.Context, loader component.ConfigLoader) err
 	// 保存配置，延迟到 Start 创建 Manager
 	c.config = cfg
 
-	ctxLogger.DebugCtx(ctx, "✅ 限流器配置已加载",
+	ctxLogger.InfoCtx(ctx, "✅ 限流器配置已加载",
 		zap.String("store_type", cfg.StoreType),
 		zap.Int("resources", len(cfg.Resources)))
 	return nil
