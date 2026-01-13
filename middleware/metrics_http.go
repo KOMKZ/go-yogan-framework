@@ -4,106 +4,137 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 )
 
+// HTTPMetricsConfig HTTP 指标配置
+type HTTPMetricsConfig struct {
+	Enabled            bool
+	RecordRequestSize  bool
+	RecordResponseSize bool
+}
+
 // HTTPMetrics HTTP 层指标收集器
+// Implements component.MetricsProvider interface
 type HTTPMetrics struct {
-	requestsTotal      metric.Int64Counter      // 请求总数
-	requestDuration    metric.Float64Histogram  // 请求耗时
-	requestsInFlight   metric.Int64UpDownCounter // 正在处理的请求数
-	requestSize        metric.Int64Histogram    // 请求大小（可选）
-	responseSize       metric.Int64Histogram    // 响应大小（可选）
-	recordRequestSize  bool
-	recordResponseSize bool
+	config           HTTPMetricsConfig
+	requestsTotal    metric.Int64Counter       // 请求总数
+	requestDuration  metric.Float64Histogram   // 请求耗时
+	requestsInFlight metric.Int64UpDownCounter // 正在处理的请求数
+	requestSize      metric.Int64Histogram     // 请求大小（可选）
+	responseSize     metric.Int64Histogram     // 响应大小（可选）
+	registered       bool
 }
 
 // NewHTTPMetrics 创建 HTTP 指标收集器
-func NewHTTPMetrics(recordRequestSize, recordResponseSize bool) (*HTTPMetrics, error) {
-	meter := otel.Meter("http-server")
+func NewHTTPMetrics(cfg HTTPMetricsConfig) *HTTPMetrics {
+	return &HTTPMetrics{
+		config: cfg,
+	}
+}
 
-	requestsTotal, err := meter.Int64Counter(
+// MetricsName returns the metrics group name
+func (m *HTTPMetrics) MetricsName() string {
+	return "http"
+}
+
+// IsMetricsEnabled returns whether metrics collection is enabled
+func (m *HTTPMetrics) IsMetricsEnabled() bool {
+	return m.config.Enabled
+}
+
+// RegisterMetrics registers all HTTP metrics with the provided Meter
+func (m *HTTPMetrics) RegisterMetrics(meter metric.Meter) error {
+	if m.registered {
+		return nil
+	}
+
+	var err error
+
+	m.requestsTotal, err = meter.Int64Counter(
 		"http_requests_total",
-		metric.WithDescription("HTTP 请求总数"),
+		metric.WithDescription("Total number of HTTP requests"),
 		metric.WithUnit("{request}"),
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	requestDuration, err := meter.Float64Histogram(
+	m.requestDuration, err = meter.Float64Histogram(
 		"http_request_duration_seconds",
-		metric.WithDescription("HTTP 请求耗时分布"),
+		metric.WithDescription("HTTP request duration distribution"),
 		metric.WithUnit("s"),
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	requestsInFlight, err := meter.Int64UpDownCounter(
+	m.requestsInFlight, err = meter.Int64UpDownCounter(
 		"http_requests_in_flight",
-		metric.WithDescription("当前正在处理的 HTTP 请求数"),
+		metric.WithDescription("Number of HTTP requests currently being processed"),
 		metric.WithUnit("{request}"),
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	m := &HTTPMetrics{
-		requestsTotal:      requestsTotal,
-		requestDuration:    requestDuration,
-		requestsInFlight:   requestsInFlight,
-		recordRequestSize:  recordRequestSize,
-		recordResponseSize: recordResponseSize,
-	}
-
-	// 可选：记录请求大小
-	if recordRequestSize {
-		requestSize, err := meter.Int64Histogram(
+	// Optional: record request size
+	if m.config.RecordRequestSize {
+		m.requestSize, err = meter.Int64Histogram(
 			"http_request_size_bytes",
-			metric.WithDescription("HTTP 请求体大小分布"),
+			metric.WithDescription("HTTP request body size distribution"),
 			metric.WithUnit("By"),
 		)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		m.requestSize = requestSize
 	}
 
-	// 可选：记录响应大小
-	if recordResponseSize {
-		responseSize, err := meter.Int64Histogram(
+	// Optional: record response size
+	if m.config.RecordResponseSize {
+		m.responseSize, err = meter.Int64Histogram(
 			"http_response_size_bytes",
-			metric.WithDescription("HTTP 响应体大小分布"),
+			metric.WithDescription("HTTP response body size distribution"),
 			metric.WithUnit("By"),
 		)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		m.responseSize = responseSize
 	}
 
-	return m, nil
+	m.registered = true
+	return nil
 }
 
-// Handler 返回 Gin 中间件
+// IsRegistered returns whether metrics have been registered
+func (m *HTTPMetrics) IsRegistered() bool {
+	return m.registered
+}
+
+// Handler returns a Gin middleware for collecting HTTP metrics.
+// Metrics must be registered via RegisterMetrics before calling this.
 func (m *HTTPMetrics) Handler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		start := time.Now()
-		ctx := c.Request.Context()
-		path := c.FullPath() // 使用路由模式而非实际路径（避免高基数）
-		if path == "" {
-			path = "unknown" // 404 或未匹配路由
+		// Skip if not registered
+		if !m.registered {
+			c.Next()
+			return
 		}
 
-		// 请求开始，增加处理中计数
+		start := time.Now()
+		ctx := c.Request.Context()
+		path := c.FullPath() // Use route pattern, not actual path (avoid high cardinality)
+		if path == "" {
+			path = "unknown" // 404 or unmatched route
+		}
+
+		// Request started, increment in-flight count
 		m.requestsInFlight.Add(ctx, 1)
 		defer m.requestsInFlight.Add(ctx, -1)
 
-		// 记录请求大小（可选）
-		if m.recordRequestSize && m.requestSize != nil {
+		// Record request size (optional)
+		if m.config.RecordRequestSize && m.requestSize != nil {
 			requestSize := c.Request.ContentLength
 			if requestSize > 0 {
 				m.requestSize.Record(ctx, requestSize,
@@ -115,29 +146,29 @@ func (m *HTTPMetrics) Handler() gin.HandlerFunc {
 			}
 		}
 
-		// 处理请求
+		// Process request
 		c.Next()
 
-		// 计算耗时
+		// Calculate duration
 		duration := time.Since(start).Seconds()
 		statusCode := c.Writer.Status()
 
-		// 通用标签
+		// Common attributes
 		attrs := []attribute.KeyValue{
 			attribute.String("method", c.Request.Method),
 			attribute.String("path", path),
 			attribute.Int("status_code", statusCode),
-			attribute.String("status_class", getStatusClass(statusCode)), // 2xx, 3xx, 4xx, 5xx
+			attribute.String("status_class", getStatusClass(statusCode)),
 		}
 
-		// 记录请求总数
+		// Record request count
 		m.requestsTotal.Add(ctx, 1, metric.WithAttributes(attrs...))
 
-		// 记录请求耗时
+		// Record request duration
 		m.requestDuration.Record(ctx, duration, metric.WithAttributes(attrs...))
 
-		// 记录响应大小（可选）
-		if m.recordResponseSize && m.responseSize != nil {
+		// Record response size (optional)
+		if m.config.RecordResponseSize && m.responseSize != nil {
 			responseSize := int64(c.Writer.Size())
 			if responseSize > 0 {
 				m.responseSize.Record(ctx, responseSize,

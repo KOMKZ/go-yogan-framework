@@ -268,17 +268,21 @@ func NewHTTPServerWithTelemetry(
 	// 🎯 HTTP Metrics 中间件：收集 HTTP 请求指标（独立于 Trace）
 	if telemetryComp != nil {
 		metricsManager := telemetryComp.GetMetricsManager()
+		metricsRegistry := telemetryComp.GetMetricsRegistry()
 		if metricsManager != nil && metricsManager.IsHTTPMetricsEnabled() {
-			httpMetrics, err := middleware.NewHTTPMetrics(
-				metricsManager.GetConfig().HTTP.RecordRequestSize,
-				metricsManager.GetConfig().HTTP.RecordResponseSize,
-			)
-			if err == nil {
-				engine.Use(httpMetrics.Handler())
-				logger.Info("yogan", "✅ HTTP Metrics middleware registered")
-			} else {
-				logger.Warn("yogan", "Failed to create HTTP Metrics middleware", zap.Error(err))
+			httpMetrics := middleware.NewHTTPMetrics(middleware.HTTPMetricsConfig{
+				Enabled:            metricsManager.GetConfig().HTTP.Enabled,
+				RecordRequestSize:  metricsManager.GetConfig().HTTP.RecordRequestSize,
+				RecordResponseSize: metricsManager.GetConfig().HTTP.RecordResponseSize,
+			})
+			// Register with MetricsRegistry if available
+			if metricsRegistry != nil {
+				if err := metricsRegistry.Register(httpMetrics); err != nil {
+					logger.Warn("yogan", "Failed to register HTTP Metrics", zap.Error(err))
+				}
 			}
+			engine.Use(httpMetrics.Handler())
+			logger.Info("yogan", "✅ HTTP Metrics middleware registered")
 		}
 	}
 
