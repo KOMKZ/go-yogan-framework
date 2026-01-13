@@ -207,6 +207,7 @@ func TestParseRenderStyle(t *testing.T) {
 		{"空字符串应返回默认值", "", RenderStyleSingleLine},
 		{"single_line", "single_line", RenderStyleSingleLine},
 		{"key_value", "key_value", RenderStyleKeyValue},
+		{"modern_compact", "modern_compact", RenderStyleModernCompact},
 		{"未知值应返回默认值", "unknown", RenderStyleSingleLine},
 	}
 
@@ -216,4 +217,280 @@ func TestParseRenderStyle(t *testing.T) {
 			assert.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+// TestPrettyConsoleEncoder_ModernCompactStyle 测试现代紧凑风格渲染
+func TestPrettyConsoleEncoder_ModernCompactStyle(t *testing.T) {
+	encoderConfig := zapcore.EncoderConfig{
+		TimeKey:       "time",
+		LevelKey:      "level",
+		NameKey:       "logger",
+		CallerKey:     "caller",
+		MessageKey:    "message",
+		StacktraceKey: "stacktrace",
+		LineEnding:    zapcore.DefaultLineEnding,
+		EncodeLevel:   zapcore.CapitalLevelEncoder,
+		EncodeTime:    zapcore.ISO8601TimeEncoder,
+		EncodeCaller:  zapcore.ShortCallerEncoder,
+	}
+
+	encoder := NewPrettyConsoleEncoderWithStyle(encoderConfig, RenderStyleModernCompact)
+
+	entry := zapcore.Entry{
+		Level:   zapcore.InfoLevel,
+		Time:    time.Date(2025, 1, 13, 14, 30, 45, 0, time.FixedZone("CST", 8*3600)),
+		Message: "HTTP server started",
+		Caller: zapcore.EntryCaller{
+			Defined: true,
+			File:    "http_app.go",
+			Line:    104,
+		},
+	}
+
+	fields := []zapcore.Field{
+		{Key: "module", Type: zapcore.StringType, String: "yogan"},
+		{Key: "port", Type: zapcore.Int64Type, Integer: 8080},
+	}
+
+	buf, err := encoder.EncodeEntry(entry, fields)
+	assert.NoError(t, err)
+
+	output := buf.String()
+	t.Logf("输出:\n%s", output)
+
+	// 验证格式：14:30:45 │ INFO  │ HTTP server started                          │ yogan        {"port":8080}
+	assert.Contains(t, output, "14:30:45")
+	assert.Contains(t, output, "│")
+	assert.Contains(t, output, "INFO")
+	assert.Contains(t, output, "HTTP server started")
+	assert.Contains(t, output, "yogan")
+	assert.Contains(t, output, `"port":8080`)
+}
+
+// TestPrettyConsoleEncoder_ModernCompactStyle_AllLevels 测试所有日志级别
+func TestPrettyConsoleEncoder_ModernCompactStyle_AllLevels(t *testing.T) {
+	encoderConfig := zapcore.EncoderConfig{
+		TimeKey:       "time",
+		LevelKey:      "level",
+		NameKey:       "logger",
+		CallerKey:     "caller",
+		MessageKey:    "message",
+		StacktraceKey: "stacktrace",
+		LineEnding:    zapcore.DefaultLineEnding,
+		EncodeLevel:   zapcore.CapitalLevelEncoder,
+		EncodeTime:    zapcore.ISO8601TimeEncoder,
+		EncodeCaller:  zapcore.ShortCallerEncoder,
+	}
+
+	encoder := NewPrettyConsoleEncoderWithStyle(encoderConfig, RenderStyleModernCompact)
+
+	levels := []struct {
+		level    zapcore.Level
+		expected string
+	}{
+		{zapcore.DebugLevel, "DEBUG"},
+		{zapcore.InfoLevel, "INFO"},
+		{zapcore.WarnLevel, "WARN"},
+		{zapcore.ErrorLevel, "ERROR"},
+	}
+
+	for _, tt := range levels {
+		t.Run(tt.expected, func(t *testing.T) {
+			entry := zapcore.Entry{
+				Level:   tt.level,
+				Time:    time.Now(),
+				Message: "Test message",
+			}
+
+			fields := []zapcore.Field{
+				{Key: "module", Type: zapcore.StringType, String: "test"},
+			}
+
+			buf, err := encoder.EncodeEntry(entry, fields)
+			assert.NoError(t, err)
+
+			output := buf.String()
+			t.Logf("输出: %s", output)
+
+			assert.Contains(t, output, tt.expected)
+			assert.Contains(t, output, "│")
+		})
+	}
+}
+
+// TestPrettyConsoleEncoder_ModernCompactStyle_LongMessage 测试长消息截断
+func TestPrettyConsoleEncoder_ModernCompactStyle_LongMessage(t *testing.T) {
+	encoderConfig := zapcore.EncoderConfig{
+		TimeKey:       "time",
+		LevelKey:      "level",
+		NameKey:       "logger",
+		CallerKey:     "caller",
+		MessageKey:    "message",
+		StacktraceKey: "stacktrace",
+		LineEnding:    zapcore.DefaultLineEnding,
+		EncodeLevel:   zapcore.CapitalLevelEncoder,
+		EncodeTime:    zapcore.ISO8601TimeEncoder,
+		EncodeCaller:  zapcore.ShortCallerEncoder,
+	}
+
+	encoder := NewPrettyConsoleEncoderWithStyle(encoderConfig, RenderStyleModernCompact)
+
+	// 创建一个超长消息
+	longMessage := "This is a very long message that should be truncated because it exceeds the maximum width"
+
+	entry := zapcore.Entry{
+		Level:   zapcore.WarnLevel,
+		Time:    time.Now(),
+		Message: longMessage,
+	}
+
+	fields := []zapcore.Field{
+		{Key: "module", Type: zapcore.StringType, String: "database"},
+	}
+
+	buf, err := encoder.EncodeEntry(entry, fields)
+	assert.NoError(t, err)
+
+	output := buf.String()
+	t.Logf("输出: %s", output)
+
+	// 验证消息被截断并添加省略号
+	assert.Contains(t, output, "...")
+	assert.Contains(t, output, "database")
+}
+
+// TestPrettyConsoleEncoder_ModernCompactStyle_ChineseMessage 测试中文消息对齐
+func TestPrettyConsoleEncoder_ModernCompactStyle_ChineseMessage(t *testing.T) {
+	encoderConfig := zapcore.EncoderConfig{
+		TimeKey:       "time",
+		LevelKey:      "level",
+		NameKey:       "logger",
+		CallerKey:     "caller",
+		MessageKey:    "message",
+		StacktraceKey: "stacktrace",
+		LineEnding:    zapcore.DefaultLineEnding,
+		EncodeLevel:   zapcore.CapitalLevelEncoder,
+		EncodeTime:    zapcore.ISO8601TimeEncoder,
+		EncodeCaller:  zapcore.ShortCallerEncoder,
+	}
+
+	encoder := NewPrettyConsoleEncoderWithStyle(encoderConfig, RenderStyleModernCompact)
+
+	// 测试多条中英文混合日志
+	entries := []struct {
+		level   zapcore.Level
+		message string
+		module  string
+	}{
+		{zapcore.InfoLevel, "服务器启动成功", "yogan"},
+		{zapcore.DebugLevel, "Route registered: GET /api", "router"},
+		{zapcore.WarnLevel, "数据库连接超时", "database"},
+		{zapcore.ErrorLevel, "用户认证失败", "auth"},
+		{zapcore.InfoLevel, "订单创建成功，订单号：12345", "order"},
+	}
+
+	t.Log("中文对齐测试输出:")
+	for _, e := range entries {
+		entry := zapcore.Entry{
+			Level:   e.level,
+			Time:    time.Date(2025, 1, 13, 14, 30, 45, 0, time.FixedZone("CST", 8*3600)),
+			Message: e.message,
+		}
+
+		fields := []zapcore.Field{
+			{Key: "module", Type: zapcore.StringType, String: e.module},
+		}
+
+		buf, err := encoder.EncodeEntry(entry, fields)
+		assert.NoError(t, err)
+
+		output := buf.String()
+		t.Logf("%s", output)
+
+		// 验证输出包含关键元素
+		assert.Contains(t, output, "│")
+		assert.Contains(t, output, e.module)
+	}
+}
+
+// TestPrettyConsoleEncoder_ModernCompactStyle_LongChineseMessage 测试长中文消息截断
+func TestPrettyConsoleEncoder_ModernCompactStyle_LongChineseMessage(t *testing.T) {
+	encoderConfig := zapcore.EncoderConfig{
+		TimeKey:       "time",
+		LevelKey:      "level",
+		NameKey:       "logger",
+		CallerKey:     "caller",
+		MessageKey:    "message",
+		StacktraceKey: "stacktrace",
+		LineEnding:    zapcore.DefaultLineEnding,
+		EncodeLevel:   zapcore.CapitalLevelEncoder,
+		EncodeTime:    zapcore.ISO8601TimeEncoder,
+		EncodeCaller:  zapcore.ShortCallerEncoder,
+	}
+
+	encoder := NewPrettyConsoleEncoderWithStyle(encoderConfig, RenderStyleModernCompact)
+
+	// 创建一个超长中文消息
+	longMessage := "这是一条非常长的中文日志消息，应该被正确截断，不会破坏表格对齐"
+
+	entry := zapcore.Entry{
+		Level:   zapcore.WarnLevel,
+		Time:    time.Now(),
+		Message: longMessage,
+	}
+
+	fields := []zapcore.Field{
+		{Key: "module", Type: zapcore.StringType, String: "database"},
+	}
+
+	buf, err := encoder.EncodeEntry(entry, fields)
+	assert.NoError(t, err)
+
+	output := buf.String()
+	t.Logf("输出: %s", output)
+
+	// 验证消息被截断并添加省略号
+	assert.Contains(t, output, "...")
+	assert.Contains(t, output, "database")
+}
+
+// TestPrettyConsoleEncoder_ModernCompactStyle_NoFields 测试无额外字段
+func TestPrettyConsoleEncoder_ModernCompactStyle_NoFields(t *testing.T) {
+	encoderConfig := zapcore.EncoderConfig{
+		TimeKey:       "time",
+		LevelKey:      "level",
+		NameKey:       "logger",
+		CallerKey:     "caller",
+		MessageKey:    "message",
+		StacktraceKey: "stacktrace",
+		LineEnding:    zapcore.DefaultLineEnding,
+		EncodeLevel:   zapcore.CapitalLevelEncoder,
+		EncodeTime:    zapcore.ISO8601TimeEncoder,
+		EncodeCaller:  zapcore.ShortCallerEncoder,
+	}
+
+	encoder := NewPrettyConsoleEncoderWithStyle(encoderConfig, RenderStyleModernCompact)
+
+	entry := zapcore.Entry{
+		Level:   zapcore.DebugLevel,
+		Time:    time.Now(),
+		Message: "Simple debug message",
+	}
+
+	// 只有 module 字段，没有其他业务字段
+	fields := []zapcore.Field{
+		{Key: "module", Type: zapcore.StringType, String: "core"},
+	}
+
+	buf, err := encoder.EncodeEntry(entry, fields)
+	assert.NoError(t, err)
+
+	output := buf.String()
+	t.Logf("输出: %s", output)
+
+	// 验证没有 JSON 字段输出
+	assert.Contains(t, output, "DEBUG")
+	assert.Contains(t, output, "Simple debug message")
+	assert.Contains(t, output, "core")
+	assert.NotContains(t, output, "{}")
 }
