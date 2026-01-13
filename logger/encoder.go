@@ -5,6 +5,7 @@ import (
 	"math"
 	"sync"
 	"time"
+	"unicode"
 	"unicode/utf8"
 
 	"go.uber.org/zap/buffer"
@@ -27,6 +28,11 @@ const (
 	//     caller: logger/manager.go:316
 	//     message: [GIN-debug] GET / --> ...
 	RenderStyleKeyValue RenderStyle = "key_value"
+
+	// RenderStyleModernCompact 现代紧凑风格
+	// 格式: 14:30:45 │ INFO  │ HTTP server started                          │ yogan       {"key":"value"}
+	// 特点：时间精简、Box Drawing 分隔符、固定列宽、清晰层次
+	RenderStyleModernCompact RenderStyle = "modern_compact"
 )
 
 // ParseRenderStyle 解析渲染样式字符串
@@ -34,6 +40,8 @@ func ParseRenderStyle(s string) RenderStyle {
 	switch s {
 	case "key_value":
 		return RenderStyleKeyValue
+	case "modern_compact":
+		return RenderStyleModernCompact
 	case "single_line", "":
 		return RenderStyleSingleLine
 	default:
@@ -99,6 +107,8 @@ func (enc *PrettyConsoleEncoder) EncodeEntry(entry zapcore.Entry, fields []zapco
 	switch enc.renderStyle {
 	case RenderStyleKeyValue:
 		return enc.encodeKeyValue(entry, fields)
+	case RenderStyleModernCompact:
+		return enc.encodeModernCompact(entry, fields)
 	case RenderStyleSingleLine:
 		fallthrough
 	default:
@@ -265,15 +275,195 @@ func (enc *PrettyConsoleEncoder) encodeKeyValue(entry zapcore.Entry, fields []za
 	return final, nil
 }
 
-// appendPadded 追加固定宽度的字符串（左对齐或居中）
-func (enc *PrettyConsoleEncoder) appendPadded(buf *buffer.Buffer, s string, width int, center bool) {
-	sLen := len(s)
-	if sLen >= width {
-		buf.AppendString(s[:width])
+// encodeModernCompact 现代紧凑风格渲染
+// 格式: 14:30:45 │ INFO  │ HTTP server started                          │ yogan       {"key":"value"}
+// 特点：时间精简、Box Drawing 分隔符、固定列宽、清晰层次
+func (enc *PrettyConsoleEncoder) encodeModernCompact(entry zapcore.Entry, fields []zapcore.Field) (*buffer.Buffer, error) {
+	final := buffer.NewPool().Get()
+
+	// 1. 时间戳 HH:MM:SS（8字符）
+	final.AppendString(entry.Time.Format("15:04:05"))
+
+	// 2. 分隔符（使用 Box Drawing 字符）
+	final.AppendString(" │ ")
+
+	// 3. 级别（5字符固定宽度，左对齐）
+	enc.appendPadded(final, enc.levelNameCompact(entry.Level), 5, false)
+
+	// 4. 分隔符
+	final.AppendString(" │ ")
+
+	// 5. 消息（固定45字符宽度）
+	enc.appendPaddedMessage(final, entry.Message, 45)
+
+	// 6. 分隔符
+	final.AppendString(" │ ")
+
+	// 7. 模块名（12字符固定宽度）
+	moduleName := enc.extractModule(fields)
+	if moduleName == "unknown" {
+		moduleName = enc.moduleName
+		if moduleName == "" {
+			moduleName = "-"
+		}
+	}
+	enc.appendPadded(final, moduleName, 12, false)
+
+	// 8. 字段（JSON格式，可选）
+	if len(fields) > 0 && enc.hasNonMetaFields(fields) {
+		final.AppendString(" ")
+		enc.appendFieldsAsJSON(final, fields)
+	}
+
+	final.AppendString("\n")
+
+	// 堆栈信息（从 entry.Stack 或 fields 中提取）
+	stackTrace := entry.Stack
+	if stackTrace == "" {
+		stackTrace = enc.extractStack(fields)
+	}
+	if stackTrace != "" {
+		final.AppendString(stackTrace)
+		final.AppendString("\n")
+	}
+
+	return final, nil
+}
+
+// levelNameCompact 级别名称（5字符，用于 Modern Compact）
+func (enc *PrettyConsoleEncoder) levelNameCompact(level zapcore.Level) string {
+	switch level {
+	case zapcore.DebugLevel:
+		return "DEBUG"
+	case zapcore.InfoLevel:
+		return "INFO"
+	case zapcore.WarnLevel:
+		return "WARN"
+	case zapcore.ErrorLevel:
+		return "ERROR"
+	case zapcore.DPanicLevel:
+		return "DPANI"
+	case zapcore.PanicLevel:
+		return "PANIC"
+	case zapcore.FatalLevel:
+		return "FATAL"
+	default:
+		return level.CapitalString()
+	}
+}
+
+// stringDisplayWidth 计算字符串的终端显示宽度
+// 中文、日文、韩文等全角字符占用2个字符宽度
+func stringDisplayWidth(s string) int {
+	width := 0
+	for _, r := range s {
+		if isWideChar(r) {
+			width += 2
+		} else {
+			width += 1
+		}
+	}
+	return width
+}
+
+// isWideChar 判断是否为宽字符（全角字符）
+// 包括：CJK 字符、全角标点、表情符号等
+func isWideChar(r rune) bool {
+	// CJK 统一汉字
+	if r >= 0x4E00 && r <= 0x9FFF {
+		return true
+	}
+	// CJK 扩展 A
+	if r >= 0x3400 && r <= 0x4DBF {
+		return true
+	}
+	// CJK 扩展 B-F
+	if r >= 0x20000 && r <= 0x2CEAF {
+		return true
+	}
+	// 全角 ASCII 和标点
+	if r >= 0xFF01 && r <= 0xFF60 {
+		return true
+	}
+	// 日文平假名和片假名
+	if r >= 0x3040 && r <= 0x30FF {
+		return true
+	}
+	// 韩文音节
+	if r >= 0xAC00 && r <= 0xD7AF {
+		return true
+	}
+	// 中文标点符号
+	if r >= 0x3000 && r <= 0x303F {
+		return true
+	}
+	// 表情符号（部分）
+	if r >= 0x1F300 && r <= 0x1F9FF {
+		return true
+	}
+	// 使用 unicode 包判断东亚宽字符
+	if unicode.Is(unicode.Han, r) {
+		return true
+	}
+	return false
+}
+
+// truncateToDisplayWidth 截断字符串到指定显示宽度
+func truncateToDisplayWidth(s string, maxWidth int) (result string, actualWidth int) {
+	width := 0
+	for i, r := range s {
+		charWidth := 1
+		if isWideChar(r) {
+			charWidth = 2
+		}
+		if width+charWidth > maxWidth {
+			return s[:i], width
+		}
+		width += charWidth
+	}
+	return s, width
+}
+
+// appendPaddedMessage 追加固定宽度的消息（截断或填充，支持中文）
+func (enc *PrettyConsoleEncoder) appendPaddedMessage(buf *buffer.Buffer, msg string, width int) {
+	displayWidth := stringDisplayWidth(msg)
+
+	if displayWidth >= width {
+		// 截断并添加省略号
+		if width > 3 {
+			truncated, actualWidth := truncateToDisplayWidth(msg, width-3)
+			buf.AppendString(truncated)
+			buf.AppendString("...")
+			// 填充剩余空格（如果有）
+			padding := width - actualWidth - 3
+			for i := 0; i < padding; i++ {
+				buf.AppendByte(' ')
+			}
+		} else {
+			truncated, _ := truncateToDisplayWidth(msg, width)
+			buf.AppendString(truncated)
+		}
 		return
 	}
 
-	padding := width - sLen
+	// 左对齐，填充空格
+	buf.AppendString(msg)
+	for i := 0; i < width-displayWidth; i++ {
+		buf.AppendByte(' ')
+	}
+}
+
+// appendPadded 追加固定宽度的字符串（左对齐或居中）
+func (enc *PrettyConsoleEncoder) appendPadded(buf *buffer.Buffer, s string, width int, center bool) {
+	displayWidth := stringDisplayWidth(s)
+	if displayWidth >= width {
+		// 截断到指定宽度
+		truncated, _ := truncateToDisplayWidth(s, width)
+		buf.AppendString(truncated)
+		return
+	}
+
+	padding := width - displayWidth
 	if center {
 		leftPad := padding / 2
 		rightPad := padding - leftPad
