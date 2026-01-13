@@ -53,12 +53,21 @@ type BatchConfig struct {
 
 // MetricsConfig Metrics 配置
 type MetricsConfig struct {
-	Enabled        bool          `mapstructure:"enabled"`         // 是否启用 Metrics
-	ExportInterval time.Duration `mapstructure:"export_interval"` // 导出间隔
-	ExportTimeout  time.Duration `mapstructure:"export_timeout"`  // 导出超时
-	HTTP           HTTPMetrics   `mapstructure:"http"`            // HTTP 层指标配置
-	Database       DBMetrics     `mapstructure:"database"`        // 数据库层指标配置
-	GRPC           GRPCMetrics   `mapstructure:"grpc"`            // gRPC 层指标配置
+	Enabled        bool              `mapstructure:"enabled"`         // 是否启用 Metrics
+	ExportInterval time.Duration     `mapstructure:"export_interval"` // 导出间隔
+	ExportTimeout  time.Duration     `mapstructure:"export_timeout"`  // 导出超时
+	Namespace      string            `mapstructure:"namespace"`       // 指标命名空间前缀
+	Labels         map[string]string `mapstructure:"labels"`          // 全局标签 (env, region 等)
+	HTTP           HTTPMetrics       `mapstructure:"http"`            // HTTP 层指标配置
+	Database       DBMetrics         `mapstructure:"database"`        // 数据库层指标配置
+	GRPC           GRPCMetrics       `mapstructure:"grpc"`            // gRPC 层指标配置
+	Redis          RedisMetrics      `mapstructure:"redis"`           // Redis 指标配置
+	Kafka          KafkaMetrics      `mapstructure:"kafka"`           // Kafka 指标配置
+	Limiter        LimiterMetrics    `mapstructure:"limiter"`         // 限流指标配置
+	Breaker        BreakerMetrics    `mapstructure:"breaker"`         // 熔断指标配置
+	JWT            JWTMetrics        `mapstructure:"jwt"`             // JWT 指标配置
+	Auth           AuthMetrics       `mapstructure:"auth"`            // 认证指标配置
+	Event          EventMetrics      `mapstructure:"event"`           // 事件指标配置
 }
 
 // HTTPMetrics HTTP 层指标配置
@@ -78,9 +87,54 @@ type DBMetrics struct {
 
 // GRPCMetrics gRPC 层指标配置
 type GRPCMetrics struct {
-	Enabled            bool `mapstructure:"enabled"`              // 是否启用
-	RecordMessageSize  bool `mapstructure:"record_message_size"`  // 是否记录消息大小
+	Enabled             bool `mapstructure:"enabled"`               // 是否启用
+	RecordMessageSize   bool `mapstructure:"record_message_size"`   // 是否记录消息大小
 	RecordStreamMetrics bool `mapstructure:"record_stream_metrics"` // 是否记录流式传输指标
+}
+
+// RedisMetrics Redis 指标配置
+type RedisMetrics struct {
+	Enabled          bool `mapstructure:"enabled"`            // 是否启用
+	RecordHitMiss    bool `mapstructure:"record_hit_miss"`    // 是否记录缓存命中/未命中
+	RecordPoolStats  bool `mapstructure:"record_pool_stats"`  // 是否记录连接池状态
+	RecordLatencyP99 bool `mapstructure:"record_latency_p99"` // 是否记录 P99 延迟
+}
+
+// KafkaMetrics Kafka 指标配置
+type KafkaMetrics struct {
+	Enabled        bool `mapstructure:"enabled"`         // 是否启用
+	RecordLag      bool `mapstructure:"record_lag"`      // 是否记录消费延迟
+	RecordBatchSize bool `mapstructure:"record_batch_size"` // 是否记录批次大小
+}
+
+// LimiterMetrics 限流指标配置
+type LimiterMetrics struct {
+	Enabled         bool `mapstructure:"enabled"`          // 是否启用
+	RecordTokens    bool `mapstructure:"record_tokens"`    // 是否记录令牌数
+	RecordRejectRate bool `mapstructure:"record_reject_rate"` // 是否记录拒绝率
+}
+
+// BreakerMetrics 熔断指标配置
+type BreakerMetrics struct {
+	Enabled           bool `mapstructure:"enabled"`             // 是否启用
+	RecordState       bool `mapstructure:"record_state"`        // 是否记录状态变化
+	RecordSuccessRate bool `mapstructure:"record_success_rate"` // 是否记录成功率
+}
+
+// JWTMetrics JWT 指标配置
+type JWTMetrics struct {
+	Enabled bool `mapstructure:"enabled"` // 是否启用
+}
+
+// AuthMetrics 认证指标配置
+type AuthMetrics struct {
+	Enabled bool `mapstructure:"enabled"` // 是否启用
+}
+
+// EventMetrics 事件指标配置
+type EventMetrics struct {
+	Enabled         bool `mapstructure:"enabled"`          // 是否启用
+	RecordQueueSize bool `mapstructure:"record_queue_size"` // 是否记录队列大小
 }
 
 // DefaultConfig 返回默认配置
@@ -125,6 +179,8 @@ func DefaultConfig() Config {
 			Enabled:        false, // 默认关闭
 			ExportInterval: 10 * time.Second,
 			ExportTimeout:  5 * time.Second,
+			Namespace:      "yogan",
+			Labels:         make(map[string]string),
 			HTTP: HTTPMetrics{
 				Enabled:            false,
 				RecordRequestSize:  false,
@@ -140,6 +196,37 @@ func DefaultConfig() Config {
 				Enabled:             false,
 				RecordMessageSize:   false,
 				RecordStreamMetrics: false,
+			},
+			Redis: RedisMetrics{
+				Enabled:          false,
+				RecordHitMiss:    true,
+				RecordPoolStats:  true,
+				RecordLatencyP99: true,
+			},
+			Kafka: KafkaMetrics{
+				Enabled:         false,
+				RecordLag:       true,
+				RecordBatchSize: true,
+			},
+			Limiter: LimiterMetrics{
+				Enabled:          false,
+				RecordTokens:     true,
+				RecordRejectRate: true,
+			},
+			Breaker: BreakerMetrics{
+				Enabled:           false,
+				RecordState:       true,
+				RecordSuccessRate: true,
+			},
+			JWT: JWTMetrics{
+				Enabled: false,
+			},
+			Auth: AuthMetrics{
+				Enabled: false,
+			},
+			Event: EventMetrics{
+				Enabled:         false,
+				RecordQueueSize: true,
 			},
 		},
 	}

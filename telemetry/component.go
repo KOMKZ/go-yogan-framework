@@ -7,6 +7,7 @@ import (
 	"github.com/KOMKZ/go-yogan-framework/component"
 	"github.com/KOMKZ/go-yogan-framework/logger"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/trace"
 	otelTrace "go.opentelemetry.io/otel/trace"
@@ -17,12 +18,13 @@ const ComponentName = "telemetry"
 
 // Component OpenTelemetry 组件
 type Component struct {
-	config         Config
-	logger         *logger.CtxZapLogger
-	tracerProvider *trace.TracerProvider
-	shutdownFn     func(context.Context) error
-	circuitBreaker *CircuitBreaker // 熔断器
-	metricsManager *MetricsManager // 🎯 Metrics 管理器
+	config          Config
+	logger          *logger.CtxZapLogger
+	tracerProvider  *trace.TracerProvider
+	shutdownFn      func(context.Context) error
+	circuitBreaker  *CircuitBreaker  // 熔断器
+	metricsManager  *MetricsManager  // Metrics 管理器
+	metricsRegistry *MetricsRegistry // 统一 Metrics 注册中心
 }
 
 // NewComponent 创建 Telemetry 组件
@@ -106,10 +108,14 @@ func (c *Component) Init(ctx context.Context, loader component.ConfigLoader) err
 
 		c.metricsManager = metricsManager
 
+		// 创建统一 Metrics 注册中心
+		c.metricsRegistry = c.createMetricsRegistry()
+
 		c.logger.InfoCtx(ctx, "✅ Metrics initialized",
 			zap.Bool("http_enabled", c.config.Metrics.HTTP.Enabled),
 			zap.Bool("db_enabled", c.config.Metrics.Database.Enabled),
 			zap.Bool("grpc_enabled", c.config.Metrics.GRPC.Enabled),
+			zap.String("namespace", c.config.Metrics.Namespace),
 			zap.Duration("export_interval", c.config.Metrics.ExportInterval),
 		)
 	}
@@ -188,6 +194,39 @@ func (c *Component) GetConfig() Config {
 // GetMetricsManager 获取 Metrics 管理器
 func (c *Component) GetMetricsManager() *MetricsManager {
 	return c.metricsManager
+}
+
+// GetMetricsRegistry 获取统一 Metrics 注册中心
+func (c *Component) GetMetricsRegistry() *MetricsRegistry {
+	return c.metricsRegistry
+}
+
+// createMetricsRegistry 创建 Metrics 注册中心
+func (c *Component) createMetricsRegistry() *MetricsRegistry {
+	// 构建全局标签
+	baseLabels := c.buildBaseLabels()
+
+	return NewMetricsRegistry(
+		otel.GetMeterProvider(),
+		WithNamespace(c.config.Metrics.Namespace),
+		WithBaseLabels(baseLabels),
+		WithLogger(c.logger),
+	)
+}
+
+// buildBaseLabels 构建全局基础标签
+func (c *Component) buildBaseLabels() []attribute.KeyValue {
+	labels := []attribute.KeyValue{
+		attribute.String("service.name", c.config.ServiceName),
+		attribute.String("service.version", c.config.ServiceVersion),
+	}
+
+	// 添加配置中的自定义标签
+	for k, v := range c.config.Metrics.Labels {
+		labels = append(labels, attribute.String(k, v))
+	}
+
+	return labels
 }
 
 // GetCircuitBreaker 获取熔断器（用于监控）
