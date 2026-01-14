@@ -1,6 +1,8 @@
 # Yogan Framework
 
-现代化 Go 微服务框架，组件化设计，开箱即用。
+**不写重复代码，不操心基础设施。** 组件注册即用，配置自动加载，追踪开箱即有。你写业务，框架兜底。
+
+📖 **文档**：[go-yogan-doc-portal.pages.dev](https://go-yogan-doc-portal.pages.dev/)
 
 > ⚠️ **注意**：项目处于快速迭代阶段，API 可能发生变化。
 
