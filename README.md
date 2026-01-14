@@ -12,6 +12,41 @@
 go get github.com/KOMKZ/go-yogan-framework
 ```
 
+## 脚手架工具 go-ygctl
+
+一条命令，项目就绪：
+
+```bash
+# 安装
+go install github.com/KOMKZ/go-ygctl@latest
+
+# 创建 HTTP 项目
+go-ygctl new http my-api
+
+# 创建 gRPC / CLI / Cron 项目
+go-ygctl new grpc my-service
+go-ygctl new cli my-tool
+go-ygctl new cron my-scheduler
+```
+
+生成的项目结构完整可运行：配置文件、路由、健康检查、Docker Compose 一应俱全。
+
+**查看可用组件**：
+
+```bash
+go-ygctl component list
+```
+
+**获取组件集成指南**：
+
+```bash
+go-ygctl component add database
+go-ygctl component add redis
+go-ygctl component add kafka
+```
+
+不用翻文档，命令行直接告诉你怎么接入。
+
 ## 核心组件
 
 | 组件 | 说明 |
