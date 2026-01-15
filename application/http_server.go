@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"time"
 
@@ -147,26 +148,54 @@ func (s *HTTPServer) GetEngine() *gin.Engine {
 	return s.engine
 }
 
-// Start 启动 HTTP Server（非阻塞）
+// Start 启动 HTTP Server（非阻塞，但会等待确认启动成功）
 func (s *HTTPServer) Start() error {
 	addr := fmt.Sprintf(":%d", s.port)
+
+	// 1. 预检测端口可用性
+	if err := s.checkPortAvailable(); err != nil {
+		return fmt.Errorf("端口 %d 不可用: %w", s.port, err)
+	}
 
 	s.httpServer = &http.Server{
 		Addr:    addr,
 		Handler: s.engine,
 	}
 
-	// 在独立 goroutine 中启动
+	// 2. 使用 channel 等待启动结果
+	errChan := make(chan error, 1)
+
 	go func() {
-		logger.Debug("yogan", "🚀 HTTP server started",
+		logger.Debug("yogan", "🚀 HTTP server starting",
 			zap.Int("port", s.port),
 			zap.String("mode", s.mode))
 
 		if err := s.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Error("yogan", "❌ HTTP server start failed", zap.Error(err))
+			errChan <- err
 		}
 	}()
 
+	// 3. 短暂等待确认启动成功（50ms 足够检测端口绑定错误）
+	select {
+	case err := <-errChan:
+		logger.Error("yogan", "❌ HTTP server start failed", zap.Error(err))
+		return fmt.Errorf("HTTP 服务启动失败: %w", err)
+	case <-time.After(50 * time.Millisecond):
+		// 启动成功
+		logger.Debug("yogan", "✅ HTTP server started successfully",
+			zap.Int("port", s.port))
+		return nil
+	}
+}
+
+// checkPortAvailable 检测端口是否可用
+func (s *HTTPServer) checkPortAvailable() error {
+	addr := fmt.Sprintf(":%d", s.port)
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		return err
+	}
+	ln.Close()
 	return nil
 }
 
