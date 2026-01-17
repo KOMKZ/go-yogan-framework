@@ -157,7 +157,7 @@ func TestOrchestrator_SubscribeInvalidationEvents(t *testing.T) {
 	cfg := &Config{
 		Enabled: true,
 		InvalidationRules: []InvalidationRule{
-			{Event: "test.event", Invalidate: []string{"test"}, KeyExtract: "test:"},
+			{Event: "test.event", Invalidate: []string{"test"}},
 		},
 	}
 
@@ -180,7 +180,7 @@ func TestOrchestrator_CreateInvalidationHandler(t *testing.T) {
 		},
 		InvalidationRules: []InvalidationRule{
 			{Event: "test.event", Invalidate: []string{"test"}, Pattern: "test:"},
-			{Event: "test.event2", Invalidate: []string{"test"}, KeyExtract: "test:{event.ID}"},
+			{Event: "test.event2", Invalidate: []string{"test"}}, // 使用 CacheInvalidator 接口
 		},
 	}
 
