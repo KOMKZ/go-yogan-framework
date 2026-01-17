@@ -17,4 +17,5 @@ const (
 	ComponentAuth       = "auth"       // 🎯 认证组件
 	ComponentKafka      = "kafka"      // 🎯 Kafka 消息队列组件
 	ComponentEvent      = "event"      // 🎯 事件分发组件
+	ComponentCache      = "cache"      // 🎯 缓存编排组件
 )
