@@ -13,6 +13,14 @@ import (
 	"golang.org/x/sync/singleflight"
 )
 
+// CacheInvalidator 缓存失效接口
+// 事件实现此接口后，cache 组件可自动提取参数进行精确缓存失效
+type CacheInvalidator interface {
+	// CacheArgs 返回用于构建缓存 key 的参数列表
+	// 例如：ArticleDeletedEvent 返回 []any{articleID}
+	CacheArgs() []any
+}
+
 // DefaultOrchestrator 默认缓存编排中心实现
 type DefaultOrchestrator struct {
 	config     *Config
@@ -304,13 +312,35 @@ func (o *DefaultOrchestrator) createInvalidationHandler(rule InvalidationRule) e
 	return event.ListenerFunc(func(ctx context.Context, e event.Event) error {
 		for _, cacheableName := range rule.Invalidate {
 			if rule.Pattern != "" {
-				// 按模式失效
-				o.InvalidateByPattern(ctx, cacheableName, rule.Pattern)
+				// 按模式失效（通配符）
+				if err := o.InvalidateByPattern(ctx, cacheableName, rule.Pattern); err != nil {
+					if o.logger != nil {
+						o.logger.Warn("cache invalidate by pattern failed",
+							zap.String("cacheable", cacheableName),
+							zap.String("pattern", rule.Pattern),
+							zap.Error(err),
+						)
+					}
+				}
+			} else if inv, ok := e.(CacheInvalidator); ok {
+				// 事件实现了 CacheInvalidator 接口，精确失效
+				args := inv.CacheArgs()
+				if err := o.Invalidate(ctx, cacheableName, args...); err != nil {
+					if o.logger != nil {
+						o.logger.Warn("cache invalidate failed",
+							zap.String("cacheable", cacheableName),
+							zap.Any("args", args),
+							zap.Error(err),
+						)
+					}
+				}
 			} else {
-				// 尝试从事件中提取参数
-				// 这里简化处理，实际需要反射提取字段
-				if rule.KeyExtract != "" {
-					o.InvalidateByPattern(ctx, cacheableName, rule.KeyExtract)
+				// 事件未实现接口，记录警告
+				if o.logger != nil {
+					o.logger.Warn("event does not implement CacheInvalidator, cannot extract cache args",
+						zap.String("event", e.Name()),
+						zap.String("cacheable", cacheableName),
+					)
 				}
 			}
 		}
