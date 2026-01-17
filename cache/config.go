@@ -76,10 +76,8 @@ type InvalidationRule struct {
 	// Invalidate 要失效的缓存项名称列表
 	Invalidate []string `mapstructure:"invalidate"`
 
-	// KeyExtract Key 提取模式，如 "user:{event.UserID}"
-	KeyExtract string `mapstructure:"key_extract"`
-
 	// Pattern 按模式失效，如 "user:*"
+	// 注意：仅在需要批量失效时使用，推荐使用 CacheInvalidator 接口精确失效
 	Pattern string `mapstructure:"pattern"`
 }
 
