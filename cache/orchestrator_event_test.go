@@ -76,6 +76,80 @@ func (e *testEvent) Payload() any {
 	return nil
 }
 
+// testEventWithCacheArgs 实现 CacheInvalidator 接口的测试事件
+type testEventWithCacheArgs struct {
+	name      string
+	articleID uint
+}
+
+func (e *testEventWithCacheArgs) Name() string {
+	return e.name
+}
+
+func (e *testEventWithCacheArgs) CacheArgs() []any {
+	return []any{e.articleID}
+}
+
+func TestOrchestrator_CacheInvalidatorInterface(t *testing.T) {
+	dispatcher := event.NewDispatcher()
+	defer dispatcher.Close()
+
+	cfg := &Config{
+		Enabled:      true,
+		DefaultStore: "memory",
+		Cacheables: []CacheableConfig{
+			{Name: "article:content", KeyPattern: "article:{0}", Store: "memory", Enabled: true},
+		},
+		InvalidationRules: []InvalidationRule{
+			{Event: "article.content.updated", Invalidate: []string{"article:content"}},
+		},
+	}
+
+	o := NewOrchestrator(cfg, dispatcher, nil)
+	o.RegisterStore("memory", NewMemoryStore("memory", 100))
+
+	var loadCount int
+	o.RegisterLoader("article:content", func(ctx context.Context, args ...any) (any, error) {
+		loadCount++
+		return map[string]any{"content": "test", "id": args[0]}, nil
+	})
+
+	ctx := context.Background()
+
+	// First call - should load
+	o.Call(ctx, "article:content", uint(123))
+	if loadCount != 1 {
+		t.Errorf("loadCount = %d, want 1", loadCount)
+	}
+
+	// Second call - should hit cache
+	o.Call(ctx, "article:content", uint(123))
+	if loadCount != 1 {
+		t.Errorf("loadCount = %d, want 1 (cached)", loadCount)
+	}
+
+	// Dispatch event with CacheInvalidator interface (精确失效)
+	dispatcher.Dispatch(ctx, &testEventWithCacheArgs{
+		name:      "article.content.updated",
+		articleID: 123,
+	})
+
+	// Wait for async processing
+	time.Sleep(50 * time.Millisecond)
+
+	// Third call - should reload (cache invalidated by CacheInvalidator)
+	o.Call(ctx, "article:content", uint(123))
+	if loadCount != 2 {
+		t.Errorf("loadCount = %d, want 2 (after CacheInvalidator invalidation)", loadCount)
+	}
+
+	// Different article should still be independent
+	o.Call(ctx, "article:content", uint(456))
+	if loadCount != 3 {
+		t.Errorf("loadCount = %d, want 3 (different article)", loadCount)
+	}
+}
+
 func TestOrchestrator_SubscribeInvalidationEvents(t *testing.T) {
 	dispatcher := event.NewDispatcher()
 	defer dispatcher.Close()
