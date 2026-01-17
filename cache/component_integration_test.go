@@ -109,10 +109,10 @@ func TestComponent_FullLifecycle(t *testing.T) {
 	}
 }
 
-func TestComponent_SetRedisClient(t *testing.T) {
+func TestComponent_SetRedisManager(t *testing.T) {
 	c := NewComponent()
 	// Just verify it doesn't panic
-	c.SetRedisClient("default", nil)
+	c.SetRedisManager(nil)
 }
 
 func TestComponent_SetEventDispatcher(t *testing.T) {
@@ -120,7 +120,6 @@ func TestComponent_SetEventDispatcher(t *testing.T) {
 	// Just verify it doesn't panic
 	c.SetEventDispatcher(nil)
 }
-
 
 func TestComponent_CreateStoreChain(t *testing.T) {
 	c := NewComponent()

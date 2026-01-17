@@ -6,8 +6,8 @@ import (
 	"github.com/KOMKZ/go-yogan-framework/component"
 	"github.com/KOMKZ/go-yogan-framework/event"
 	"github.com/KOMKZ/go-yogan-framework/logger"
+	frameworkRedis "github.com/KOMKZ/go-yogan-framework/redis"
 	"github.com/KOMKZ/go-yogan-framework/registry"
-	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
 
@@ -21,16 +21,14 @@ type Component struct {
 	log          *logger.CtxZapLogger
 	registry     *registry.Registry // 🎯 使用具体类型，支持泛型方法
 
-	// 外部依赖（启动时注入）
-	redisClients map[string]*redis.Client
+	// 外部依赖（启动时从 Registry 获取）
+	redisManager *frameworkRedis.Manager
 	dispatcher   event.Dispatcher
 }
 
 // NewComponent 创建缓存组件
 func NewComponent() *Component {
-	return &Component{
-		redisClients: make(map[string]*redis.Client),
-	}
+	return &Component{}
 }
 
 // Name 返回组件名称
@@ -41,10 +39,10 @@ func (c *Component) Name() string {
 // DependsOn 依赖的组件
 func (c *Component) DependsOn() []string {
 	return []string{
-		"config",               // 强制依赖配置
-		"logger",               // 强制依赖日志
-		"optional:redis",       // 可选依赖 Redis
-		"optional:event",       // 可选依赖事件
+		"config",         // 强制依赖配置
+		"logger",         // 强制依赖日志
+		"optional:redis", // 可选依赖 Redis
+		"optional:event", // 可选依赖事件
 	}
 }
 
@@ -78,6 +76,25 @@ func (c *Component) Start(ctx context.Context) error {
 		return nil
 	}
 
+	// 从 Registry 获取可选依赖
+	if c.registry != nil {
+		// 获取 Redis 组件
+		if redisComp, ok := registry.GetTyped[*frameworkRedis.Component](c.registry, component.ComponentRedis); ok {
+			c.redisManager = redisComp.GetManager()
+			if c.redisManager != nil {
+				c.log.Debug("cache component: redis manager obtained from registry")
+			}
+		}
+
+		// 获取事件组件
+		if eventComp, ok := registry.GetTyped[*event.Component](c.registry, component.ComponentEvent); ok {
+			if eventComp.IsEnabled() {
+				c.dispatcher = eventComp.GetDispatcher()
+				c.log.Debug("cache component: event dispatcher obtained from registry")
+			}
+		}
+	}
+
 	// 创建编排中心
 	c.orchestrator = NewOrchestrator(c.config, c.dispatcher, c.log)
 
@@ -104,10 +121,10 @@ func (c *Component) initStores(ctx context.Context) error {
 	for name, storeCfg := range c.config.Stores {
 		store, err := c.createStore(name, storeCfg)
 		if err != nil {
-		c.log.Warn("failed to create store, skipping",
-			zap.String("name", name),
-			zap.Error(err),
-		)
+			c.log.Warn("failed to create store, skipping",
+				zap.String("name", name),
+				zap.Error(err),
+			)
 			continue
 		}
 		c.orchestrator.RegisterStore(name, store)
@@ -135,8 +152,11 @@ func (c *Component) createStore(name string, cfg StoreConfig) (Store, error) {
 		return NewMemoryStore(name, maxSize), nil
 
 	case "redis":
-		client, ok := c.redisClients[cfg.Instance]
-		if !ok {
+		if c.redisManager == nil {
+			return nil, ErrStoreNotFound.WithMsg("Redis Manager 未初始化")
+		}
+		client := c.redisManager.Client(cfg.Instance)
+		if client == nil {
 			return nil, ErrStoreNotFound.WithMsgf("Redis 实例未找到: %s", cfg.Instance)
 		}
 		return NewRedisStore(name, client, cfg.KeyPrefix), nil
@@ -174,12 +194,12 @@ func (c *Component) SetRegistry(r *registry.Registry) {
 	c.registry = r
 }
 
-// SetRedisClient 设置 Redis 客户端
-func (c *Component) SetRedisClient(name string, client *redis.Client) {
-	c.redisClients[name] = client
+// SetRedisManager 设置 Redis 管理器（可选，用于测试或手动注入）
+func (c *Component) SetRedisManager(manager *frameworkRedis.Manager) {
+	c.redisManager = manager
 }
 
-// SetEventDispatcher 设置事件分发器
+// SetEventDispatcher 设置事件分发器（可选，用于测试或手动注入）
 func (c *Component) SetEventDispatcher(dispatcher event.Dispatcher) {
 	c.dispatcher = dispatcher
 }
