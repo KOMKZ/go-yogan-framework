@@ -6,3 +6,8 @@ import "errors"
 // 监听器返回此错误时，后续监听器不再执行，但 Dispatch 不返回错误
 var ErrStopPropagation = errors.New("stop propagation")
 
+// ErrKafkaNotAvailable Kafka 发布者未配置
+var ErrKafkaNotAvailable = errors.New("kafka publisher not available")
+
+// ErrKafkaTopicRequired Kafka topic 未指定
+var ErrKafkaTopicRequired = errors.New("kafka topic is required")

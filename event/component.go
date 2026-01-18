@@ -101,3 +101,11 @@ func (c *Component) IsEnabled() bool {
 	return c.config.Enabled && c.dispatcher != nil
 }
 
+
+// SetKafkaPublisher 设置 Kafka 发布者
+// 调用后，Dispatch 方法可使用 WithKafka() 选项发送事件到 Kafka
+func (c *Component) SetKafkaPublisher(publisher KafkaPublisher) {
+	if c.dispatcher != nil {
+		c.dispatcher.kafkaPublisher = publisher
+	}
+}
