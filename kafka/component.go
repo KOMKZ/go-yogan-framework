@@ -48,7 +48,7 @@ func (c *Component) Init(ctx context.Context, loader component.ConfigLoader) err
 
 	// 如果没有配置 brokers，跳过
 	if len(cfg.Brokers) == 0 {
-		c.logger.DebugCtx(ctx, "Kafka brokers 未配置，跳过初始化")
+		c.logger.InfoCtx(ctx, "Kafka brokers 未配置，跳过初始化")
 		return nil
 	}
 
