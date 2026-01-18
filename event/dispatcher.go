@@ -20,15 +20,16 @@ type Dispatcher interface {
 	// Subscribe 订阅事件，返回取消订阅函数
 	Subscribe(eventName string, listener Listener, opts ...SubscribeOption) UnsubscribeFunc
 
-	// Dispatch 同步分发事件
-	// - 按优先级顺序执行监听器
-	// - 任一监听器返回错误则停止后续执行并返回该错误
-	// - 监听器返回 ErrStopPropagation 则停止后续执行但不返回错误
-	Dispatch(ctx context.Context, event Event) error
+	// Dispatch 分发事件
+	// 支持 DispatchOption 控制分发行为：
+	// - 默认：内存同步分发
+	// - WithDispatchAsync()：内存异步分发
+	// - WithKafka(topic)：发送到 Kafka
+	// - WithKafka(topic) + WithDispatchAsync()：异步发送到 Kafka
+	Dispatch(ctx context.Context, event Event, opts ...DispatchOption) error
 
-	// DispatchAsync 异步分发事件
-	// - 立即返回，不阻塞调用方
-	// - 监听器错误只记录日志
+	// DispatchAsync 异步分发事件（兼容旧 API）
+	// 等价于 Dispatch(ctx, event, WithDispatchAsync())
 	DispatchAsync(ctx context.Context, event Event)
 
 	// Use 注册全局拦截器
@@ -37,14 +38,15 @@ type Dispatcher interface {
 
 // dispatcher 事件分发器实现
 type dispatcher struct {
-	mu           sync.RWMutex
-	listeners    map[string][]listenerEntry
-	interceptors []Interceptor
-	nextID       uint64
-	pool         *ants.Pool
-	poolSize     int
-	logger       *logger.CtxZapLogger
-	closed       int32
+	mu             sync.RWMutex
+	listeners      map[string][]listenerEntry
+	interceptors   []Interceptor
+	nextID         uint64
+	pool           *ants.Pool
+	poolSize       int
+	logger         *logger.CtxZapLogger
+	closed         int32
+	kafkaPublisher KafkaPublisher // Kafka 发布者（可选）
 }
 
 // NewDispatcher 创建事件分发器
@@ -120,12 +122,34 @@ func (d *dispatcher) Use(interceptor Interceptor) {
 	d.mu.Unlock()
 }
 
-// Dispatch 同步分发事件
-func (d *dispatcher) Dispatch(ctx context.Context, event Event) error {
+// Dispatch 分发事件
+func (d *dispatcher) Dispatch(ctx context.Context, event Event, opts ...DispatchOption) error {
 	if event == nil {
 		return nil
 	}
 
+	// 解析选项
+	options := &dispatchOptions{}
+	for _, opt := range opts {
+		opt(options)
+	}
+	options.applyDefaults()
+
+	// 根据驱动器选择分发方式
+	switch options.driver {
+	case DriverKafka:
+		return d.dispatchToKafka(ctx, event, options)
+	default:
+		if options.async {
+			d.dispatchAsyncMemory(ctx, event)
+			return nil
+		}
+		return d.dispatchMemory(ctx, event)
+	}
+}
+
+// dispatchMemory 内存同步分发
+func (d *dispatcher) dispatchMemory(ctx context.Context, event Event) error {
 	// 获取拦截器和监听器的副本
 	d.mu.RLock()
 	interceptors := make([]Interceptor, len(d.interceptors))
@@ -150,9 +174,9 @@ func (d *dispatcher) Dispatch(ctx context.Context, event Event) error {
 	return err
 }
 
-// DispatchAsync 异步分发事件
-func (d *dispatcher) DispatchAsync(ctx context.Context, event Event) {
-	if event == nil || atomic.LoadInt32(&d.closed) == 1 {
+// dispatchAsyncMemory 内存异步分发
+func (d *dispatcher) dispatchAsyncMemory(ctx context.Context, event Event) {
+	if atomic.LoadInt32(&d.closed) == 1 {
 		return
 	}
 
@@ -165,7 +189,7 @@ func (d *dispatcher) DispatchAsync(ctx context.Context, event Event) {
 	eventName := event.Name()
 
 	err := d.pool.Submit(func() {
-		if err := d.Dispatch(asyncCtx, event); err != nil {
+		if err := d.dispatchMemory(asyncCtx, event); err != nil {
 			d.logger.ErrorCtx(asyncCtx, "异步事件处理失败",
 				zap.String("event", eventName),
 				zap.Error(err))
@@ -177,6 +201,59 @@ func (d *dispatcher) DispatchAsync(ctx context.Context, event Event) {
 			zap.String("event", eventName),
 			zap.Error(err))
 	}
+}
+
+// dispatchToKafka 发送到 Kafka
+func (d *dispatcher) dispatchToKafka(ctx context.Context, event Event, opts *dispatchOptions) error {
+	if d.kafkaPublisher == nil {
+		return ErrKafkaNotAvailable
+	}
+
+	if opts.topic == "" {
+		return ErrKafkaTopicRequired
+	}
+
+	// 获取 traceID
+	traceID := ""
+	if v := ctx.Value("trace_id"); v != nil {
+		if s, ok := v.(string); ok {
+			traceID = s
+		}
+	}
+
+	// 序列化事件
+	payload, err := SerializeEvent(event, traceID)
+	if err != nil {
+		return err
+	}
+
+	// 确定消息 Key
+	key := opts.key
+	if key == "" {
+		key = event.Name()
+	}
+
+	// 异步发送
+	if opts.async {
+		go func() {
+			if err := d.kafkaPublisher.PublishJSON(ctx, opts.topic, key, payload); err != nil {
+				d.logger.ErrorCtx(ctx, "Kafka 异步发送失败",
+					zap.String("event", event.Name()),
+					zap.String("topic", opts.topic),
+					zap.Error(err))
+			}
+		}()
+		return nil
+	}
+
+	// 同步发送
+	return d.kafkaPublisher.PublishJSON(ctx, opts.topic, key, payload)
+}
+
+// DispatchAsync 异步分发事件（兼容旧 API）
+// 等价于 Dispatch(ctx, event, WithDispatchAsync())
+func (d *dispatcher) DispatchAsync(ctx context.Context, event Event) {
+	_ = d.Dispatch(ctx, event, WithDispatchAsync())
 }
 
 // buildHandlerChain 构建执行链

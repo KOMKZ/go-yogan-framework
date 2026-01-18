@@ -47,3 +47,10 @@ func WithPoolSize(size int) DispatcherOption {
 	}
 }
 
+// WithKafkaPublisher 设置 Kafka 发布者
+// 设置后可使用 WithKafka() 选项发送事件到 Kafka
+func WithKafkaPublisher(publisher KafkaPublisher) DispatcherOption {
+	return func(d *dispatcher) {
+		d.kafkaPublisher = publisher
+	}
+}
