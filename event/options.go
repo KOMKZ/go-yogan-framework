@@ -54,3 +54,12 @@ func WithKafkaPublisher(publisher KafkaPublisher) DispatcherOption {
 		d.kafkaPublisher = publisher
 	}
 }
+
+// WithRouter 设置事件路由器
+// 路由器根据配置决定事件发送到 Kafka 还是内存
+// 优先级：代码选项 > 配置路由 > 默认(内存)
+func WithRouter(router *Router) DispatcherOption {
+	return func(d *dispatcher) {
+		d.router = router
+	}
+}

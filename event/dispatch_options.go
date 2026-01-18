@@ -2,10 +2,11 @@ package event
 
 // dispatchOptions 分发选项
 type dispatchOptions struct {
-	driver string // "memory" | "kafka"
-	topic  string // Kafka topic（仅 Kafka 模式）
-	key    string // Kafka 消息键
-	async  bool   // 是否异步分发
+	driver         string // "memory" | "kafka"
+	driverExplicit bool   // 驱动器是否由代码明确指定（优先级最高）
+	topic          string // Kafka topic（仅 Kafka 模式）
+	key            string // Kafka 消息键
+	async          bool   // 是否异步分发
 }
 
 // DispatchOption 分发选项函数
@@ -26,10 +27,21 @@ const (
 
 // WithKafka 使用 Kafka 驱动器发送事件
 // topic: Kafka topic 名称
+// 注意：代码指定的选项优先级最高，会覆盖配置路由
 func WithKafka(topic string) DispatchOption {
 	return func(o *dispatchOptions) {
 		o.driver = DriverKafka
+		o.driverExplicit = true
 		o.topic = topic
+	}
+}
+
+// WithMemory 强制使用内存驱动器
+// 注意：代码指定的选项优先级最高，会覆盖配置路由
+func WithMemory() DispatchOption {
+	return func(o *dispatchOptions) {
+		o.driver = DriverMemory
+		o.driverExplicit = true
 	}
 }
 

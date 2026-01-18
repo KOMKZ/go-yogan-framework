@@ -198,8 +198,7 @@ func (m *Manager) Connect(ctx context.Context) error {
 		m.logger.Debug("producer created")
 	}
 
-	m.logger.Info("kafka manager connected",
-		zap.Strings("brokers", m.config.Brokers))
+	m.logger.Info("kafka manager connected")
 
 	return nil
 }

@@ -47,6 +47,7 @@ type dispatcher struct {
 	logger         *logger.CtxZapLogger
 	closed         int32
 	kafkaPublisher KafkaPublisher // Kafka 发布者（可选）
+	router         *Router        // 事件路由器（可选）
 }
 
 // NewDispatcher 创建事件分发器
@@ -123,6 +124,7 @@ func (d *dispatcher) Use(interceptor Interceptor) {
 }
 
 // Dispatch 分发事件
+// 优先级：代码选项 > 配置路由 > 默认(内存)
 func (d *dispatcher) Dispatch(ctx context.Context, event Event, opts ...DispatchOption) error {
 	if event == nil {
 		return nil
@@ -133,6 +135,22 @@ func (d *dispatcher) Dispatch(ctx context.Context, event Event, opts ...Dispatch
 	for _, opt := range opts {
 		opt(options)
 	}
+
+	// 如果代码没有明确指定驱动器，尝试从路由配置获取
+	if !options.driverExplicit && d.router != nil {
+		if route := d.router.Match(event.Name()); route != nil {
+			d.logger.DebugCtx(ctx, "🎯 事件路由匹配成功",
+				zap.String("event", event.Name()),
+				zap.String("driver", route.Driver),
+				zap.String("topic", route.Topic))
+			options.driver = route.Driver
+			if route.Driver == DriverKafka && options.topic == "" {
+				options.topic = route.Topic
+			}
+		}
+	}
+
+	// 应用默认值
 	options.applyDefaults()
 
 	// 根据驱动器选择分发方式
@@ -348,4 +366,3 @@ func (d *dispatcher) ListenerCount(eventName string) int {
 	defer d.mu.RUnlock()
 	return len(d.listeners[eventName])
 }
-

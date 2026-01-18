@@ -11,8 +11,9 @@ import (
 
 // Config 事件组件配置
 type Config struct {
-	Enabled  bool `mapstructure:"enabled"`
-	PoolSize int  `mapstructure:"pool_size"`
+	Enabled  bool                   `mapstructure:"enabled"`
+	PoolSize int                    `mapstructure:"pool_size"`
+	Routes   map[string]RouteConfig `mapstructure:"routes"` // 事件路由配置
 }
 
 // DefaultConfig 默认配置
@@ -20,12 +21,14 @@ func DefaultConfig() Config {
 	return Config{
 		Enabled:  true,
 		PoolSize: 100,
+		Routes:   make(map[string]RouteConfig),
 	}
 }
 
 // Component 事件组件
 type Component struct {
 	dispatcher *dispatcher
+	router     *Router
 	registry   *registry.Registry
 	logger     *logger.CtxZapLogger
 	config     Config
@@ -70,10 +73,21 @@ func (c *Component) Init(ctx context.Context, loader component.ConfigLoader) err
 		return nil
 	}
 
-	// 创建分发器
-	c.dispatcher = NewDispatcher(WithPoolSize(c.config.PoolSize))
+	// 创建路由器
+	c.router = NewRouter()
+	if len(c.config.Routes) > 0 {
+		c.router.LoadRoutes(c.config.Routes)
+		c.logger.InfoCtx(ctx, fmt.Sprintf("📍 加载事件路由 (routes=%d)", len(c.config.Routes)))
+	}
 
-	c.logger.InfoCtx(ctx, fmt.Sprintf("✅ 事件组件初始化完成 (pool_size=%d)", c.config.PoolSize))
+	// 创建分发器
+	c.dispatcher = NewDispatcher(
+		WithPoolSize(c.config.PoolSize),
+		WithRouter(c.router),
+	)
+
+	c.logger.InfoCtx(ctx, fmt.Sprintf("✅ 事件组件初始化完成 (pool_size=%d, routes=%d)",
+		c.config.PoolSize, len(c.config.Routes)))
 	return nil
 }
 
@@ -101,11 +115,20 @@ func (c *Component) IsEnabled() bool {
 	return c.config.Enabled && c.dispatcher != nil
 }
 
-
 // SetKafkaPublisher 设置 Kafka 发布者
 // 调用后，Dispatch 方法可使用 WithKafka() 选项发送事件到 Kafka
 func (c *Component) SetKafkaPublisher(publisher KafkaPublisher) {
 	if c.dispatcher != nil {
 		c.dispatcher.kafkaPublisher = publisher
 	}
+}
+
+// GetRouter 获取事件路由器
+func (c *Component) GetRouter() *Router {
+	return c.router
+}
+
+// GetConfig 获取配置（用于测试）
+func (c *Component) GetConfig() Config {
+	return c.config
 }
