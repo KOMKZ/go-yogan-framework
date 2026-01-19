@@ -6,7 +6,6 @@ import (
 
 	"github.com/KOMKZ/go-yogan-framework/component"
 	"github.com/KOMKZ/go-yogan-framework/logger"
-	"github.com/KOMKZ/go-yogan-framework/registry"
 	"go.uber.org/zap"
 )
 
@@ -14,10 +13,10 @@ const ComponentName = "health"
 
 // Component 健康检查组件
 type Component struct {
-	aggregator *Aggregator
-	config     Config
-	logger     *logger.CtxZapLogger
-	registry   *registry.Registry
+	aggregator     *Aggregator
+	config         Config
+	logger         *logger.CtxZapLogger
+	healthCheckers []component.HealthChecker // 外部注册的健康检查器
 }
 
 // Config 健康检查配置
@@ -88,9 +87,10 @@ func (c *Component) Start(ctx context.Context) error {
 		return nil
 	}
 
-	// 从 Registry 中发现所有实现了 Checker 接口的组件
-	if c.registry != nil {
-		c.discoverAndRegisterCheckers(ctx)
+	// 注册外部注入的健康检查器
+	for _, checker := range c.healthCheckers {
+		c.aggregator.Register(checker)
+		c.logger.DebugCtx(ctx, "Registered health checker", zap.String("name", checker.Name()))
 	}
 
 	c.logger.InfoCtx(ctx, "✅ Health check component started")
@@ -107,9 +107,12 @@ func (c *Component) Stop(ctx context.Context) error {
 	return nil
 }
 
-// SetRegistry 设置 Registry
-func (c *Component) SetRegistry(r *registry.Registry) {
-	c.registry = r
+// RegisterHealthChecker 注册健康检查器
+// 应用层可以调用此方法注册需要检查的组件
+func (c *Component) RegisterHealthChecker(checker component.HealthChecker) {
+	if checker != nil {
+		c.healthCheckers = append(c.healthCheckers, checker)
+	}
 }
 
 // GetAggregator 获取聚合器
@@ -120,32 +123,6 @@ func (c *Component) GetAggregator() *Aggregator {
 // IsEnabled 是否启用
 func (c *Component) IsEnabled() bool {
 	return c.config.Enabled
-}
-
-// discoverAndRegisterCheckers 自动发现并注册健康检查器
-func (c *Component) discoverAndRegisterCheckers(ctx context.Context) {
-	if c.registry == nil {
-		return
-	}
-
-	// 尝试从各个组件获取健康检查器
-	componentsToCheck := []string{"database", "redis", "grpc"}
-
-	for _, compName := range componentsToCheck {
-		comp, ok := c.registry.Get(compName)
-		if !ok {
-			continue
-		}
-
-		// 类型断言为 HealthCheckProvider
-		if provider, ok := comp.(component.HealthCheckProvider); ok {
-			checker := provider.GetHealthChecker()
-			if checker != nil {
-				c.aggregator.Register(checker)
-				c.logger.DebugCtx(ctx, "Registered health checker", zap.String("name", checker.Name()))
-			}
-		}
-	}
 }
 
 // Check 执行健康检查（便捷方法）
