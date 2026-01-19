@@ -11,9 +11,15 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/KOMKZ/go-yogan-framework/auth"
+	"github.com/KOMKZ/go-yogan-framework/cache"
 	"github.com/KOMKZ/go-yogan-framework/component"
 	"github.com/KOMKZ/go-yogan-framework/config"
+	"github.com/KOMKZ/go-yogan-framework/database"
+	"github.com/KOMKZ/go-yogan-framework/event"
+	"github.com/KOMKZ/go-yogan-framework/jwt"
 	"github.com/KOMKZ/go-yogan-framework/logger"
+	"github.com/KOMKZ/go-yogan-framework/redis"
 	"github.com/KOMKZ/go-yogan-framework/registry"
 	"github.com/samber/do/v2"
 	"go.uber.org/zap"
@@ -216,7 +222,10 @@ func (b *BaseApplication) Setup() error {
 		return fmt.Errorf("组件启动失败: %w", err)
 	}
 
-	// 4. 触发 OnSetup 回调（应用自定义准备）
+	// 4. 自动注册核心组件到 samber/do（组件启动后才能获取 Manager 等）
+	b.registerCoreComponentsToDo()
+
+	// 5. 触发 OnSetup 回调（应用自定义准备）
 	if b.onSetup != nil {
 		if err := b.onSetup(b); err != nil {
 			return fmt.Errorf("onSetup failed: %w", err)
@@ -419,4 +428,49 @@ func (b *BaseApplication) setState(state AppState) {
 			zap.String("from", oldState.String()),
 			zap.String("to", state.String()))
 	}
+}
+
+// registerCoreComponentsToDo 自动注册核心组件到 samber/do
+// 在组件启动后调用，确保 Manager 等已初始化
+func (b *BaseApplication) registerCoreComponentsToDo() {
+	// Database (gorm.DB) - 默认使用 master 连接
+	if dbComp, ok := registry.GetTyped[*database.Component](b.registry, component.ComponentDatabase); ok {
+		if mgr := dbComp.GetManager(); mgr != nil {
+			if db := mgr.DB("master"); db != nil {
+				do.ProvideValue(b.injector, db)
+			}
+		}
+	}
+
+	// Redis Client - 默认使用 main 实例
+	if redisComp, ok := registry.GetTyped[*redis.Component](b.registry, component.ComponentRedis); ok {
+		if mgr := redisComp.GetManager(); mgr != nil {
+			if client := mgr.Client("main"); client != nil {
+				do.ProvideValue(b.injector, client)
+			}
+		}
+	}
+
+	// JWT TokenManager
+	if jwtComp, ok := registry.GetTyped[*jwt.Component](b.registry, component.ComponentJWT); ok {
+		do.ProvideValue[jwt.TokenManager](b.injector, jwtComp.GetTokenManager())
+		do.ProvideValue(b.injector, jwtComp.GetConfig())
+	}
+
+	// Auth Service
+	if authComp, ok := registry.GetTyped[*auth.Component](b.registry, component.ComponentAuth); ok {
+		do.ProvideValue(b.injector, authComp.GetAuthService())
+	}
+
+	// Event Dispatcher
+	if eventComp, ok := registry.GetTyped[*event.Component](b.registry, component.ComponentEvent); ok {
+		do.ProvideValue[event.Dispatcher](b.injector, eventComp.GetDispatcher())
+	}
+
+	// Cache Component
+	if cacheComp, ok := registry.GetTyped[*cache.Component](b.registry, component.ComponentCache); ok {
+		do.ProvideValue(b.injector, cacheComp)
+	}
+
+	b.logger.DebugCtx(b.ctx, "✅ 核心组件已注册到 samber/do")
 }
