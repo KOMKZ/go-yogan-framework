@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/KOMKZ/go-yogan-framework/limiter"
+	"github.com/KOMKZ/go-yogan-framework/swagger"
 	"github.com/KOMKZ/go-yogan-framework/telemetry"
 	"github.com/samber/do/v2"
 	"go.uber.org/zap"
@@ -141,6 +142,11 @@ func (a *Application) startHTTPServer() error {
 
 	logger := a.MustGetLogger()
 	logger.DebugCtx(a.ctx, "✅ Routes registered")
+
+	// 🎯 自动挂载 Swagger 路由（如果已启用）
+	if err := swagger.Setup(a.GetInjector(), a.httpServer.GetEngine()); err != nil {
+		logger.WarnCtx(a.ctx, "Swagger setup failed", zap.Error(err))
+	}
 
 	// 启动 HTTP Server（非阻塞）
 	if err := a.httpServer.Start(); err != nil {

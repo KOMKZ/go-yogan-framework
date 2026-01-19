@@ -4,6 +4,7 @@ package di
 import (
 	"github.com/KOMKZ/go-yogan-framework/database"
 	"github.com/KOMKZ/go-yogan-framework/redis"
+	"github.com/KOMKZ/go-yogan-framework/swagger"
 	goredis "github.com/redis/go-redis/v9"
 	"github.com/samber/do/v2"
 	"gorm.io/gorm"
@@ -44,6 +45,11 @@ func RegisterCoreProviders(injector *do.RootScope, opts ConfigOptions) {
 	do.Provide(injector, ProvideCacheOrchestrator)
 	do.Provide(injector, ProvideLimiterManager)
 	do.Provide(injector, ProvideHealthAggregator)
+
+	// ═══════════════════════════════════════════════════════════
+	// Layer 4: 文档和辅助组件（懒加载）
+	// ═══════════════════════════════════════════════════════════
+	do.Provide(injector, swagger.ProvideManager)
 }
 
 // ProvideDefaultDB 提供默认数据库连接（master）
