@@ -115,10 +115,10 @@ func (a *Application) startHTTPServer() error {
 		return nil
 	}
 
-	// 🎯 通过 DI 获取 Telemetry 组件（可选）
-	var telemetryComp *telemetry.Component
-	if comp, err := do.Invoke[*telemetry.Component](a.GetInjector()); err == nil && comp != nil && comp.IsEnabled() {
-		telemetryComp = comp
+	// 🎯 通过 DI 获取 Telemetry Manager（可选）
+	var telemetryMgr *telemetry.Manager
+	if mgr, err := do.Invoke[*telemetry.Manager](a.GetInjector()); err == nil && mgr != nil && mgr.IsEnabled() {
+		telemetryMgr = mgr
 	}
 
 	// 🎯 通过 DI 获取 Limiter Manager（可选）
@@ -133,7 +133,7 @@ func (a *Application) startHTTPServer() error {
 		a.appConfig.Middleware,
 		a.appConfig.Httpx,
 		limiterMgr,
-		telemetryComp,
+		telemetryMgr,
 	)
 
 	// 业务应用注册路由（传递 Application 依赖容器）

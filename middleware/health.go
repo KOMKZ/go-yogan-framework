@@ -10,13 +10,13 @@ import (
 // HealthCheckHandler 健康检查 HTTP Handler
 // 提供统一的健康检查端点
 type HealthCheckHandler struct {
-	healthComponent *health.Component
+	aggregator *health.Aggregator
 }
 
 // NewHealthCheckHandler 创建健康检查 Handler
-func NewHealthCheckHandler(healthComponent *health.Component) *HealthCheckHandler {
+func NewHealthCheckHandler(aggregator *health.Aggregator) *HealthCheckHandler {
 	return &HealthCheckHandler{
-		healthComponent: healthComponent,
+		aggregator: aggregator,
 	}
 }
 
@@ -27,7 +27,7 @@ func NewHealthCheckHandler(healthComponent *health.Component) *HealthCheckHandle
 func (h *HealthCheckHandler) Handle() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 执行健康检查
-		response := h.healthComponent.Check(c.Request.Context())
+		response := h.aggregator.Check(c.Request.Context())
 
 		// 根据整体状态返回 HTTP 状态码
 		statusCode := http.StatusOK
@@ -59,7 +59,7 @@ func (h *HealthCheckHandler) HandleReadiness() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Readiness 探针检查应用是否准备好接收流量
 		// 包括检查所有依赖项
-		response := h.healthComponent.Check(c.Request.Context())
+		response := h.aggregator.Check(c.Request.Context())
 
 		// 只有完全健康才返回 200
 		statusCode := http.StatusOK
@@ -75,12 +75,12 @@ func (h *HealthCheckHandler) HandleReadiness() gin.HandlerFunc {
 
 // RegisterHealthRoutes 注册健康检查路由
 // 便捷方法，自动注册所有健康检查端点
-func RegisterHealthRoutes(router gin.IRouter, healthComponent *health.Component) {
-	if healthComponent == nil || !healthComponent.IsEnabled() {
+func RegisterHealthRoutes(router gin.IRouter, aggregator *health.Aggregator) {
+	if aggregator == nil {
 		return
 	}
 
-	handler := NewHealthCheckHandler(healthComponent)
+	handler := NewHealthCheckHandler(aggregator)
 
 	// 注册路由
 	router.GET("/health", handler.Handle())

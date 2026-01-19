@@ -8,23 +8,23 @@ import (
 )
 
 // createTracerProvider 创建 TracerProvider
-func (c *Component) createTracerProvider(ctx context.Context) (
+func (m *Manager) createTracerProvider(ctx context.Context) (
 	*trace.TracerProvider, func(context.Context) error, error) {
 
 	// 1. 创建 Resource（服务信息）
-	res, err := c.createResource(ctx)
+	res, err := m.createResource(ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("create resource failed: %w", err)
 	}
 
 	// 2. 创建 Exporter
-	exporter, err := c.createExporter(ctx)
+	exporter, err := m.createExporter(ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("create exporter failed: %w", err)
 	}
 
 	// 3. 创建 Sampler
-	sampler := c.createSampler()
+	sampler := m.createSampler()
 
 	// 4. 配置 TracerProvider 选项
 	opts := []trace.TracerProviderOption{
@@ -33,13 +33,13 @@ func (c *Component) createTracerProvider(ctx context.Context) (
 	}
 
 	// 5. 配置 SpanProcessor（批处理或同步）
-	if c.config.Batch.Enabled {
+	if m.config.Batch.Enabled {
 		// 批处理模式（推荐用于生产）
 		batchOpts := []trace.BatchSpanProcessorOption{
-			trace.WithMaxQueueSize(c.config.Batch.MaxQueueSize),
-			trace.WithMaxExportBatchSize(c.config.Batch.MaxExportBatchSize),
-			trace.WithBatchTimeout(c.config.Batch.ScheduleDelay),
-			trace.WithExportTimeout(c.config.Batch.ExportTimeout),
+			trace.WithMaxQueueSize(m.config.Batch.MaxQueueSize),
+			trace.WithMaxExportBatchSize(m.config.Batch.MaxExportBatchSize),
+			trace.WithBatchTimeout(m.config.Batch.ScheduleDelay),
+			trace.WithExportTimeout(m.config.Batch.ExportTimeout),
 		}
 		opts = append(opts, trace.WithBatcher(exporter, batchOpts...))
 	} else {
@@ -48,12 +48,12 @@ func (c *Component) createTracerProvider(ctx context.Context) (
 	}
 
 	// 6. 配置 Span 限制
-	if c.config.Span.MaxAttributes > 0 {
+	if m.config.Span.MaxAttributes > 0 {
 		opts = append(opts, trace.WithSpanLimits(trace.SpanLimits{
-			AttributeCountLimit:        c.config.Span.MaxAttributes,
-			EventCountLimit:            c.config.Span.MaxEvents,
-			LinkCountLimit:             c.config.Span.MaxLinks,
-			AttributeValueLengthLimit:  c.config.Span.MaxAttributeLength,
+			AttributeCountLimit:        m.config.Span.MaxAttributes,
+			EventCountLimit:            m.config.Span.MaxEvents,
+			LinkCountLimit:             m.config.Span.MaxLinks,
+			AttributeValueLengthLimit:  m.config.Span.MaxAttributeLength,
 		}))
 	}
 
@@ -72,14 +72,14 @@ func (c *Component) createTracerProvider(ctx context.Context) (
 }
 
 // createSampler 创建 Sampler
-func (c *Component) createSampler() trace.Sampler {
-	switch c.config.Sampler.Type {
+func (m *Manager) createSampler() trace.Sampler {
+	switch m.config.Sampler.Type {
 	case "always_on":
 		return trace.AlwaysSample()
 	case "always_off":
 		return trace.NeverSample()
 	case "trace_id_ratio":
-		return trace.TraceIDRatioBased(c.config.Sampler.Ratio)
+		return trace.TraceIDRatioBased(m.config.Sampler.Ratio)
 	case "parent_based_always_on":
 		return trace.ParentBased(trace.AlwaysSample())
 	default:

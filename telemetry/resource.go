@@ -11,15 +11,15 @@ import (
 )
 
 // createResource 创建 Resource（服务信息）
-func (c *Component) createResource(ctx context.Context) (*resource.Resource, error) {
+func (m *Manager) createResource(ctx context.Context) (*resource.Resource, error) {
 	// 基础属性
 	attrs := []attribute.KeyValue{
-		semconv.ServiceName(c.config.ServiceName),
-		semconv.ServiceVersion(c.config.ServiceVersion),
+		semconv.ServiceName(m.config.ServiceName),
+		semconv.ServiceVersion(m.config.ServiceVersion),
 	}
 
 	// 添加自定义资源属性（支持嵌套结构）
-	flattenedAttrs := flattenMap(c.config.ResourceAttrs, "")
+	flattenedAttrs := flattenMap(m.config.ResourceAttrs, "")
 	for key, value := range flattenedAttrs {
 		// 支持环境变量替换
 		expandedValue := os.ExpandEnv(value)

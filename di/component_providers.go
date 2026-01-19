@@ -1,6 +1,8 @@
 package di
 
 import (
+	"context"
+
 	"github.com/KOMKZ/go-yogan-framework/cache"
 	"github.com/KOMKZ/go-yogan-framework/config"
 	"github.com/KOMKZ/go-yogan-framework/database"
@@ -311,8 +313,8 @@ func ProvideKafkaManager(i do.Injector) (*kafka.Manager, error) {
 // 依赖：Config, Logger
 // ============================================
 
-// ProvideTelemetryComponent 创建 telemetry.Component 的独立 Provider
-func ProvideTelemetryComponent(i do.Injector) (*telemetry.Component, error) {
+// ProvideTelemetryManager 创建 telemetry.Manager 的独立 Provider
+func ProvideTelemetryManager(i do.Injector) (*telemetry.Manager, error) {
 	loader, err := do.Invoke[*config.Loader](i)
 	if err != nil {
 		return nil, err
@@ -332,10 +334,17 @@ func ProvideTelemetryComponent(i do.Injector) (*telemetry.Component, error) {
 		return nil, nil // Telemetry 未启用
 	}
 
-	// 创建组件（需要手动初始化）
-	comp := telemetry.NewComponent()
-	// 注意：完整初始化需要调用 Init 和 Start，这里只返回组件实例
-	return comp, nil
+	log, _ := do.Invoke[*logger.CtxZapLogger](i)
+	if log == nil {
+		log = logger.GetLogger("telemetry")
+	}
+
+	// 创建并启动 Manager
+	mgr := telemetry.NewManager(cfg, log)
+	if err := mgr.Start(context.Background()); err != nil {
+		return nil, err
+	}
+	return mgr, nil
 }
 
 // ============================================

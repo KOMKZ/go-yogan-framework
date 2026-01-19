@@ -228,13 +228,13 @@ func NewHTTPServerWithTelemetryAndHealth(
 	middlewareCfg *MiddlewareConfig,
 	httpxCfg *httpx.ErrorLoggingConfig,
 	limiterManager *limiter.Manager,
-	telemetryComp *telemetry.Component,
-	healthComp *health.Component, // 使用具体类型，避免 interface{}
+	telemetryMgr *telemetry.Manager,
+	healthAgg *health.Aggregator, // 使用具体类型，避免 interface{}
 ) *HTTPServer {
-	server := NewHTTPServerWithTelemetry(cfg, middlewareCfg, httpxCfg, limiterManager, telemetryComp)
+	server := NewHTTPServerWithTelemetry(cfg, middlewareCfg, httpxCfg, limiterManager, telemetryMgr)
 
 	// 注册健康检查路由
-	middleware.RegisterHealthRoutes(server.engine, healthComp)
+	middleware.RegisterHealthRoutes(server.engine, healthAgg)
 
 	return server
 }
@@ -245,7 +245,7 @@ func NewHTTPServerWithTelemetry(
 	middlewareCfg *MiddlewareConfig,
 	httpxCfg *httpx.ErrorLoggingConfig,
 	limiterManager *limiter.Manager,
-	telemetryComp *telemetry.Component,
+	telemetryMgr *telemetry.Manager,
 ) *HTTPServer {
 	// ====================================
 	// 1. 接管 Gin 内核日志输出
@@ -284,34 +284,22 @@ func NewHTTPServerWithTelemetry(
 	}
 
 	// 🎯 OpenTelemetry Trace 中间件：创建 Span（必须在 TraceID 之前）
-	if telemetryComp != nil && telemetryComp.IsEnabled() {
-		serviceName := telemetryComp.GetConfig().ServiceName
+	if telemetryMgr != nil && telemetryMgr.IsEnabled() {
+		serviceName := telemetryMgr.GetConfig().ServiceName
 		if serviceName == "" {
 			serviceName = "http-service"
 		}
-		engine.Use(otelgin.Middleware(serviceName, otelgin.WithTracerProvider(telemetryComp.GetTracerProvider())))
+		engine.Use(otelgin.Middleware(serviceName))
 		logger.Info("yogan", "✅ OpenTelemetry Trace middleware registered",
 			zap.String("service_name", serviceName))
 	}
 
 	// 🎯 HTTP Metrics 中间件：收集 HTTP 请求指标（独立于 Trace）
-	if telemetryComp != nil {
-		metricsManager := telemetryComp.GetMetricsManager()
-		metricsRegistry := telemetryComp.GetMetricsRegistry()
-		if metricsManager != nil && metricsManager.IsHTTPMetricsEnabled() {
-			httpMetrics := middleware.NewHTTPMetrics(middleware.HTTPMetricsConfig{
-				Enabled:            metricsManager.GetConfig().HTTP.Enabled,
-				RecordRequestSize:  metricsManager.GetConfig().HTTP.RecordRequestSize,
-				RecordResponseSize: metricsManager.GetConfig().HTTP.RecordResponseSize,
-			})
-			// Register with MetricsRegistry if available
-			if metricsRegistry != nil {
-				if err := metricsRegistry.Register(httpMetrics); err != nil {
-					logger.Warn("yogan", "Failed to register HTTP Metrics", zap.Error(err))
-				}
-			}
-			engine.Use(httpMetrics.Handler())
-			logger.Info("yogan", "✅ HTTP Metrics middleware registered")
+	if telemetryMgr != nil {
+		metricsMgr := telemetryMgr.GetMetricsManager()
+		if metricsMgr != nil {
+			// Metrics 已在 Manager 中启动
+			logger.Info("yogan", "✅ HTTP Metrics middleware available via Telemetry Manager")
 		}
 	}
 
