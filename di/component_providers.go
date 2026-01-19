@@ -2,8 +2,11 @@ package di
 
 import (
 	"github.com/KOMKZ/go-yogan-framework/config"
+	"github.com/KOMKZ/go-yogan-framework/database"
 	"github.com/KOMKZ/go-yogan-framework/logger"
+	"github.com/KOMKZ/go-yogan-framework/redis"
 	"github.com/samber/do/v2"
+	gormlogger "gorm.io/gorm/logger"
 )
 
 // ============================================
@@ -75,3 +78,80 @@ func ProvideCtxLogger(moduleName string) func(do.Injector) (*logger.CtxZapLogger
 		return mgr.GetLogger(moduleName), nil
 	}
 }
+
+// ============================================
+// Database 组件 Provider
+// 依赖：Config, Logger
+// ============================================
+
+// ProvideDatabaseManager 创建 database.Manager 的 Provider
+// 依赖：config.Loader（读取数据库配置）
+func ProvideDatabaseManager(i do.Injector) (*database.Manager, error) {
+	loader, err := do.Invoke[*config.Loader](i)
+	if err != nil {
+		return nil, err
+	}
+
+	log, _ := do.Invoke[*logger.CtxZapLogger](i)
+	if log == nil {
+		log = logger.GetLogger("yogan")
+	}
+
+	// 读取数据库配置
+	var dbConfigs map[string]database.Config
+	if err := loader.GetViper().UnmarshalKey("database.connections", &dbConfigs); err != nil {
+		return nil, err
+	}
+
+	if len(dbConfigs) == 0 {
+		return nil, nil // 未配置数据库
+	}
+
+	// 创建 GORM Logger 工厂
+	gormLoggerFactory := func(dbCfg database.Config) gormlogger.Interface {
+		if dbCfg.EnableLog {
+			loggerCfg := logger.DefaultGormLoggerConfig()
+			loggerCfg.SlowThreshold = dbCfg.SlowThreshold
+			loggerCfg.LogLevel = gormlogger.Info
+			loggerCfg.EnableAudit = dbCfg.EnableAudit
+			return logger.NewGormLogger(loggerCfg)
+		}
+		return gormlogger.Default.LogMode(gormlogger.Silent)
+	}
+
+	return database.NewManager(dbConfigs, gormLoggerFactory, log)
+}
+
+// ============================================
+// Redis 组件 Provider
+// 依赖：Config, Logger
+// ============================================
+
+// ProvideRedisManager 创建 redis.Manager 的 Provider
+// 依赖：config.Loader（读取 Redis 配置）
+func ProvideRedisManager(i do.Injector) (*redis.Manager, error) {
+	loader, err := do.Invoke[*config.Loader](i)
+	if err != nil {
+		return nil, err
+	}
+
+	log, _ := do.Invoke[*logger.CtxZapLogger](i)
+	if log == nil {
+		log = logger.GetLogger("yogan")
+	}
+
+	// 读取 Redis 配置
+	var redisConfigs map[string]redis.Config
+	if err := loader.GetViper().UnmarshalKey("redis.instances", &redisConfigs); err != nil {
+		return nil, err
+	}
+
+	if len(redisConfigs) == 0 {
+		return nil, nil // 未配置 Redis
+	}
+
+	return redis.NewManager(redisConfigs, log.GetZapLogger())
+}
+
+// 注意：JWT/Event/Cache 等高层组件的 Provider 在 providers.go 中定义
+// 它们目前从 Registry 获取，后续版本将直接创建

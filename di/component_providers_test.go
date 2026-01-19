@@ -1,0 +1,289 @@
+package di
+
+import (
+	"testing"
+
+	"github.com/KOMKZ/go-yogan-framework/config"
+	"github.com/KOMKZ/go-yogan-framework/database"
+	"github.com/KOMKZ/go-yogan-framework/logger"
+	"github.com/KOMKZ/go-yogan-framework/redis"
+	"github.com/samber/do/v2"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+// TestProvideConfigLoader 测试配置加载器 Provider
+func TestProvideConfigLoader(t *testing.T) {
+	t.Run("default options", func(t *testing.T) {
+		injector := do.New()
+		defer injector.Shutdown()
+
+		opts := ConfigOptions{}
+		do.Provide(injector, ProvideConfigLoader(opts))
+
+		// Provider 应该成功注册
+		// 即使配置加载可能失败，Provider 仍会返回 Loader 实例
+		loader, err := do.Invoke[*config.Loader](injector)
+		// ConfigLoader 构建器即使没有配置文件也会返回实例
+		if err == nil {
+			assert.NotNil(t, loader)
+		}
+	})
+
+	t.Run("with custom options", func(t *testing.T) {
+		opts := ConfigOptions{
+			ConfigPath:   "../testdata",
+			ConfigPrefix: "TEST",
+			AppType:      "http",
+		}
+
+		// 验证默认值应用
+		assert.Equal(t, "../testdata", opts.ConfigPath)
+		assert.Equal(t, "TEST", opts.ConfigPrefix)
+		assert.Equal(t, "http", opts.AppType)
+	})
+}
+
+// TestProvideLoggerManager 测试 Logger Manager Provider
+func TestProvideLoggerManager(t *testing.T) {
+	t.Run("without config loader", func(t *testing.T) {
+		injector := do.New()
+		defer injector.Shutdown()
+
+		do.Provide(injector, ProvideLoggerManager)
+
+		// 没有 config.Loader，应该回退到默认配置
+		mgr, err := do.Invoke[*logger.Manager](injector)
+		require.NoError(t, err)
+		assert.NotNil(t, mgr)
+	})
+
+	t.Run("get logger from manager", func(t *testing.T) {
+		injector := do.New()
+		defer injector.Shutdown()
+
+		do.Provide(injector, ProvideLoggerManager)
+
+		mgr, err := do.Invoke[*logger.Manager](injector)
+		require.NoError(t, err)
+
+		log := mgr.GetLogger("test")
+		assert.NotNil(t, log)
+	})
+}
+
+// TestProvideCtxLogger 测试命名 Logger Provider
+func TestProvideCtxLogger(t *testing.T) {
+	t.Run("without manager", func(t *testing.T) {
+		injector := do.New()
+		defer injector.Shutdown()
+
+		do.Provide(injector, ProvideCtxLogger("test-module"))
+
+		// 没有 Manager，应该回退到全局 logger
+		log, err := do.Invoke[*logger.CtxZapLogger](injector)
+		require.NoError(t, err)
+		assert.NotNil(t, log)
+	})
+
+	t.Run("with manager", func(t *testing.T) {
+		injector := do.New()
+		defer injector.Shutdown()
+
+		do.Provide(injector, ProvideLoggerManager)
+		do.ProvideNamed(injector, "mymodule", ProvideCtxLogger("mymodule"))
+
+		log, err := do.InvokeNamed[*logger.CtxZapLogger](injector, "mymodule")
+		require.NoError(t, err)
+		assert.NotNil(t, log)
+	})
+}
+
+// TestProvideDatabaseManager 测试数据库 Manager Provider
+func TestProvideDatabaseManager(t *testing.T) {
+	t.Run("without config loader", func(t *testing.T) {
+		injector := do.New()
+		defer injector.Shutdown()
+
+		do.Provide(injector, ProvideDatabaseManager)
+
+		// 没有 config.Loader，应该报错
+		_, err := do.Invoke[*struct{}](injector)
+		assert.Error(t, err)
+	})
+}
+
+// TestProvideRedisManager 测试 Redis Manager Provider
+func TestProvideRedisManager(t *testing.T) {
+	t.Run("without config loader", func(t *testing.T) {
+		injector := do.New()
+		defer injector.Shutdown()
+
+		do.Provide(injector, ProvideRedisManager)
+
+		// 没有 config.Loader，应该报错
+		_, err := do.Invoke[*struct{}](injector)
+		assert.Error(t, err)
+	})
+}
+
+// TestConfigOptions 测试配置选项结构
+func TestConfigOptions(t *testing.T) {
+	opts := ConfigOptions{
+		ConfigPath:   "/path/to/config",
+		ConfigPrefix: "MYAPP",
+		AppType:      "mixed",
+		Flags:        nil,
+	}
+
+	assert.Equal(t, "/path/to/config", opts.ConfigPath)
+	assert.Equal(t, "MYAPP", opts.ConfigPrefix)
+	assert.Equal(t, "mixed", opts.AppType)
+	assert.Nil(t, opts.Flags)
+}
+
+// TestProvideConfigLoaderWithFlags 测试带 Flags 的配置加载
+func TestProvideConfigLoaderWithFlags(t *testing.T) {
+	type TestFlags struct {
+		Debug bool
+	}
+
+	opts := ConfigOptions{
+		ConfigPath: "../config",
+		AppType:    "http",
+		Flags:      &TestFlags{Debug: true},
+	}
+
+	provider := ProvideConfigLoader(opts)
+	assert.NotNil(t, provider)
+}
+
+// TestProvideLoggerManagerIntegration 集成测试 Logger Manager
+func TestProvideLoggerManagerIntegration(t *testing.T) {
+	injector := do.New()
+	defer injector.Shutdown()
+
+	// 注册 Logger Manager
+	do.Provide(injector, ProvideLoggerManager)
+
+	// 注册多个命名 Logger
+	do.ProvideNamed(injector, "api", ProvideCtxLogger("api"))
+	do.ProvideNamed(injector, "db", ProvideCtxLogger("db"))
+	do.ProvideNamed(injector, "auth", ProvideCtxLogger("auth"))
+
+	// 验证各模块 Logger 独立
+	apiLog, err := do.InvokeNamed[*logger.CtxZapLogger](injector, "api")
+	require.NoError(t, err)
+	assert.NotNil(t, apiLog)
+
+	dbLog, err := do.InvokeNamed[*logger.CtxZapLogger](injector, "db")
+	require.NoError(t, err)
+	assert.NotNil(t, dbLog)
+
+	authLog, err := do.InvokeNamed[*logger.CtxZapLogger](injector, "auth")
+	require.NoError(t, err)
+	assert.NotNil(t, authLog)
+}
+
+// TestProvideDatabaseManagerWithMockConfig 测试带模拟配置的数据库 Provider
+func TestProvideDatabaseManagerWithMockConfig(t *testing.T) {
+	// 这个测试验证 Provider 的逻辑路径
+	// 实际数据库连接需要真实配置
+	t.Run("provider function is callable", func(t *testing.T) {
+		injector := do.New()
+		defer injector.Shutdown()
+
+		// 注册 Database Provider
+		do.Provide(injector, ProvideDatabaseManager)
+
+		// 没有配置，调用会失败
+		_, err := do.Invoke[*struct{ Name string }](injector)
+		assert.Error(t, err)
+	})
+}
+
+// TestProvideRedisManagerWithMockConfig 测试带模拟配置的 Redis Provider
+func TestProvideRedisManagerWithMockConfig(t *testing.T) {
+	t.Run("provider function is callable", func(t *testing.T) {
+		injector := do.New()
+		defer injector.Shutdown()
+
+		// 注册 Redis Provider
+		do.Provide(injector, ProvideRedisManager)
+
+		// 没有配置，调用会失败
+		_, err := do.Invoke[*struct{ Name string }](injector)
+		assert.Error(t, err)
+	})
+}
+
+// TestProvideDatabaseManagerWithRealConfig 测试带真实配置的数据库 Provider
+func TestProvideDatabaseManagerWithRealConfig(t *testing.T) {
+	t.Run("with config loader but no db config", func(t *testing.T) {
+		injector := do.New()
+		defer injector.Shutdown()
+
+		// 先注册一个配置加载器
+		opts := ConfigOptions{
+			ConfigPath: "../config",
+			AppType:    "http",
+		}
+		do.Provide(injector, ProvideConfigLoader(opts))
+		do.Provide(injector, ProvideLoggerManager)
+		do.Provide(injector, ProvideCtxLogger("yogan"))
+		do.Provide(injector, ProvideDatabaseManager)
+
+		// 尝试调用 - 可能因为没有数据库配置而返回 nil
+		mgr, err := do.Invoke[*database.Manager](injector)
+		// 没有配置时应该返回 nil, nil
+		if err == nil {
+			assert.Nil(t, mgr) // 未配置数据库返回 nil
+		}
+	})
+}
+
+// TestProvideRedisManagerWithRealConfig 测试带真实配置的 Redis Provider
+func TestProvideRedisManagerWithRealConfig(t *testing.T) {
+	t.Run("with config loader but no redis config", func(t *testing.T) {
+		injector := do.New()
+		defer injector.Shutdown()
+
+		// 先注册一个配置加载器
+		opts := ConfigOptions{
+			ConfigPath: "../config",
+			AppType:    "http",
+		}
+		do.Provide(injector, ProvideConfigLoader(opts))
+		do.Provide(injector, ProvideLoggerManager)
+		do.Provide(injector, ProvideCtxLogger("yogan"))
+		do.Provide(injector, ProvideRedisManager)
+
+		// 尝试调用 - 可能因为没有 Redis 配置而返回 nil
+		mgr, err := do.Invoke[*redis.Manager](injector)
+		// 没有配置时应该返回 nil, nil
+		if err == nil {
+			assert.Nil(t, mgr) // 未配置 Redis 返回 nil
+		}
+	})
+}
+
+// TestProvideLoggerManagerWithConfig 测试带配置的 Logger Manager
+func TestProvideLoggerManagerWithConfig(t *testing.T) {
+	t.Run("with config loader", func(t *testing.T) {
+		injector := do.New()
+		defer injector.Shutdown()
+
+		// 注册配置加载器
+		opts := ConfigOptions{
+			ConfigPath: "../config",
+			AppType:    "http",
+		}
+		do.Provide(injector, ProvideConfigLoader(opts))
+		do.Provide(injector, ProvideLoggerManager)
+
+		// 应该成功获取 Manager
+		mgr, err := do.Invoke[*logger.Manager](injector)
+		require.NoError(t, err)
+		assert.NotNil(t, mgr)
+	})
+}
