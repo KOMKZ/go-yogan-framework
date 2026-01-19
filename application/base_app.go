@@ -15,6 +15,7 @@ import (
 	"github.com/KOMKZ/go-yogan-framework/config"
 	"github.com/KOMKZ/go-yogan-framework/logger"
 	"github.com/KOMKZ/go-yogan-framework/registry"
+	"github.com/samber/do/v2"
 	"go.uber.org/zap"
 )
 
@@ -25,6 +26,7 @@ type BaseApplication struct {
 	// 组件注册中心（统一管理所有组件）
 	// ═══════════════════════════════════════════════════════════
 	registry *registry.Registry // 🎯 使用具体类型，支持泛型方法
+	injector *do.RootScope      // 🎯 samber/do 注入器（新）
 
 	// 配置管理（仅用于初始化时）
 	configPath   string
@@ -112,10 +114,11 @@ func NewBase(configPath, configPrefix, appType string, flags interface{}) *BaseA
 	coreLogger := loggerComp.GetLogger()
 
 	// ═══════════════════════════════════════════════════════════
-	// 2. 创建 Registry 并注入 Logger（使其从一开始就有日志能力）
+	// 2. 创建 Registry 和 Injector
 	// ═══════════════════════════════════════════════════════════
 	reg := NewRegistry()
 	reg.SetLogger(coreLogger) // ← 注入 Logger，Registry 从此有日志能力
+	injector := do.New()      // 🎯 创建 samber/do 注入器
 
 	// ═══════════════════════════════════════════════════════════
 	// 3. 注册 Config 和 Logger 组件到 Registry（已初始化）
@@ -138,6 +141,7 @@ func NewBase(configPath, configPrefix, appType string, flags interface{}) *BaseA
 
 	return &BaseApplication{
 		registry:     reg,
+		injector:     injector,               // 🎯 samber/do 注入器
 		configPath:   configPath,
 		configPrefix: configPrefix,
 		logger:       coreLogger,             // ← 直接缓存
@@ -308,6 +312,11 @@ func (b *BaseApplication) GetConfigLoader() *config.Loader {
 		panic("config loader not initialized, please call Setup() first")
 	}
 	return b.configLoader
+}
+
+// GetInjector 获取 samber/do 注入器
+func (b *BaseApplication) GetInjector() *do.RootScope {
+	return b.injector
 }
 
 // LoadAppConfig 获取通用配置（已在 NewBase 中加载并缓存）
