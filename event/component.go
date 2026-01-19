@@ -6,7 +6,6 @@ import (
 
 	"github.com/KOMKZ/go-yogan-framework/component"
 	"github.com/KOMKZ/go-yogan-framework/logger"
-	"github.com/KOMKZ/go-yogan-framework/registry"
 )
 
 // Config 事件组件配置
@@ -29,7 +28,6 @@ func DefaultConfig() Config {
 type Component struct {
 	dispatcher *dispatcher
 	router     *Router
-	registry   *registry.Registry
 	logger     *logger.CtxZapLogger
 	config     Config
 }
@@ -50,11 +48,6 @@ func (c *Component) DependsOn() []string {
 		component.ComponentConfig,
 		component.ComponentLogger,
 	}
-}
-
-// SetRegistry 设置 Registry（框架自动调用）
-func (c *Component) SetRegistry(r *registry.Registry) {
-	c.registry = r
 }
 
 // Init 初始化组件

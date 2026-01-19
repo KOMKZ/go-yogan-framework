@@ -83,12 +83,6 @@ func TestComponent_DependsOn(t *testing.T) {
 	assert.Contains(t, deps, "logger")
 }
 
-func TestComponent_SetRegistry(t *testing.T) {
-	c := NewComponent()
-	c.SetRegistry(nil) // 测试 nil 也不 panic
-	assert.Nil(t, c.registry)
-}
-
 func TestComponent_Init(t *testing.T) {
 	c := NewComponent()
 	loader := &mockConfigLoader{
