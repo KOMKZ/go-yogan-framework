@@ -6,9 +6,12 @@ import (
 	"github.com/KOMKZ/go-yogan-framework/config"
 	"github.com/KOMKZ/go-yogan-framework/database"
 	"github.com/KOMKZ/go-yogan-framework/event"
+	"github.com/KOMKZ/go-yogan-framework/health"
 	"github.com/KOMKZ/go-yogan-framework/jwt"
+	"github.com/KOMKZ/go-yogan-framework/kafka"
 	"github.com/KOMKZ/go-yogan-framework/logger"
 	"github.com/KOMKZ/go-yogan-framework/redis"
+	"github.com/KOMKZ/go-yogan-framework/telemetry"
 	"github.com/samber/do/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -450,5 +453,114 @@ func TestProvideEventDispatcherIndependent(t *testing.T) {
 		if err == nil {
 			assert.Nil(t, dispatcher)
 		}
+	})
+}
+
+// ============================================
+// Kafka Provider 测试
+// ============================================
+
+// TestProvideKafkaManager 测试 Kafka Manager Provider
+func TestProvideKafkaManager(t *testing.T) {
+	t.Run("without config loader", func(t *testing.T) {
+		injector := do.New()
+		defer injector.Shutdown()
+
+		do.Provide(injector, ProvideKafkaManager)
+
+		// 没有 config.Loader，应该报错
+		_, err := do.Invoke[*kafka.Manager](injector)
+		assert.Error(t, err)
+	})
+
+	t.Run("with config but kafka not configured", func(t *testing.T) {
+		injector := do.New()
+		defer injector.Shutdown()
+
+		opts := ConfigOptions{
+			ConfigPath: "./testdata",
+			AppType:    "http",
+		}
+		do.Provide(injector, ProvideConfigLoader(opts))
+		do.Provide(injector, ProvideLoggerManager)
+		do.Provide(injector, ProvideCtxLogger("yogan"))
+		do.Provide(injector, ProvideKafkaManager)
+
+		// Kafka 未配置，返回 nil
+		mgr, err := do.Invoke[*kafka.Manager](injector)
+		if err == nil {
+			assert.Nil(t, mgr)
+		}
+	})
+}
+
+// ============================================
+// Telemetry Provider 测试
+// ============================================
+
+// TestProvideTelemetryComponent 测试 Telemetry Component Provider
+func TestProvideTelemetryComponent(t *testing.T) {
+	t.Run("without config loader", func(t *testing.T) {
+		injector := do.New()
+		defer injector.Shutdown()
+
+		do.Provide(injector, ProvideTelemetryComponent)
+
+		// 没有 config.Loader，应该报错
+		_, err := do.Invoke[*telemetry.Component](injector)
+		assert.Error(t, err)
+	})
+
+	t.Run("with config but telemetry disabled", func(t *testing.T) {
+		injector := do.New()
+		defer injector.Shutdown()
+
+		opts := ConfigOptions{
+			ConfigPath: "./testdata",
+			AppType:    "http",
+		}
+		do.Provide(injector, ProvideConfigLoader(opts))
+		do.Provide(injector, ProvideTelemetryComponent)
+
+		// Telemetry 未启用，返回 nil
+		comp, err := do.Invoke[*telemetry.Component](injector)
+		if err == nil {
+			assert.Nil(t, comp)
+		}
+	})
+}
+
+// ============================================
+// Health Provider 测试
+// ============================================
+
+// TestProvideHealthAggregator 测试 Health Aggregator Provider
+func TestProvideHealthAggregator(t *testing.T) {
+	t.Run("without config loader", func(t *testing.T) {
+		injector := do.New()
+		defer injector.Shutdown()
+
+		do.Provide(injector, ProvideHealthAggregator)
+
+		// 没有 config.Loader，应该报错
+		_, err := do.Invoke[*health.Aggregator](injector)
+		assert.Error(t, err)
+	})
+
+	t.Run("with config - health enabled by default", func(t *testing.T) {
+		injector := do.New()
+		defer injector.Shutdown()
+
+		opts := ConfigOptions{
+			ConfigPath: "./testdata",
+			AppType:    "http",
+		}
+		do.Provide(injector, ProvideConfigLoader(opts))
+		do.Provide(injector, ProvideHealthAggregator)
+
+		// Health 默认启用
+		agg, err := do.Invoke[*health.Aggregator](injector)
+		require.NoError(t, err)
+		assert.NotNil(t, agg)
 	})
 }

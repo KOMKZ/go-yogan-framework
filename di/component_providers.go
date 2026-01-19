@@ -4,9 +4,12 @@ import (
 	"github.com/KOMKZ/go-yogan-framework/config"
 	"github.com/KOMKZ/go-yogan-framework/database"
 	"github.com/KOMKZ/go-yogan-framework/event"
+	"github.com/KOMKZ/go-yogan-framework/health"
 	"github.com/KOMKZ/go-yogan-framework/jwt"
+	"github.com/KOMKZ/go-yogan-framework/kafka"
 	"github.com/KOMKZ/go-yogan-framework/logger"
 	"github.com/KOMKZ/go-yogan-framework/redis"
+	"github.com/KOMKZ/go-yogan-framework/telemetry"
 	"github.com/samber/do/v2"
 	gormlogger "gorm.io/gorm/logger"
 )
@@ -239,4 +242,91 @@ func ProvideEventDispatcherIndependent(i do.Injector) (event.Dispatcher, error) 
 	return event.NewDispatcher(
 		event.WithPoolSize(cfg.PoolSize),
 	), nil
+}
+
+// ============================================
+// Kafka 组件 Provider
+// 依赖：Config, Logger
+// ============================================
+
+// ProvideKafkaManager 创建 kafka.Manager 的独立 Provider
+func ProvideKafkaManager(i do.Injector) (*kafka.Manager, error) {
+	loader, err := do.Invoke[*config.Loader](i)
+	if err != nil {
+		return nil, err
+	}
+
+	log, _ := do.Invoke[*logger.CtxZapLogger](i)
+	if log == nil {
+		log = logger.GetLogger("yogan")
+	}
+
+	// 读取 Kafka 配置
+	var cfg kafka.Config
+	if err := loader.GetViper().UnmarshalKey("kafka", &cfg); err != nil {
+		return nil, nil // Kafka 未配置
+	}
+
+	if len(cfg.Brokers) == 0 {
+		return nil, nil // Kafka brokers 未配置
+	}
+
+	return kafka.NewManager(cfg, log.GetZapLogger())
+}
+
+// ============================================
+// Telemetry 组件 Provider
+// 依赖：Config, Logger
+// ============================================
+
+// ProvideTelemetryComponent 创建 telemetry.Component 的独立 Provider
+func ProvideTelemetryComponent(i do.Injector) (*telemetry.Component, error) {
+	loader, err := do.Invoke[*config.Loader](i)
+	if err != nil {
+		return nil, err
+	}
+
+	// 读取 Telemetry 配置
+	var cfg telemetry.Config
+	if loader.IsSet("telemetry") {
+		if err := loader.GetViper().UnmarshalKey("telemetry", &cfg); err != nil {
+			cfg = telemetry.DefaultConfig()
+		}
+	} else {
+		cfg = telemetry.DefaultConfig()
+	}
+
+	if !cfg.Enabled {
+		return nil, nil // Telemetry 未启用
+	}
+
+	// 创建组件（需要手动初始化）
+	comp := telemetry.NewComponent()
+	// 注意：完整初始化需要调用 Init 和 Start，这里只返回组件实例
+	return comp, nil
+}
+
+// ============================================
+// Health 组件 Provider
+// 依赖：Config, Logger
+// ============================================
+
+// ProvideHealthAggregator 创建 health.Aggregator 的独立 Provider
+func ProvideHealthAggregator(i do.Injector) (*health.Aggregator, error) {
+	loader, err := do.Invoke[*config.Loader](i)
+	if err != nil {
+		return nil, err
+	}
+
+	// 读取 Health 配置
+	cfg := health.DefaultConfig()
+	if loader.IsSet("health") {
+		_ = loader.GetViper().UnmarshalKey("health", &cfg)
+	}
+
+	if !cfg.Enabled {
+		return nil, nil // Health 未启用
+	}
+
+	return health.NewAggregator(cfg.Timeout), nil
 }
