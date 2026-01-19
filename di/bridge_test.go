@@ -132,6 +132,32 @@ func TestBridge_ProvideFromRegistry_NotFound(t *testing.T) {
 	assert.Contains(t, err.Error(), "not-exist")
 }
 
+// anotherMockComponent 用于类型不匹配测试
+type anotherMockComponent struct {
+	mockComponent
+}
+
+func TestBridge_ProvideFromRegistry_TypeMismatch(t *testing.T) {
+	registry := newMockRegistry()
+	// 注册一个 mockComponent
+	comp := &mockComponent{name: "type-mismatch-test"}
+	registry.Register(comp)
+
+	injector := do.New()
+	defer injector.Shutdown()
+
+	bridge := NewBridge(registry, injector)
+
+	// 尝试以不同类型获取
+	err := ProvideFromRegistry[*anotherMockComponent](bridge, "type-mismatch-test")
+	require.NoError(t, err) // Provide 不会立即报错
+
+	// 调用时因类型不匹配而报错
+	_, err = Invoke[*anotherMockComponent](bridge)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "类型不匹配")
+}
+
 func TestBridge_ProvideValue(t *testing.T) {
 	registry := newMockRegistry()
 	injector := do.New()
@@ -285,6 +311,10 @@ func TestBridge_MustProvideFromRegistry(t *testing.T) {
 	retrieved := MustInvoke[*mockComponent](bridge)
 	assert.Equal(t, comp, retrieved)
 }
+
+// 注意：MustProvideFromRegistry 不会 panic，因为 ProvideFromRegistry 
+// 总是返回 nil（错误在 do.Provide 内部的 Provider 函数中返回）
+// 这是设计如此，错误会在 Invoke 时抛出
 
 func TestBridge_InvokeNamed(t *testing.T) {
 	registry := newMockRegistry()
