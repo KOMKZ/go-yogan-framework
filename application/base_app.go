@@ -539,5 +539,15 @@ func (b *BaseApplication) registerCoreComponentsToDo() {
 		}
 	}
 
+	// Event ← Kafka：自动配置 Kafka 发布者
+	if eventComp, ok := registry.GetTyped[*event.Component](b.registry, component.ComponentEvent); ok {
+		if kafkaComp, ok := registry.GetTyped[*kafka.Component](b.registry, component.ComponentKafka); ok {
+			if mgr := kafkaComp.GetManager(); mgr != nil {
+				eventComp.SetKafkaPublisher(mgr)
+				b.logger.DebugCtx(b.ctx, "✅ Kafka 注入到 Event 组件")
+			}
+		}
+	}
+
 	b.logger.DebugCtx(b.ctx, "✅ 核心组件已注册到 samber/do")
 }
