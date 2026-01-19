@@ -5,6 +5,7 @@ import (
 	"github.com/KOMKZ/go-yogan-framework/config"
 	"github.com/KOMKZ/go-yogan-framework/database"
 	"github.com/KOMKZ/go-yogan-framework/event"
+	"github.com/KOMKZ/go-yogan-framework/grpc"
 	"github.com/KOMKZ/go-yogan-framework/health"
 	"github.com/KOMKZ/go-yogan-framework/jwt"
 	"github.com/KOMKZ/go-yogan-framework/kafka"
@@ -402,4 +403,59 @@ func ProvideLimiterManager(i do.Injector) (*limiter.Manager, error) {
 	}
 
 	return limiter.NewManagerWithLogger(cfg, log, redisClient, nil)
+}
+
+// ============================================
+// gRPC 组件 Provider
+// 依赖：Config, Logger, Limiter(可选), Telemetry(可选)
+// ============================================
+
+// ProvideGRPCServer 创建 grpc.Server 的独立 Provider
+func ProvideGRPCServer(i do.Injector) (*grpc.Server, error) {
+	loader, err := do.Invoke[*config.Loader](i)
+	if err != nil {
+		return nil, err
+	}
+
+	// 读取 gRPC 配置
+	var cfg grpc.Config
+	if err := loader.GetViper().UnmarshalKey("grpc", &cfg); err != nil {
+		return nil, nil // gRPC 未配置
+	}
+
+	if !cfg.Server.Enabled {
+		return nil, nil // gRPC Server 未启用
+	}
+
+	log, _ := do.Invoke[*logger.CtxZapLogger](i)
+	if log == nil {
+		log = logger.GetLogger("yogan")
+	}
+
+	return grpc.NewServer(cfg.Server, log), nil
+}
+
+// ProvideGRPCClientManager 创建 grpc.ClientManager 的独立 Provider
+func ProvideGRPCClientManager(i do.Injector) (*grpc.ClientManager, error) {
+	loader, err := do.Invoke[*config.Loader](i)
+	if err != nil {
+		return nil, err
+	}
+
+	// 读取 gRPC 配置
+	var cfg grpc.Config
+	if err := loader.GetViper().UnmarshalKey("grpc", &cfg); err != nil {
+		return nil, nil // gRPC 未配置
+	}
+
+	if len(cfg.Clients) == 0 {
+		return nil, nil // gRPC Client 未配置
+	}
+
+	log, _ := do.Invoke[*logger.CtxZapLogger](i)
+	if log == nil {
+		log = logger.GetLogger("yogan")
+	}
+
+	return grpc.NewClientManager(cfg.Clients, log), nil
 }

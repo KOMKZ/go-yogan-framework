@@ -7,6 +7,7 @@ import (
 	"github.com/KOMKZ/go-yogan-framework/config"
 	"github.com/KOMKZ/go-yogan-framework/database"
 	"github.com/KOMKZ/go-yogan-framework/event"
+	"github.com/KOMKZ/go-yogan-framework/grpc"
 	"github.com/KOMKZ/go-yogan-framework/health"
 	"github.com/KOMKZ/go-yogan-framework/jwt"
 	"github.com/KOMKZ/go-yogan-framework/kafka"
@@ -637,6 +638,78 @@ func TestProvideLimiterManager(t *testing.T) {
 
 		// Limiter 未配置/未启用，返回 nil
 		mgr, err := do.Invoke[*limiter.Manager](injector)
+		if err == nil {
+			assert.Nil(t, mgr)
+		}
+	})
+}
+
+// ============================================
+// gRPC Provider 测试
+// ============================================
+
+// TestProvideGRPCServer 测试 gRPC Server Provider
+func TestProvideGRPCServer(t *testing.T) {
+	t.Run("without config loader", func(t *testing.T) {
+		injector := do.New()
+		defer injector.Shutdown()
+
+		do.Provide(injector, ProvideGRPCServer)
+
+		// 没有 config.Loader，应该报错
+		_, err := do.Invoke[*grpc.Server](injector)
+		assert.Error(t, err)
+	})
+
+	t.Run("with config but grpc server disabled", func(t *testing.T) {
+		injector := do.New()
+		defer injector.Shutdown()
+
+		opts := ConfigOptions{
+			ConfigPath: "./testdata",
+			AppType:    "http",
+		}
+		do.Provide(injector, ProvideConfigLoader(opts))
+		do.Provide(injector, ProvideLoggerManager)
+		do.Provide(injector, ProvideCtxLogger("yogan"))
+		do.Provide(injector, ProvideGRPCServer)
+
+		// gRPC Server 未配置/未启用，返回 nil
+		srv, err := do.Invoke[*grpc.Server](injector)
+		if err == nil {
+			assert.Nil(t, srv)
+		}
+	})
+}
+
+// TestProvideGRPCClientManager 测试 gRPC ClientManager Provider
+func TestProvideGRPCClientManager(t *testing.T) {
+	t.Run("without config loader", func(t *testing.T) {
+		injector := do.New()
+		defer injector.Shutdown()
+
+		do.Provide(injector, ProvideGRPCClientManager)
+
+		// 没有 config.Loader，应该报错
+		_, err := do.Invoke[*grpc.ClientManager](injector)
+		assert.Error(t, err)
+	})
+
+	t.Run("with config but no grpc clients", func(t *testing.T) {
+		injector := do.New()
+		defer injector.Shutdown()
+
+		opts := ConfigOptions{
+			ConfigPath: "./testdata",
+			AppType:    "http",
+		}
+		do.Provide(injector, ProvideConfigLoader(opts))
+		do.Provide(injector, ProvideLoggerManager)
+		do.Provide(injector, ProvideCtxLogger("yogan"))
+		do.Provide(injector, ProvideGRPCClientManager)
+
+		// gRPC Clients 未配置，返回 nil
+		mgr, err := do.Invoke[*grpc.ClientManager](injector)
 		if err == nil {
 			assert.Nil(t, mgr)
 		}
