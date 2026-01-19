@@ -112,11 +112,11 @@ func ParseFlags(appName string, defaultConfigDir string) *AppFlags {
 
 	// 调试输出最终结果
 	if os.Getenv("APP_DEBUG") == "1" {
-		fmt.Printf("[DEBUG] 最终配置目录: %s\n", finalConfigDir)
-		fmt.Printf("[DEBUG] 最终环境: %s\n", finalEnv)
-		fmt.Printf("[DEBUG] 最终端口: %d\n", finalPort)
-		fmt.Printf("[DEBUG] 最终地址: %s\n", finalAddress)
-		fmt.Println("---")
+		//fmt.Printf("[DEBUG] 最终配置目录: %s\n", finalConfigDir)
+		//fmt.Printf("[DEBUG] 最终环境: %s\n", finalEnv)
+		//fmt.Printf("[DEBUG] 最终端口: %d\n", finalPort)
+		//fmt.Printf("[DEBUG] 最终地址: %s\n", finalAddress)
+		//fmt.Println("---")
 	}
 
 	return &AppFlags{

@@ -213,22 +213,25 @@ func (b *BaseApplication) Setup() error {
 		return fmt.Errorf("组件初始化失败: %w", err)
 	}
 
-	// 2. 触发 OnAfterInit 回调（用于在组件启动前注入依赖）
+	// 2. 自动注入核心组件间的依赖（内核职责，应用层无需关心）
+	b.injectCoreComponentDependencies()
+
+	// 3. 触发 OnAfterInit 回调（用于应用层特定的依赖注入）
 	if b.onAfterInit != nil {
 		if err := b.onAfterInit(b); err != nil {
 			return fmt.Errorf("onAfterInit failed: %w", err)
 		}
 	}
 
-	// 3. 启动所有组件 - Registry 会输出启动日志
+	// 4. 启动所有组件 - Registry 会输出启动日志
 	if err := b.registry.Start(b.ctx); err != nil {
 		return fmt.Errorf("组件启动失败: %w", err)
 	}
 
-	// 4. 自动注册核心组件到 samber/do（组件启动后才能获取 Manager 等）
+	// 5. 自动注册核心组件到 samber/do（组件启动后才能获取 Manager 等）
 	b.registerCoreComponentsToDo()
 
-	// 5. 触发 OnSetup 回调（应用自定义准备）
+	// 6. 触发 OnSetup 回调（应用自定义准备）
 	if b.onSetup != nil {
 		if err := b.onSetup(b); err != nil {
 			return fmt.Errorf("onSetup failed: %w", err)
@@ -430,6 +433,44 @@ func (b *BaseApplication) setState(state AppState) {
 		b.logger.DebugCtx(b.ctx, "State changed",
 			zap.String("from", oldState.String()),
 			zap.String("to", state.String()))
+	}
+}
+
+// injectCoreComponentDependencies 自动注入核心组件间的依赖
+// 在组件 Init 后、Start 前调用
+// 内核职责：JWT/Auth/Limiter/Cache 需要 Redis，由内核自动处理
+func (b *BaseApplication) injectCoreComponentDependencies() {
+	// 获取 Redis 组件（已初始化）
+	redisComp, ok := registry.GetTyped[*redis.Component](b.registry, component.ComponentRedis)
+	if !ok {
+		// Redis 未注册，跳过依赖注入
+		return
+	}
+
+	// 注入 Redis 到 JWT 组件
+	if jwtComp, ok := registry.GetTyped[*jwt.Component](b.registry, component.ComponentJWT); ok {
+		jwtComp.SetRedisComponent(redisComp)
+		b.logger.DebugCtx(b.ctx, "✅ Redis 注入到 JWT 组件")
+	}
+
+	// 注入 Redis 到 Auth 组件
+	if authComp, ok := registry.GetTyped[*auth.Component](b.registry, component.ComponentAuth); ok {
+		authComp.SetRedisComponent(redisComp)
+		b.logger.DebugCtx(b.ctx, "✅ Redis 注入到 Auth 组件")
+	}
+
+	// 注入 Redis 到 Limiter 组件
+	if limiterComp, ok := registry.GetTyped[*limiter.Component](b.registry, component.ComponentLimiter); ok {
+		limiterComp.SetRedisComponent(redisComp)
+		b.logger.DebugCtx(b.ctx, "✅ Redis 注入到 Limiter 组件")
+	}
+
+	// 注入 Redis Manager 到 Cache 组件
+	if cacheComp, ok := registry.GetTyped[*cache.Component](b.registry, component.ComponentCache); ok {
+		if redisComp.GetManager() != nil {
+			cacheComp.SetRedisManager(redisComp.GetManager())
+			b.logger.DebugCtx(b.ctx, "✅ Redis Manager 注入到 Cache 组件")
+		}
 	}
 }
 

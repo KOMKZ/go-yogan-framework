@@ -112,8 +112,8 @@ func (c *ConfigComponent) Unmarshal(key string, v interface{}) error {
 		return c.loader.Unmarshal(v)
 	}
 	// DEBUG: 打印 viper 中该 key 的原始值
-	rawValue := c.loader.GetViper().Get(key)
-	fmt.Printf("[DEBUG] Unmarshal key=%s, rawValue=%+v, rawType=%T\n", key, rawValue, rawValue)
+	//rawValue := c.loader.GetViper().Get(key)
+	//fmt.Printf("[DEBUG] Unmarshal key=%s, rawValue=%+v, rawType=%T\n", key, rawValue, rawValue)
 	return c.loader.GetViper().UnmarshalKey(key, v)
 }
 
