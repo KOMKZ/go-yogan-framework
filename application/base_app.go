@@ -127,7 +127,13 @@ func NewBase(configPath, configPrefix, appType string, flags interface{}) *BaseA
 	reg.MustRegister(loggerComp)
 
 	// ═══════════════════════════════════════════════════════════
-	// 4. 加载通用 AppConfig（configLoader 已可用）
+	// 4. 注册 Config 和 Logger 到 samber/do（统一依赖注入）
+	// ═══════════════════════════════════════════════════════════
+	do.ProvideValue(injector, configComp.GetLoader()) // *config.Loader
+	do.ProvideValue(injector, coreLogger)             // *logger.CtxZapLogger
+
+	// ═══════════════════════════════════════════════════════════
+	// 5. 加载通用 AppConfig（configLoader 已可用）
 	// ═══════════════════════════════════════════════════════════
 	var appCfg AppConfig
 	if err := configComp.GetLoader().Unmarshal(&appCfg); err != nil {
