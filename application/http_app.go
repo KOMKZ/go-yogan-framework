@@ -192,6 +192,16 @@ func (a *Application) Shutdown() {
 }
 
 // OnSetup 注册 Setup 阶段回调（链式调用）
+// OnAfterInit 注册组件初始化后回调（链式调用）
+// 在所有组件 Init 完成后、Start 之前触发
+// 用于在组件启动前注入依赖（如 SetRedisComponent）
+func (a *Application) OnAfterInit(fn func(*Application) error) *Application {
+	a.BaseApplication.OnAfterInit(func(base *BaseApplication) error {
+		return fn(a)
+	})
+	return a
+}
+
 func (a *Application) OnSetup(fn func(*Application) error) *Application {
 	a.BaseApplication.OnSetup(func(base *BaseApplication) error {
 		return fn(a)

@@ -54,7 +54,8 @@ type BaseApplication struct {
 	version string // 应用版本号
 
 	// 回调函数（应用自定义逻辑）
-	onSetup        func(*BaseApplication) error // Setup 阶段回调
+	onAfterInit    func(*BaseApplication) error // 组件初始化后、启动前回调（用于注入依赖）
+	onSetup        func(*BaseApplication) error // Setup 阶段回调（组件启动后）
 	onReady        func(*BaseApplication) error // 启动完成回调
 	onConfigReload func(*config.Loader)         // 配置更新回调
 	onShutdown     func(context.Context) error  // 关闭前回调
@@ -203,12 +204,19 @@ func (b *BaseApplication) Setup() error {
 		return fmt.Errorf("组件初始化失败: %w", err)
 	}
 
-	// 2. 启动所有组件 - Registry 会输出启动日志
+	// 2. 触发 OnAfterInit 回调（用于在组件启动前注入依赖）
+	if b.onAfterInit != nil {
+		if err := b.onAfterInit(b); err != nil {
+			return fmt.Errorf("onAfterInit failed: %w", err)
+		}
+	}
+
+	// 3. 启动所有组件 - Registry 会输出启动日志
 	if err := b.registry.Start(b.ctx); err != nil {
 		return fmt.Errorf("组件启动失败: %w", err)
 	}
 
-	// 3. 触发 OnSetup 回调（应用自定义准备）
+	// 4. 触发 OnSetup 回调（应用自定义准备）
 	if b.onSetup != nil {
 		if err := b.onSetup(b); err != nil {
 			return fmt.Errorf("onSetup failed: %w", err)
@@ -281,6 +289,14 @@ func (b *BaseApplication) Cancel() {
 }
 
 // OnSetup 注册 Setup 阶段回调（在配置加载后触发）
+// OnAfterInit 注册组件初始化后回调
+// 在所有组件 Init 完成后、Start 之前触发
+// 用于在组件启动前注入依赖（如 SetRedisComponent）
+func (b *BaseApplication) OnAfterInit(fn func(*BaseApplication) error) *BaseApplication {
+	b.onAfterInit = fn
+	return b
+}
+
 func (b *BaseApplication) OnSetup(fn func(*BaseApplication) error) *BaseApplication {
 	b.onSetup = fn
 	return b
