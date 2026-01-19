@@ -8,7 +8,18 @@
 ## [Unreleased]
 
 ### Added
+- **di**: 新增基于 samber/do v2 的依赖注入包
+  - `DoApplication`: 替代 BaseApplication 的新应用框架
+  - `Bridge`: Registry 与 samber/do 的桥接层
+  - 完整的组件 Provider 系列函数
+  - 支持健康检查和优雅关闭
 - 初始版本，包含核心组件
+
+### Deprecated
+- **registry**: Registry 包已废弃，请迁移至 di 包
+  - 使用 `di.NewDoApplication()` 替代 `registry.NewRegistry()`
+  - 使用 `do.Provide()` 替代 `registry.Register()`
+  - 使用 `do.Invoke()` 替代 `registry.Get()`
 - application: HTTP/gRPC/CLI/Cron 应用支持
 - database: GORM 多数据库连接池
 - redis: Redis 客户端管理
