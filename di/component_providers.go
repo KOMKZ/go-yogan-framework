@@ -1,12 +1,18 @@
 package di
 
 import (
+	"github.com/KOMKZ/go-yogan-framework/cache"
 	"github.com/KOMKZ/go-yogan-framework/config"
 	"github.com/KOMKZ/go-yogan-framework/database"
 	"github.com/KOMKZ/go-yogan-framework/event"
+	"github.com/KOMKZ/go-yogan-framework/health"
 	"github.com/KOMKZ/go-yogan-framework/jwt"
+	"github.com/KOMKZ/go-yogan-framework/kafka"
+	"github.com/KOMKZ/go-yogan-framework/limiter"
 	"github.com/KOMKZ/go-yogan-framework/logger"
 	"github.com/KOMKZ/go-yogan-framework/redis"
+	"github.com/KOMKZ/go-yogan-framework/telemetry"
+	goredis "github.com/redis/go-redis/v9"
 	"github.com/samber/do/v2"
 	gormlogger "gorm.io/gorm/logger"
 )
@@ -239,4 +245,161 @@ func ProvideEventDispatcherIndependent(i do.Injector) (event.Dispatcher, error) 
 	return event.NewDispatcher(
 		event.WithPoolSize(cfg.PoolSize),
 	), nil
+}
+
+// ============================================
+// Kafka 组件 Provider
+// 依赖：Config, Logger
+// ============================================
+
+// ProvideKafkaManager 创建 kafka.Manager 的独立 Provider
+func ProvideKafkaManager(i do.Injector) (*kafka.Manager, error) {
+	loader, err := do.Invoke[*config.Loader](i)
+	if err != nil {
+		return nil, err
+	}
+
+	log, _ := do.Invoke[*logger.CtxZapLogger](i)
+	if log == nil {
+		log = logger.GetLogger("yogan")
+	}
+
+	// 读取 Kafka 配置
+	var cfg kafka.Config
+	if err := loader.GetViper().UnmarshalKey("kafka", &cfg); err != nil {
+		return nil, nil // Kafka 未配置
+	}
+
+	if len(cfg.Brokers) == 0 {
+		return nil, nil // Kafka brokers 未配置
+	}
+
+	return kafka.NewManager(cfg, log.GetZapLogger())
+}
+
+// ============================================
+// Telemetry 组件 Provider
+// 依赖：Config, Logger
+// ============================================
+
+// ProvideTelemetryComponent 创建 telemetry.Component 的独立 Provider
+func ProvideTelemetryComponent(i do.Injector) (*telemetry.Component, error) {
+	loader, err := do.Invoke[*config.Loader](i)
+	if err != nil {
+		return nil, err
+	}
+
+	// 读取 Telemetry 配置
+	var cfg telemetry.Config
+	if loader.IsSet("telemetry") {
+		if err := loader.GetViper().UnmarshalKey("telemetry", &cfg); err != nil {
+			cfg = telemetry.DefaultConfig()
+		}
+	} else {
+		cfg = telemetry.DefaultConfig()
+	}
+
+	if !cfg.Enabled {
+		return nil, nil // Telemetry 未启用
+	}
+
+	// 创建组件（需要手动初始化）
+	comp := telemetry.NewComponent()
+	// 注意：完整初始化需要调用 Init 和 Start，这里只返回组件实例
+	return comp, nil
+}
+
+// ============================================
+// Health 组件 Provider
+// 依赖：Config, Logger
+// ============================================
+
+// ProvideHealthAggregator 创建 health.Aggregator 的独立 Provider
+func ProvideHealthAggregator(i do.Injector) (*health.Aggregator, error) {
+	loader, err := do.Invoke[*config.Loader](i)
+	if err != nil {
+		return nil, err
+	}
+
+	// 读取 Health 配置
+	cfg := health.DefaultConfig()
+	if loader.IsSet("health") {
+		_ = loader.GetViper().UnmarshalKey("health", &cfg)
+	}
+
+	if !cfg.Enabled {
+		return nil, nil // Health 未启用
+	}
+
+	return health.NewAggregator(cfg.Timeout), nil
+}
+
+// ============================================
+// Cache 组件 Provider
+// 依赖：Config, Logger, Redis(可选), Event(可选)
+// ============================================
+
+// ProvideCacheOrchestrator 创建 cache.Orchestrator 的独立 Provider
+func ProvideCacheOrchestrator(i do.Injector) (*cache.DefaultOrchestrator, error) {
+	loader, err := do.Invoke[*config.Loader](i)
+	if err != nil {
+		return nil, err
+	}
+
+	// 读取 Cache 配置
+	var cfg cache.Config
+	if err := loader.GetViper().UnmarshalKey("cache", &cfg); err != nil {
+		return nil, nil // Cache 未配置
+	}
+
+	if !cfg.Enabled {
+		return nil, nil // Cache 未启用
+	}
+
+	log, _ := do.Invoke[*logger.CtxZapLogger](i)
+	if log == nil {
+		log = logger.GetLogger("yogan")
+	}
+
+	// 尝试获取 Event Dispatcher
+	dispatcher, _ := do.Invoke[event.Dispatcher](i)
+
+	return cache.NewOrchestrator(&cfg, dispatcher, log), nil
+}
+
+// ============================================
+// Limiter 组件 Provider
+// 依赖：Config, Logger, Redis
+// ============================================
+
+// ProvideLimiterManager 创建 limiter.Manager 的独立 Provider
+func ProvideLimiterManager(i do.Injector) (*limiter.Manager, error) {
+	loader, err := do.Invoke[*config.Loader](i)
+	if err != nil {
+		return nil, err
+	}
+
+	// 读取 Limiter 配置
+	var cfg limiter.Config
+	if err := loader.GetViper().UnmarshalKey("limiter", &cfg); err != nil {
+		return nil, nil // Limiter 未配置
+	}
+
+	if !cfg.Enabled {
+		return nil, nil // Limiter 未启用
+	}
+
+	log, _ := do.Invoke[*logger.CtxZapLogger](i)
+	if log == nil {
+		log = logger.GetLogger("yogan")
+	}
+
+	// 尝试获取 Redis Client
+	redisMgr, _ := do.Invoke[*redis.Manager](i)
+	var redisClient *goredis.Client
+	if redisMgr != nil && cfg.Redis.Instance != "" {
+		redisClient = redisMgr.Client(cfg.Redis.Instance)
+	}
+
+	return limiter.NewManagerWithLogger(cfg, log, redisClient, nil)
 }
