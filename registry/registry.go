@@ -1,5 +1,9 @@
 // Package registry 提供组件注册中心实现
 // 作为独立内核组件，不依赖任何业务组件
+//
+// Deprecated: 此包已废弃，请使用 github.com/KOMKZ/go-yogan-framework/di 包
+// 新代码应使用 samber/do 进行依赖注入
+// 迁移指南：参考 di.DoApplication 和 di.Provider* 系列函数
 package registry
 
 import (
@@ -14,6 +18,9 @@ import (
 
 // Registry 组件注册中心实现
 // 实现 component.Registry 接口
+//
+// Deprecated: 请使用 samber/do 进行依赖注入
+// 迁移方法：使用 di.NewDoApplication() 替代
 type Registry struct {
 	mu         sync.RWMutex
 	components map[string]component.Component
@@ -21,6 +28,8 @@ type Registry struct {
 }
 
 // NewRegistry 创建组件注册中心
+//
+// Deprecated: 请使用 do.New() 创建 samber/do 注入器
 func NewRegistry() *Registry {
 	return &Registry{
 		components: make(map[string]component.Component),
