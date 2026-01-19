@@ -300,6 +300,11 @@ func (m *Manager) Close() error {
 	return nil
 }
 
+// Shutdown 实现 samber/do.Shutdownable 接口
+func (m *Manager) Shutdown() error {
+	return m.Close()
+}
+
 // IsEnabled 检查限流器是否启用
 func (m *Manager) IsEnabled() bool {
 	return m.config.Enabled

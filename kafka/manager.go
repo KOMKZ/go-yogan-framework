@@ -415,6 +415,11 @@ func (m *Manager) Close() error {
 	return nil
 }
 
+// Shutdown 实现 samber/do.Shutdownable 接口
+func (m *Manager) Shutdown() error {
+	return m.Close()
+}
+
 // ================== Topic 管理方法 ==================
 
 // TopicInfo Topic 信息
