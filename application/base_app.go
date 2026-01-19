@@ -17,7 +17,10 @@ import (
 	"github.com/KOMKZ/go-yogan-framework/config"
 	"github.com/KOMKZ/go-yogan-framework/database"
 	"github.com/KOMKZ/go-yogan-framework/event"
+	"github.com/KOMKZ/go-yogan-framework/health"
 	"github.com/KOMKZ/go-yogan-framework/jwt"
+	"github.com/KOMKZ/go-yogan-framework/kafka"
+	"github.com/KOMKZ/go-yogan-framework/limiter"
 	"github.com/KOMKZ/go-yogan-framework/logger"
 	"github.com/KOMKZ/go-yogan-framework/redis"
 	"github.com/KOMKZ/go-yogan-framework/registry"
@@ -432,44 +435,67 @@ func (b *BaseApplication) setState(state AppState) {
 
 // registerCoreComponentsToDo 自动注册核心组件到 samber/do
 // 在组件启动后调用，确保 Manager 等已初始化
+// 注册策略：同时注册 Manager（多实例访问）和默认实例（便捷访问）
 func (b *BaseApplication) registerCoreComponentsToDo() {
-	// Database (gorm.DB) - 默认使用 master 连接
+	// Database - 注册 Manager 和默认 DB
 	if dbComp, ok := registry.GetTyped[*database.Component](b.registry, component.ComponentDatabase); ok {
 		if mgr := dbComp.GetManager(); mgr != nil {
+			do.ProvideValue(b.injector, mgr) // *database.Manager（多连接访问）
 			if db := mgr.DB("master"); db != nil {
-				do.ProvideValue(b.injector, db)
+				do.ProvideValue(b.injector, db) // *gorm.DB（默认 master）
 			}
 		}
 	}
 
-	// Redis Client - 默认使用 main 实例
+	// Redis - 注册 Manager 和默认 Client
 	if redisComp, ok := registry.GetTyped[*redis.Component](b.registry, component.ComponentRedis); ok {
 		if mgr := redisComp.GetManager(); mgr != nil {
+			do.ProvideValue(b.injector, mgr) // *redis.Manager（多实例访问）
 			if client := mgr.Client("main"); client != nil {
-				do.ProvideValue(b.injector, client)
+				do.ProvideValue(b.injector, client) // *goredis.Client（默认 main）
 			}
 		}
 	}
 
-	// JWT TokenManager
+	// JWT - 注册 TokenManager 和 Config
 	if jwtComp, ok := registry.GetTyped[*jwt.Component](b.registry, component.ComponentJWT); ok {
 		do.ProvideValue[jwt.TokenManager](b.injector, jwtComp.GetTokenManager())
 		do.ProvideValue(b.injector, jwtComp.GetConfig())
 	}
 
-	// Auth Service
+	// Auth - 注册 AuthService
 	if authComp, ok := registry.GetTyped[*auth.Component](b.registry, component.ComponentAuth); ok {
 		do.ProvideValue(b.injector, authComp.GetAuthService())
 	}
 
-	// Event Dispatcher
+	// Event - 注册 Component 和 Dispatcher
 	if eventComp, ok := registry.GetTyped[*event.Component](b.registry, component.ComponentEvent); ok {
-		do.ProvideValue[event.Dispatcher](b.injector, eventComp.GetDispatcher())
+		do.ProvideValue(b.injector, eventComp)                               // *event.Component
+		do.ProvideValue[event.Dispatcher](b.injector, eventComp.GetDispatcher()) // event.Dispatcher
 	}
 
-	// Cache Component
+	// Cache - 注册 Component
 	if cacheComp, ok := registry.GetTyped[*cache.Component](b.registry, component.ComponentCache); ok {
 		do.ProvideValue(b.injector, cacheComp)
+	}
+
+	// Health - 注册 Component
+	if healthComp, ok := registry.GetTyped[*health.Component](b.registry, component.ComponentHealth); ok {
+		do.ProvideValue(b.injector, healthComp)
+	}
+
+	// Kafka - 注册 Manager
+	if kafkaComp, ok := registry.GetTyped[*kafka.Component](b.registry, component.ComponentKafka); ok {
+		if mgr := kafkaComp.GetManager(); mgr != nil {
+			do.ProvideValue(b.injector, mgr) // *kafka.Manager
+		}
+	}
+
+	// Limiter - 注册 Manager
+	if limiterComp, ok := registry.GetTyped[*limiter.Component](b.registry, component.ComponentLimiter); ok {
+		if mgr := limiterComp.GetManager(); mgr != nil {
+			do.ProvideValue(b.injector, mgr) // *limiter.Manager
+		}
 	}
 
 	b.logger.DebugCtx(b.ctx, "✅ 核心组件已注册到 samber/do")
