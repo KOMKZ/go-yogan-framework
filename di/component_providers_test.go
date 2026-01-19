@@ -42,6 +42,31 @@ func TestProvideConfigLoader(t *testing.T) {
 		assert.Equal(t, "TEST", opts.ConfigPrefix)
 		assert.Equal(t, "http", opts.AppType)
 	})
+
+	t.Run("with testdata config", func(t *testing.T) {
+		injector := do.New()
+		defer injector.Shutdown()
+
+		opts := ConfigOptions{
+			ConfigPath: "./testdata",
+			AppType:    "http",
+		}
+		do.Provide(injector, ProvideConfigLoader(opts))
+
+		loader, err := do.Invoke[*config.Loader](injector)
+		require.NoError(t, err)
+		assert.NotNil(t, loader)
+	})
+
+	t.Run("applies defaults for empty fields", func(t *testing.T) {
+		injector := do.New()
+		defer injector.Shutdown()
+
+		// 空选项，应该应用默认值
+		opts := ConfigOptions{}
+		provider := ProvideConfigLoader(opts)
+		assert.NotNil(t, provider)
+	})
 }
 
 // TestProvideLoggerManager 测试 Logger Manager Provider
