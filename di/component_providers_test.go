@@ -3,12 +3,14 @@ package di
 import (
 	"testing"
 
+	"github.com/KOMKZ/go-yogan-framework/cache"
 	"github.com/KOMKZ/go-yogan-framework/config"
 	"github.com/KOMKZ/go-yogan-framework/database"
 	"github.com/KOMKZ/go-yogan-framework/event"
 	"github.com/KOMKZ/go-yogan-framework/health"
 	"github.com/KOMKZ/go-yogan-framework/jwt"
 	"github.com/KOMKZ/go-yogan-framework/kafka"
+	"github.com/KOMKZ/go-yogan-framework/limiter"
 	"github.com/KOMKZ/go-yogan-framework/logger"
 	"github.com/KOMKZ/go-yogan-framework/redis"
 	"github.com/KOMKZ/go-yogan-framework/telemetry"
@@ -562,5 +564,81 @@ func TestProvideHealthAggregator(t *testing.T) {
 		agg, err := do.Invoke[*health.Aggregator](injector)
 		require.NoError(t, err)
 		assert.NotNil(t, agg)
+	})
+}
+
+// ============================================
+// Cache Provider 测试
+// ============================================
+
+// TestProvideCacheOrchestrator 测试 Cache Orchestrator Provider
+func TestProvideCacheOrchestrator(t *testing.T) {
+	t.Run("without config loader", func(t *testing.T) {
+		injector := do.New()
+		defer injector.Shutdown()
+
+		do.Provide(injector, ProvideCacheOrchestrator)
+
+		// 没有 config.Loader，应该报错
+		_, err := do.Invoke[*cache.DefaultOrchestrator](injector)
+		assert.Error(t, err)
+	})
+
+	t.Run("with config but cache disabled", func(t *testing.T) {
+		injector := do.New()
+		defer injector.Shutdown()
+
+		opts := ConfigOptions{
+			ConfigPath: "./testdata",
+			AppType:    "http",
+		}
+		do.Provide(injector, ProvideConfigLoader(opts))
+		do.Provide(injector, ProvideLoggerManager)
+		do.Provide(injector, ProvideCtxLogger("yogan"))
+		do.Provide(injector, ProvideCacheOrchestrator)
+
+		// Cache 未配置/未启用，返回 nil
+		orch, err := do.Invoke[*cache.DefaultOrchestrator](injector)
+		if err == nil {
+			assert.Nil(t, orch)
+		}
+	})
+}
+
+// ============================================
+// Limiter Provider 测试
+// ============================================
+
+// TestProvideLimiterManager 测试 Limiter Manager Provider
+func TestProvideLimiterManager(t *testing.T) {
+	t.Run("without config loader", func(t *testing.T) {
+		injector := do.New()
+		defer injector.Shutdown()
+
+		do.Provide(injector, ProvideLimiterManager)
+
+		// 没有 config.Loader，应该报错
+		_, err := do.Invoke[*limiter.Manager](injector)
+		assert.Error(t, err)
+	})
+
+	t.Run("with config but limiter disabled", func(t *testing.T) {
+		injector := do.New()
+		defer injector.Shutdown()
+
+		opts := ConfigOptions{
+			ConfigPath: "./testdata",
+			AppType:    "http",
+		}
+		do.Provide(injector, ProvideConfigLoader(opts))
+		do.Provide(injector, ProvideLoggerManager)
+		do.Provide(injector, ProvideCtxLogger("yogan"))
+		do.Provide(injector, ProvideLimiterManager)
+
+		// Limiter 未配置/未启用，返回 nil
+		mgr, err := do.Invoke[*limiter.Manager](injector)
+		if err == nil {
+			assert.Nil(t, mgr)
+		}
 	})
 }
