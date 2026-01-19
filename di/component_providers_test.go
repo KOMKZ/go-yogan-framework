@@ -223,9 +223,9 @@ func TestProvideDatabaseManagerWithRealConfig(t *testing.T) {
 		injector := do.New()
 		defer injector.Shutdown()
 
-		// 先注册一个配置加载器
+		// 使用测试配置目录
 		opts := ConfigOptions{
-			ConfigPath: "../config",
+			ConfigPath: "./testdata",
 			AppType:    "http",
 		}
 		do.Provide(injector, ProvideConfigLoader(opts))
@@ -233,11 +233,30 @@ func TestProvideDatabaseManagerWithRealConfig(t *testing.T) {
 		do.Provide(injector, ProvideCtxLogger("yogan"))
 		do.Provide(injector, ProvideDatabaseManager)
 
-		// 尝试调用 - 可能因为没有数据库配置而返回 nil
+		// 尝试调用 - 因为没有数据库配置，返回 nil
 		mgr, err := do.Invoke[*database.Manager](injector)
 		// 没有配置时应该返回 nil, nil
 		if err == nil {
 			assert.Nil(t, mgr) // 未配置数据库返回 nil
+		}
+	})
+
+	t.Run("without logger - fallback to global", func(t *testing.T) {
+		injector := do.New()
+		defer injector.Shutdown()
+
+		// 只注册 ConfigLoader，不注册 Logger
+		opts := ConfigOptions{
+			ConfigPath: "./testdata",
+			AppType:    "http",
+		}
+		do.Provide(injector, ProvideConfigLoader(opts))
+		do.Provide(injector, ProvideDatabaseManager)
+
+		// 应该使用全局 logger 并返回 nil（无数据库配置）
+		mgr, err := do.Invoke[*database.Manager](injector)
+		if err == nil {
+			assert.Nil(t, mgr)
 		}
 	})
 }
@@ -248,9 +267,9 @@ func TestProvideRedisManagerWithRealConfig(t *testing.T) {
 		injector := do.New()
 		defer injector.Shutdown()
 
-		// 先注册一个配置加载器
+		// 使用测试配置目录
 		opts := ConfigOptions{
-			ConfigPath: "../config",
+			ConfigPath: "./testdata",
 			AppType:    "http",
 		}
 		do.Provide(injector, ProvideConfigLoader(opts))
@@ -258,11 +277,30 @@ func TestProvideRedisManagerWithRealConfig(t *testing.T) {
 		do.Provide(injector, ProvideCtxLogger("yogan"))
 		do.Provide(injector, ProvideRedisManager)
 
-		// 尝试调用 - 可能因为没有 Redis 配置而返回 nil
+		// 尝试调用 - 因为没有 Redis 配置，返回 nil
 		mgr, err := do.Invoke[*redis.Manager](injector)
 		// 没有配置时应该返回 nil, nil
 		if err == nil {
 			assert.Nil(t, mgr) // 未配置 Redis 返回 nil
+		}
+	})
+
+	t.Run("without logger - fallback to global", func(t *testing.T) {
+		injector := do.New()
+		defer injector.Shutdown()
+
+		// 只注册 ConfigLoader，不注册 Logger
+		opts := ConfigOptions{
+			ConfigPath: "./testdata",
+			AppType:    "http",
+		}
+		do.Provide(injector, ProvideConfigLoader(opts))
+		do.Provide(injector, ProvideRedisManager)
+
+		// 应该使用全局 logger 并返回 nil（无 Redis 配置）
+		mgr, err := do.Invoke[*redis.Manager](injector)
+		if err == nil {
+			assert.Nil(t, mgr)
 		}
 	})
 }
@@ -273,9 +311,9 @@ func TestProvideLoggerManagerWithConfig(t *testing.T) {
 		injector := do.New()
 		defer injector.Shutdown()
 
-		// 注册配置加载器
+		// 使用测试配置目录
 		opts := ConfigOptions{
-			ConfigPath: "../config",
+			ConfigPath: "./testdata",
 			AppType:    "http",
 		}
 		do.Provide(injector, ProvideConfigLoader(opts))
@@ -285,5 +323,25 @@ func TestProvideLoggerManagerWithConfig(t *testing.T) {
 		mgr, err := do.Invoke[*logger.Manager](injector)
 		require.NoError(t, err)
 		assert.NotNil(t, mgr)
+	})
+
+	t.Run("with valid config", func(t *testing.T) {
+		injector := do.New()
+		defer injector.Shutdown()
+
+		opts := ConfigOptions{
+			ConfigPath: "./testdata",
+			AppType:    "http",
+		}
+		do.Provide(injector, ProvideConfigLoader(opts))
+		do.Provide(injector, ProvideLoggerManager)
+
+		mgr, err := do.Invoke[*logger.Manager](injector)
+		require.NoError(t, err)
+		assert.NotNil(t, mgr)
+
+		// 验证可以获取 logger
+		log := mgr.GetLogger("test")
+		assert.NotNil(t, log)
 	})
 }

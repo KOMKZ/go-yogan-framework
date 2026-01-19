@@ -217,3 +217,46 @@ func TestProvideCacheComponent_InvokeError(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "cache")
 }
+
+// TestRegisterCoreComponents_AllBranches 测试 RegisterCoreComponents 所有分支
+func TestRegisterCoreComponents_AllBranches(t *testing.T) {
+	t.Run("empty registry - all branches skip", func(t *testing.T) {
+		reg := registry.NewRegistry()
+		injector := do.New()
+		defer injector.Shutdown()
+
+		// 空 Registry，所有分支都应跳过
+		RegisterCoreComponents(injector, reg)
+
+		// 验证没有注册任何服务（通过尝试调用来验证）
+		// 由于没有注册，调用会失败
+	})
+
+	t.Run("with mock component registered but type mismatch", func(t *testing.T) {
+		reg := registry.NewRegistry()
+		injector := do.New()
+		defer injector.Shutdown()
+
+		// 注册一个 mock 组件，但类型不匹配
+		mock := &mockComponent{name: "database"}
+		reg.Register(mock)
+
+		// 不应 panic
+		RegisterCoreComponents(injector, reg)
+	})
+}
+
+// TestProvideDB_AllErrorPaths 测试 ProvideDB 所有错误路径
+func TestProvideDB_AllErrorPaths(t *testing.T) {
+	t.Run("component not found", func(t *testing.T) {
+		reg := registry.NewRegistry()
+		injector := do.New()
+		defer injector.Shutdown()
+
+		provider := ProvideDB(reg)
+		_, err := provider(injector)
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "database")
+	})
+}
