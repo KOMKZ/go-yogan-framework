@@ -251,3 +251,99 @@ func TestBridge_HealthCheck(t *testing.T) {
 	errors := bridge.HealthCheck()
 	assert.Empty(t, errors)
 }
+
+func TestBridge_HealthCheckWithContext(t *testing.T) {
+	registry := newMockRegistry()
+	injector := do.New()
+	defer injector.Shutdown()
+
+	bridge := NewBridge(registry, injector)
+
+	ctx := context.Background()
+
+	// 没有服务时应该健康
+	assert.True(t, bridge.IsHealthyWithContext(ctx))
+
+	errors := bridge.HealthCheckWithContext(ctx)
+	assert.Empty(t, errors)
+}
+
+func TestBridge_MustProvideFromRegistry(t *testing.T) {
+	registry := newMockRegistry()
+	comp := &mockComponent{name: "must-test-component"}
+	registry.Register(comp)
+
+	injector := do.New()
+	defer injector.Shutdown()
+
+	bridge := NewBridge(registry, injector)
+
+	// 不应该 panic
+	MustProvideFromRegistry[*mockComponent](bridge, "must-test-component")
+
+	// 从 do 获取组件
+	retrieved := MustInvoke[*mockComponent](bridge)
+	assert.Equal(t, comp, retrieved)
+}
+
+func TestBridge_InvokeNamed(t *testing.T) {
+	registry := newMockRegistry()
+	injector := do.New()
+	defer injector.Shutdown()
+
+	bridge := NewBridge(registry, injector)
+
+	type NamedService struct {
+		ID string
+	}
+
+	svc := &NamedService{ID: "named-svc"}
+	ProvideNamedValue(bridge, "my-service", svc)
+
+	// 使用 InvokeNamed 获取
+	retrieved, err := InvokeNamed[*NamedService](bridge, "my-service")
+	require.NoError(t, err)
+	assert.Equal(t, svc, retrieved)
+}
+
+func TestBridge_ProvideNamed(t *testing.T) {
+	registry := newMockRegistry()
+	injector := do.New()
+	defer injector.Shutdown()
+
+	bridge := NewBridge(registry, injector)
+
+	type Counter struct {
+		Value int
+	}
+
+	// 使用 ProvideNamed 注册
+	ProvideNamed(bridge, "counter-1", func(i do.Injector) (*Counter, error) {
+		return &Counter{Value: 1}, nil
+	})
+
+	ProvideNamed(bridge, "counter-2", func(i do.Injector) (*Counter, error) {
+		return &Counter{Value: 2}, nil
+	})
+
+	// 获取不同的命名服务
+	c1 := MustInvokeNamed[*Counter](bridge, "counter-1")
+	c2 := MustInvokeNamed[*Counter](bridge, "counter-2")
+
+	assert.Equal(t, 1, c1.Value)
+	assert.Equal(t, 2, c2.Value)
+}
+
+func TestBridge_ShutdownWithContext_Timeout(t *testing.T) {
+	registry := newMockRegistry()
+	injector := do.New()
+
+	bridge := NewBridge(registry, injector)
+
+	// 使用已取消的 context
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // 立即取消
+
+	// ShutdownWithContext 应该处理取消
+	_ = bridge.ShutdownWithContext(ctx)
+}
