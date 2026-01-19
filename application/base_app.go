@@ -16,6 +16,7 @@ import (
 	"github.com/KOMKZ/go-yogan-framework/component"
 	"github.com/KOMKZ/go-yogan-framework/config"
 	"github.com/KOMKZ/go-yogan-framework/database"
+	"github.com/KOMKZ/go-yogan-framework/di"
 	"github.com/KOMKZ/go-yogan-framework/event"
 	"github.com/KOMKZ/go-yogan-framework/health"
 	"github.com/KOMKZ/go-yogan-framework/jwt"
@@ -108,61 +109,60 @@ func NewBase(configPath, configPrefix, appType string, flags interface{}) *BaseA
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// ═══════════════════════════════════════════════════════════
-	// 1. 手动初始化 Config 和 Logger 组件（优先级最高）
+	// 1. 创建 samber/do 注入器并注册核心 Provider
 	// ═══════════════════════════════════════════════════════════
-	// Config 组件初始化
-	configComp := NewConfigComponent(configPath, configPrefix, appType, flags)
-	if err := configComp.Init(ctx, nil); err != nil {
-		panic(fmt.Sprintf("配置组件初始化失败: %v", err))
-	}
+	injector := do.New()
 
-	// Logger 组件初始化（复用组件自己的 Init 逻辑）
-	loggerComp := NewLoggerComponent()
-	if err := loggerComp.Init(ctx, configComp); err != nil {
-		panic(fmt.Sprintf("日志组件初始化失败: %v", err))
-	}
-	coreLogger := loggerComp.GetLogger()
+	// 注册 Config Provider（Layer 0）
+	do.Provide(injector, di.ProvideConfigLoader(di.ConfigOptions{
+		ConfigPath:   configPath,
+		ConfigPrefix: configPrefix,
+		AppType:      appType,
+		Flags:        flags,
+	}))
+
+	// 立即 Invoke 获取 Config Loader
+	configLoader := do.MustInvoke[*config.Loader](injector)
+
+	// 注册 Logger Provider（Layer 1，依赖 Config）
+	do.Provide(injector, di.ProvideCtxLogger("yogan"))
+	coreLogger := do.MustInvoke[*logger.CtxZapLogger](injector)
 
 	// ═══════════════════════════════════════════════════════════
-	// 2. 创建 Registry 和 Injector
+	// 2. 创建 Registry（过渡期仍需要，用于管理业务组件生命周期）
 	// ═══════════════════════════════════════════════════════════
 	reg := NewRegistry()
-	reg.SetLogger(coreLogger) // ← 注入 Logger，Registry 从此有日志能力
-	injector := do.New()      // 🎯 创建 samber/do 注入器
+	reg.SetLogger(coreLogger)
 
-	// ═══════════════════════════════════════════════════════════
-	// 3. 注册 Config 和 Logger 组件到 Registry（已初始化）
-	// ═══════════════════════════════════════════════════════════
+	// 为兼容旧代码，仍注册 ConfigComponent 和 LoggerComponent 到 Registry
+	configComp := NewConfigComponent(configPath, configPrefix, appType, flags)
+	configComp.SetLoader(configLoader) // 复用 DI 创建的 Loader
+	loggerComp := NewLoggerComponent()
+	loggerComp.SetLogger(coreLogger) // 复用 DI 创建的 Logger
 	reg.MustRegister(configComp)
 	reg.MustRegister(loggerComp)
 
 	// ═══════════════════════════════════════════════════════════
-	// 4. 注册 Config 和 Logger 到 samber/do（统一依赖注入）
-	// ═══════════════════════════════════════════════════════════
-	do.ProvideValue(injector, configComp.GetLoader()) // *config.Loader
-	do.ProvideValue(injector, coreLogger)             // *logger.CtxZapLogger
-
-	// ═══════════════════════════════════════════════════════════
-	// 5. 加载通用 AppConfig（configLoader 已可用）
+	// 3. 加载通用 AppConfig
 	// ═══════════════════════════════════════════════════════════
 	var appCfg AppConfig
-	if err := configComp.GetLoader().Unmarshal(&appCfg); err != nil {
+	if err := configLoader.Unmarshal(&appCfg); err != nil {
 		panic(fmt.Sprintf("加载 AppConfig 失败: %v", err))
 	}
 
-	coreLogger.DebugCtx(ctx, "✅ 基础应用初始化完成",
+	coreLogger.DebugCtx(ctx, "✅ 基础应用初始化完成（DI 模式）",
 		zap.String("configPath", configPath),
 		zap.String("prefix", configPrefix),
 		zap.String("appType", appType))
 
 	return &BaseApplication{
 		registry:     reg,
-		injector:     injector,               // 🎯 samber/do 注入器
+		injector:     injector,
 		configPath:   configPath,
 		configPrefix: configPrefix,
-		logger:       coreLogger,             // ← 直接缓存
-		configLoader: configComp.GetLoader(), // ← 直接缓存
-		appConfig:    &appCfg,                // ← 直接缓存
+		logger:       coreLogger,
+		configLoader: configLoader,
+		appConfig:    &appCfg,
 		ctx:          ctx,
 		cancel:       cancel,
 		state:        StateInit,
