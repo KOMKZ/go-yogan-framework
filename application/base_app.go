@@ -12,11 +12,8 @@ import (
 	"time"
 
 	"github.com/KOMKZ/go-yogan-framework/config"
-	"github.com/KOMKZ/go-yogan-framework/database"
 	"github.com/KOMKZ/go-yogan-framework/di"
-	"github.com/KOMKZ/go-yogan-framework/kafka"
 	"github.com/KOMKZ/go-yogan-framework/logger"
-	"github.com/KOMKZ/go-yogan-framework/redis"
 	"github.com/samber/do/v2"
 	"go.uber.org/zap"
 )
@@ -148,35 +145,13 @@ func (b *BaseApplication) GetVersion() string {
 }
 
 // Setup 初始化所有组件（核心逻辑）
-// 🎯 组件通过 samber/do 懒加载，此处触发关键组件的初始化
+// 🎯 组件生命周期：Provider 创建时完成 Init+Start，Shutdown 时调用 Stop
 func (b *BaseApplication) Setup() error {
 	b.setState(StateSetup)
-	ctx := b.ctx
 
-	// ═══════════════════════════════════════════════════════════
-	// 按需初始化核心组件（通过 Invoke 触发懒加载）
-	// 同时注册默认实例（便于应用层使用）
-	// ═══════════════════════════════════════════════════════════
-
-	// Database（如果配置了）- 注册默认 *gorm.DB
-	if dbMgr, err := do.Invoke[*database.Manager](b.injector); err == nil && dbMgr != nil {
-		if db := dbMgr.DB("master"); db != nil {
-			do.ProvideValue(b.injector, db) // *gorm.DB（默认 master）
-		}
-		b.logger.DebugCtx(ctx, "✅ Database 组件已初始化")
-	}
-
-	// Redis（如果配置了）- 注册默认 *goredis.Client
-	if redisMgr, err := do.Invoke[*redis.Manager](b.injector); err == nil && redisMgr != nil {
-		if client := redisMgr.Client("main"); client != nil {
-			do.ProvideValue(b.injector, client) // *goredis.Client（默认 main）
-		}
-		b.logger.DebugCtx(ctx, "✅ Redis 组件已初始化")
-	}
-
-	// Kafka（如果配置了）
-	if kafkaMgr, err := do.Invoke[*kafka.Manager](b.injector); err == nil && kafkaMgr != nil {
-		b.logger.DebugCtx(ctx, "✅ Kafka 组件已初始化")
+	// 启动核心组件（集中管理于 di/lifecycle.go）
+	if err := di.StartCoreComponents(b.ctx, b.injector, b.logger); err != nil {
+		return fmt.Errorf("启动核心组件失败: %w", err)
 	}
 
 	// 触发 OnSetup 回调
