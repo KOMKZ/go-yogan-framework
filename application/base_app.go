@@ -144,15 +144,10 @@ func (b *BaseApplication) GetVersion() string {
 	return b.version
 }
 
-// Setup 初始化所有组件（核心逻辑）
-// 🎯 组件生命周期：Provider 创建时完成 Init+Start，Shutdown 时调用 Stop
+// Setup 初始化应用（核心逻辑）
+// 🎯 组件生命周期：Provider 内完成 Init+Start（懒加载），Shutdown 时自动 Stop
 func (b *BaseApplication) Setup() error {
 	b.setState(StateSetup)
-
-	// 启动核心组件（集中管理于 di/lifecycle.go）
-	if err := di.StartCoreComponents(b.ctx, b.injector, b.logger); err != nil {
-		return fmt.Errorf("启动核心组件失败: %w", err)
-	}
 
 	// 触发 OnSetup 回调
 	if b.onSetup != nil {
