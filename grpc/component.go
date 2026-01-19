@@ -9,7 +9,6 @@ import (
 	"github.com/KOMKZ/go-yogan-framework/governance"
 	"github.com/KOMKZ/go-yogan-framework/limiter"
 	"github.com/KOMKZ/go-yogan-framework/logger"
-	"github.com/KOMKZ/go-yogan-framework/registry"
 	"github.com/KOMKZ/go-yogan-framework/telemetry"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
@@ -20,12 +19,16 @@ import (
 type Component struct {
 	server             *Server
 	clientManager      *ClientManager
-	registry           *registry.Registry // 🎯 使用具体类型，支持泛型方法
 	log                *logger.CtxZapLogger
 	config             Config                        // 保存配置用于后续注入选择器
 	customInterceptors []grpc.UnaryServerInterceptor // 自定义拦截器
 	limiter            *limiter.Manager              // 🎯 限速管理器（可选）
 	tracerProvider     trace.TracerProvider          // 🎯 OpenTelemetry TracerProvider（可选）
+
+	// 外部依赖（需外部注入）
+	telemetryComponent  *telemetry.Component  // 可选：Telemetry 组件
+	governanceComponent *governance.Component // 可选：Governance 组件
+	limiterComponent    *limiter.Component    // 可选：Limiter 组件
 }
 
 // NewComponent 创建 gRPC 组件
@@ -84,21 +87,16 @@ func (c *Component) Init(ctx context.Context, loader component.ConfigLoader) err
 
 // Start 启动 gRPC 组件（自动注入服务发现和负载均衡策略）
 func (c *Component) Start(ctx context.Context) error {
-	// 🎯 创建通用注入器
-	injector := registry.NewInjector(c.registry, c.log)
+	// 🎯 从已注入的组件获取依赖
+	c.injectTracerProvider(ctx)
+	c.injectMetricsManager(ctx)
 
-	// 🎯 自动从 Telemetry 组件获取 TracerProvider 并注入
-	c.injectTracerProvider(ctx, injector)
-
-	// 🎯 自动从 Telemetry 组件获取 MetricsManager 并注入
-	c.injectMetricsManager(ctx, injector)
-
-	// 🎯 自动从治理组件获取服务发现器并注入
+	// 🎯 客户端管理器相关注入
 	if c.clientManager != nil {
-		c.injectServiceDiscovery(ctx, injector)
+		c.injectServiceDiscovery(ctx)
 		c.injectLoadBalancer(ctx)
-		c.injectBreaker(ctx, injector) // 🎯 注入熔断器
-		c.injectLimiter(ctx, injector) // 🎯 注入限速管理器
+		c.injectBreaker(ctx)
+		c.injectLimiter(ctx)
 
 		// 自动预连接所有客户端
 		c.clientManager.PreConnect(3 * time.Second)
@@ -110,27 +108,26 @@ func (c *Component) Start(ctx context.Context) error {
 }
 
 // injectServiceDiscovery 从治理组件获取服务发现器并注入到客户端管理器
-func (c *Component) injectServiceDiscovery(ctx context.Context, injector *registry.ComponentInjector) {
-	registry.Inject(injector, ctx, component.ComponentGovernance,
-		nil, // 无需额外检查
-		func(govComp *governance.Component) {
-			discovery := govComp.GetDiscovery()
-			if discovery == nil {
-				c.log.WarnCtx(ctx, "Governance component did not provide service discovery")
-				return
-			}
+func (c *Component) injectServiceDiscovery(ctx context.Context) {
+	if c.governanceComponent == nil {
+		return
+	}
 
-			// 注入服务发现器（类型断言为具体类型）
-			etcdDiscovery, ok := discovery.(*governance.EtcdDiscovery)
-			if !ok {
-				c.log.ErrorCtx(ctx, "Service discovery type assertion failed, expected *governance.EtcdDiscovery")
-				return
-			}
+	discovery := c.governanceComponent.GetDiscovery()
+	if discovery == nil {
+		c.log.WarnCtx(ctx, "Governance component did not provide service discovery")
+		return
+	}
 
-			c.clientManager.SetDiscovery(etcdDiscovery)
-			c.log.DebugCtx(ctx, "✅ Service discovery injected into gRPC client manager")
-		},
-	)
+	// 注入服务发现器（类型断言为具体类型）
+	etcdDiscovery, ok := discovery.(*governance.EtcdDiscovery)
+	if !ok {
+		c.log.ErrorCtx(ctx, "Service discovery type assertion failed, expected *governance.EtcdDiscovery")
+		return
+	}
+
+	c.clientManager.SetDiscovery(etcdDiscovery)
+	c.log.DebugCtx(ctx, "✅ Service discovery injected into gRPC client manager")
 }
 
 // injectLoadBalancer 根据配置注入负载均衡策略
@@ -161,104 +158,98 @@ func (c *Component) injectLoadBalancer(ctx context.Context) {
 }
 
 // injectBreaker 从治理组件获取熔断器并注入到客户端管理器
-func (c *Component) injectBreaker(ctx context.Context, injector *registry.ComponentInjector) {
-	registry.Inject(injector, ctx, component.ComponentGovernance,
-		nil, // 无需额外检查
-		func(govComp *governance.Component) {
-			breakerMgr := govComp.GetBreakerManager()
-			if breakerMgr == nil {
-				c.log.DebugCtx(ctx, "Circuit breaker not enabled, skipping injection")
-				return
-			}
+func (c *Component) injectBreaker(ctx context.Context) {
+	if c.governanceComponent == nil {
+		return
+	}
 
-			c.clientManager.SetBreaker(breakerMgr)
-			c.log.DebugCtx(ctx, "✅ Circuit breaker injected from governance to gRPC client")
-		},
-	)
+	breakerMgr := c.governanceComponent.GetBreakerManager()
+	if breakerMgr == nil {
+		c.log.DebugCtx(ctx, "Circuit breaker not enabled, skipping injection")
+		return
+	}
+
+	c.clientManager.SetBreaker(breakerMgr)
+	c.log.DebugCtx(ctx, "✅ Circuit breaker injected from governance to gRPC client")
 }
 
 // injectLimiter 从 Limiter 组件获取限速管理器并注入到客户端管理器
-func (c *Component) injectLimiter(ctx context.Context, injector *registry.ComponentInjector) {
-	registry.Inject(injector, ctx, component.ComponentLimiter,
-		nil, // 无需额外检查
-		func(limiterComp *limiter.Component) {
-			limiterMgr := limiterComp.GetManager()
-			if limiterMgr == nil || !limiterMgr.IsEnabled() {
-				c.log.DebugCtx(ctx, "Limiter manager not available or disabled")
-				return
-			}
+func (c *Component) injectLimiter(ctx context.Context) {
+	if c.limiterComponent == nil {
+		return
+	}
 
-			// 保存到 Component
-			c.limiter = limiterMgr
+	limiterMgr := c.limiterComponent.GetManager()
+	if limiterMgr == nil || !limiterMgr.IsEnabled() {
+		c.log.DebugCtx(ctx, "Limiter manager not available or disabled")
+		return
+	}
 
-			// 注入到客户端管理器
-			c.clientManager.SetLimiter(limiterMgr)
-			c.log.DebugCtx(ctx, "✅ Rate limiter injected into gRPC client manager")
-		},
-	)
+	// 保存到 Component
+	c.limiter = limiterMgr
+
+	// 注入到客户端管理器
+	c.clientManager.SetLimiter(limiterMgr)
+	c.log.DebugCtx(ctx, "✅ Rate limiter injected into gRPC client manager")
 }
 
 // injectTracerProvider 从 Telemetry 组件获取 TracerProvider 并注入
-func (c *Component) injectTracerProvider(ctx context.Context, injector *registry.ComponentInjector) {
-	registry.Inject(injector, ctx, component.ComponentTelemetry,
-		func(tc *telemetry.Component) bool { return tc.IsEnabled() },
-		func(tc *telemetry.Component) {
-			tp := tc.GetTracerProvider()
-			if tp == nil {
-				c.log.WarnCtx(ctx, "TracerProvider is nil")
-				return
-			}
+func (c *Component) injectTracerProvider(ctx context.Context) {
+	if c.telemetryComponent == nil || !c.telemetryComponent.IsEnabled() {
+		return
+	}
 
-			// 保存到 Component
-			c.tracerProvider = tp
+	tp := c.telemetryComponent.GetTracerProvider()
+	if tp == nil {
+		c.log.WarnCtx(ctx, "TracerProvider is nil")
+		return
+	}
 
-			// 注入到服务端
-			if c.server != nil {
-				c.server.SetTracerProvider(tp)
-				c.log.DebugCtx(ctx, "✅ TracerProvider injected into gRPC server")
-			}
+	// 保存到 Component
+	c.tracerProvider = tp
 
-			// 注入到客户端管理器
-			if c.clientManager != nil {
-				c.clientManager.SetTracerProvider(tp)
-				c.log.DebugCtx(ctx, "✅ TracerProvider injected into gRPC client manager")
-			}
-		},
-	)
+	// 注入到服务端
+	if c.server != nil {
+		c.server.SetTracerProvider(tp)
+		c.log.DebugCtx(ctx, "✅ TracerProvider injected into gRPC server")
+	}
+
+	// 注入到客户端管理器
+	if c.clientManager != nil {
+		c.clientManager.SetTracerProvider(tp)
+		c.log.DebugCtx(ctx, "✅ TracerProvider injected into gRPC client manager")
+	}
 }
 
 // injectMetricsManager 从 Telemetry 组件获取 MetricsManager 并注入
-func (c *Component) injectMetricsManager(ctx context.Context, injector *registry.ComponentInjector) {
-	registry.Inject(injector, ctx, component.ComponentTelemetry,
-		func(tc *telemetry.Component) bool {
-			// 检查 Telemetry 启用 + MetricsManager 可用 + gRPC Metrics 启用
-			if !tc.IsEnabled() {
-				return false
-			}
-			mm := tc.GetMetricsManager()
-			return mm != nil && mm.IsGRPCMetricsEnabled()
-		},
-		func(tc *telemetry.Component) {
-			// 创建 gRPC Metrics（使用默认配置）
-			grpcMetrics, err := NewGRPCMetrics(false, false)
-			if err != nil {
-				c.log.ErrorCtx(ctx, "Failed to create GRPCMetrics", zap.Error(err))
-				return
-			}
+func (c *Component) injectMetricsManager(ctx context.Context) {
+	if c.telemetryComponent == nil || !c.telemetryComponent.IsEnabled() {
+		return
+	}
 
-			// 注入到服务端
-			if c.server != nil {
-				c.server.SetMetricsHandler(grpcMetrics.StatsHandler())
-				c.log.DebugCtx(ctx, "✅ Metrics StatsHandler injected into gRPC server")
-			}
+	mm := c.telemetryComponent.GetMetricsManager()
+	if mm == nil || !mm.IsGRPCMetricsEnabled() {
+		return
+	}
 
-			// 注入到客户端管理器
-			if c.clientManager != nil {
-				c.clientManager.SetMetricsHandler(grpcMetrics.StatsHandler())
-				c.log.DebugCtx(ctx, "✅ Metrics StatsHandler injected into gRPC client manager")
-			}
-		},
-	)
+	// 创建 gRPC Metrics（使用默认配置）
+	grpcMetrics, err := NewGRPCMetrics(false, false)
+	if err != nil {
+		c.log.ErrorCtx(ctx, "Failed to create GRPCMetrics", zap.Error(err))
+		return
+	}
+
+	// 注入到服务端
+	if c.server != nil {
+		c.server.SetMetricsHandler(grpcMetrics.StatsHandler())
+		c.log.DebugCtx(ctx, "✅ Metrics StatsHandler injected into gRPC server")
+	}
+
+	// 注入到客户端管理器
+	if c.clientManager != nil {
+		c.clientManager.SetMetricsHandler(grpcMetrics.StatsHandler())
+		c.log.DebugCtx(ctx, "✅ Metrics StatsHandler injected into gRPC client manager")
+	}
 }
 
 // StartServer 手动启动 gRPC Server（在注册服务后调用）
@@ -279,19 +270,12 @@ func (c *Component) StartServer(ctx context.Context) error {
 
 // registerToGovernance 注册服务到治理中心（内部方法）
 func (c *Component) registerToGovernance(ctx context.Context) error {
-	if c.registry == nil {
-		return nil
-	}
-
-	// 获取治理组件
-	govComp, ok := registry.GetTyped[*governance.Component](c.registry, component.ComponentGovernance)
-	if !ok {
-		// 组件未注册，跳过
+	if c.governanceComponent == nil {
 		return nil
 	}
 
 	// 调用治理组件的注册方法
-	if err := govComp.RegisterService(c.server.Port); err != nil {
+	if err := c.governanceComponent.RegisterService(c.server.Port); err != nil {
 		return err
 	}
 
@@ -338,9 +322,19 @@ func (c *Component) GetHealthChecker() component.HealthChecker {
 	return NewHealthChecker(c.server, c.clientManager)
 }
 
-// SetRegistry 设置注册中心（由框架调用）
-func (c *Component) SetRegistry(r *registry.Registry) {
-	c.registry = r
+// SetTelemetryComponent 设置 Telemetry 组件（用于 TracerProvider 和 Metrics）
+func (c *Component) SetTelemetryComponent(tc *telemetry.Component) {
+	c.telemetryComponent = tc
+}
+
+// SetGovernanceComponent 设置 Governance 组件（用于服务发现和熔断器）
+func (c *Component) SetGovernanceComponent(gc *governance.Component) {
+	c.governanceComponent = gc
+}
+
+// SetLimiterComponent 设置 Limiter 组件（用于限流）
+func (c *Component) SetLimiterComponent(lc *limiter.Component) {
+	c.limiterComponent = lc
 }
 
 // RegisterInterceptor 注册自定义 Unary 拦截器（应用层调用）
