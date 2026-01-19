@@ -136,6 +136,12 @@ func (r *Registry) MustGet(name string) component.Component {
 
 // GetTyped 泛型函数获取组件并自动类型转换（包级别函数）
 //
+// Deprecated: 请使用 samber/do.Invoke 获取组件
+// 迁移示例：
+//
+//	// 旧代码：redisComp, ok := registry.GetTyped[*redis.Component](reg, "redis")
+//	// 新代码：redisComp, err := do.Invoke[*redis.Component](injector)
+//
 // 参数：
 //   - r: Registry 实例
 //   - name: 组件名称
@@ -143,10 +149,6 @@ func (r *Registry) MustGet(name string) component.Component {
 // 返回：
 //   - T: 组件实例（已转换为目标类型）
 //   - bool: 组件是否存在且类型匹配
-//
-// 示例：
-//
-//	redisComp, ok := registry.GetTyped[*redis.Component](reg, component.ComponentRedis)
 func GetTyped[T component.Component](r *Registry, name string) (T, bool) {
 	var zero T
 	comp, ok := r.Get(name)
@@ -164,16 +166,18 @@ func GetTyped[T component.Component](r *Registry, name string) (T, bool) {
 
 // MustGetTyped 泛型函数获取组件（不存在或类型不匹配则 panic）（包级别函数）
 //
+// Deprecated: 请使用 samber/do.MustInvoke 获取组件
+// 迁移示例：
+//
+//	// 旧代码：redisComp := registry.MustGetTyped[*redis.Component](reg, "redis")
+//	// 新代码：redisComp := do.MustInvoke[*redis.Component](injector)
+//
 // 参数：
 //   - r: Registry 实例
 //   - name: 组件名称
 //
 // 返回：
 //   - T: 组件实例（已转换为目标类型）
-//
-// 示例：
-//
-//	redisComp := registry.MustGetTyped[*redis.Component](reg, component.ComponentRedis)
 func MustGetTyped[T component.Component](r *Registry, name string) T {
 	typed, ok := GetTyped[T](r, name)
 	if !ok {
