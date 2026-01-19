@@ -11,6 +11,9 @@ import (
 
 // Bridge 桥接器，连接 Registry 和 samber/do
 //
+// Deprecated: Bridge 是过渡方案，请直接使用 samber/do
+// 新代码应使用 component_providers.go 中的独立 Provider
+//
 // 设计目的：
 //   - 让现有 Registry 中的组件可以被 samber/do 访问
 //   - 让 samber/do 中的服务可以被 Registry 中的组件使用
