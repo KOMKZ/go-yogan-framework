@@ -5,6 +5,8 @@ import (
 
 	"github.com/KOMKZ/go-yogan-framework/config"
 	"github.com/KOMKZ/go-yogan-framework/database"
+	"github.com/KOMKZ/go-yogan-framework/event"
+	"github.com/KOMKZ/go-yogan-framework/jwt"
 	"github.com/KOMKZ/go-yogan-framework/logger"
 	"github.com/KOMKZ/go-yogan-framework/redis"
 	"github.com/samber/do/v2"
@@ -368,5 +370,85 @@ func TestProvideLoggerManagerWithConfig(t *testing.T) {
 		// 验证可以获取 logger
 		log := mgr.GetLogger("test")
 		assert.NotNil(t, log)
+	})
+}
+
+// ============================================
+// JWT Provider 测试
+// ============================================
+
+// TestProvideJWTTokenManagerIndependent 测试 JWT TokenManager 独立 Provider
+func TestProvideJWTTokenManagerIndependent(t *testing.T) {
+	t.Run("without config loader", func(t *testing.T) {
+		injector := do.New()
+		defer injector.Shutdown()
+
+		do.Provide(injector, ProvideJWTTokenManagerIndependent)
+
+		// 没有 config.Loader，应该报错
+		_, err := do.Invoke[jwt.TokenManager](injector)
+		assert.Error(t, err)
+	})
+
+	t.Run("with config but jwt disabled", func(t *testing.T) {
+		injector := do.New()
+		defer injector.Shutdown()
+
+		// 使用测试配置（JWT 未启用）
+		opts := ConfigOptions{
+			ConfigPath: "./testdata",
+			AppType:    "http",
+		}
+		do.Provide(injector, ProvideConfigLoader(opts))
+		do.Provide(injector, ProvideLoggerManager)
+		do.Provide(injector, ProvideCtxLogger("yogan"))
+		do.Provide(injector, ProvideJWTTokenManagerIndependent)
+
+		// JWT 未启用，返回 nil
+		mgr, err := do.Invoke[jwt.TokenManager](injector)
+		// 可能返回 nil, nil（未启用）
+		if err == nil {
+			assert.Nil(t, mgr)
+		}
+	})
+}
+
+// ============================================
+// Event Provider 测试
+// ============================================
+
+// TestProvideEventDispatcherIndependent 测试 Event Dispatcher 独立 Provider
+func TestProvideEventDispatcherIndependent(t *testing.T) {
+	t.Run("without config loader", func(t *testing.T) {
+		injector := do.New()
+		defer injector.Shutdown()
+
+		do.Provide(injector, ProvideEventDispatcherIndependent)
+
+		// 没有 config.Loader，应该报错
+		_, err := do.Invoke[event.Dispatcher](injector)
+		assert.Error(t, err)
+	})
+
+	t.Run("with config but event disabled", func(t *testing.T) {
+		injector := do.New()
+		defer injector.Shutdown()
+
+		// 使用测试配置（Event 未启用）
+		opts := ConfigOptions{
+			ConfigPath: "./testdata",
+			AppType:    "http",
+		}
+		do.Provide(injector, ProvideConfigLoader(opts))
+		do.Provide(injector, ProvideLoggerManager)
+		do.Provide(injector, ProvideCtxLogger("yogan"))
+		do.Provide(injector, ProvideEventDispatcherIndependent)
+
+		// Event 未启用，返回 nil
+		dispatcher, err := do.Invoke[event.Dispatcher](injector)
+		// 可能返回 nil, nil（未启用）
+		if err == nil {
+			assert.Nil(t, dispatcher)
+		}
 	})
 }
