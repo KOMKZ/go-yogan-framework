@@ -6,7 +6,6 @@ import (
 
 	"github.com/KOMKZ/go-yogan-framework/component"
 	"github.com/KOMKZ/go-yogan-framework/logger"
-	"github.com/KOMKZ/go-yogan-framework/registry"
 	"github.com/KOMKZ/go-yogan-framework/telemetry"
 	"go.uber.org/zap"
 	gormlogger "gorm.io/gorm/logger"
@@ -16,11 +15,11 @@ import (
 //
 // 实现 component.Component 接口，提供数据库管理能力
 // 依赖：config, logger
-// 可选依赖：telemetry（在 Start 阶段动态注入）
+// 可选依赖：telemetry（需外部注入）
 type Component struct {
-	manager  *Manager
-	registry *registry.Registry   // 🎯 使用具体类型，支持泛型方法
-	logger   *logger.CtxZapLogger // 🎯 组件统一使用字段保存 logger
+	manager            *Manager
+	logger             *logger.CtxZapLogger     // 🎯 组件统一使用字段保存 logger
+	telemetryComponent *telemetry.Component     // 可选：Telemetry 组件
 }
 
 // NewComponent 创建数据库组件
@@ -28,9 +27,10 @@ func NewComponent() *Component {
 	return &Component{}
 }
 
-// SetRegistry 设置 Registry（由框架调用）
-func (c *Component) SetRegistry(r *registry.Registry) {
-	c.registry = r
+// SetTelemetryComponent 注入 Telemetry 组件
+// 可选，用于注入 TracerProvider 和 MetricsManager
+func (c *Component) SetTelemetryComponent(tc *telemetry.Component) {
+	c.telemetryComponent = tc
 }
 
 // Name 组件名称
@@ -108,81 +108,65 @@ func (c *Component) Start(ctx context.Context) error {
 
 // injectTracerProvider 从 Telemetry 组件获取 TracerProvider 并注入到 GORM
 func (c *Component) injectTracerProvider(ctx context.Context) {
-	if c.registry == nil {
+	if c.telemetryComponent == nil || !c.telemetryComponent.IsEnabled() {
 		return
 	}
 
-	// 🎯 使用通用注入器
-	injector := registry.NewInjector(c.registry, c.logger)
-	registry.Inject(injector, ctx, component.ComponentTelemetry,
-		func(tc *telemetry.Component) bool { return tc.IsEnabled() },
-		func(tc *telemetry.Component) {
-			tp := tc.GetTracerProvider()
-			if tp == nil {
-				c.logger.WarnCtx(ctx, "TracerProvider is nil")
-				return
-			}
+	tp := c.telemetryComponent.GetTracerProvider()
+	if tp == nil {
+		c.logger.WarnCtx(ctx, "TracerProvider is nil")
+		return
+	}
 
-			// 创建 OtelPlugin 并注入到 Manager
-			otelPlugin := NewOtelPlugin(tp)
-			if err := c.manager.SetOtelPlugin(otelPlugin); err != nil {
-				c.logger.ErrorCtx(ctx, "Failed to inject TracerProvider into GORM", zap.Error(err))
-				return
-			}
+	// 创建 OtelPlugin 并注入到 Manager
+	otelPlugin := NewOtelPlugin(tp)
+	if err := c.manager.SetOtelPlugin(otelPlugin); err != nil {
+		c.logger.ErrorCtx(ctx, "Failed to inject TracerProvider into GORM", zap.Error(err))
+		return
+	}
 
-			c.logger.DebugCtx(ctx, "✅ TracerProvider injected into GORM")
-		},
-	)
+	c.logger.DebugCtx(ctx, "✅ TracerProvider injected into GORM")
 }
 
 // injectMetricsManager 从 Telemetry 组件获取 MetricsManager 并注入到 GORM
 func (c *Component) injectMetricsManager(ctx context.Context) {
-	if c.registry == nil {
+	if c.telemetryComponent == nil || !c.telemetryComponent.IsEnabled() {
 		return
 	}
 
-	// 🎯 使用通用注入器
-	injector := registry.NewInjector(c.registry, c.logger)
-	registry.Inject(injector, ctx, component.ComponentTelemetry,
-		func(tc *telemetry.Component) bool {
-			// 检查 Telemetry 启用 + MetricsManager 可用 + DB Metrics 启用
-			if !tc.IsEnabled() {
-				return false
-			}
-			mm := tc.GetMetricsManager()
-			return mm != nil && mm.IsDBMetricsEnabled()
-		},
-		func(tc *telemetry.Component) {
-			// 遍历所有数据库实例，为每个实例创建并注入 Metrics Plugin
-			dbNames := c.manager.GetDBNames()
-			for _, dbName := range dbNames {
-				db := c.manager.DB(dbName)
-				if db == nil {
-					continue
-				}
+	mm := c.telemetryComponent.GetMetricsManager()
+	if mm == nil || !mm.IsDBMetricsEnabled() {
+		return
+	}
 
-				// 创建 DBMetrics（默认配置）
-				dbMetrics, err := NewDBMetrics(db, false, 1.0)
-				if err != nil {
-					c.logger.ErrorCtx(ctx, "Failed to create DBMetrics",
-						zap.String("db_name", dbName),
-						zap.Error(err))
-					continue
-				}
+	// 遍历所有数据库实例，为每个实例创建并注入 Metrics Plugin
+	dbNames := c.manager.GetDBNames()
+	for _, dbName := range dbNames {
+		db := c.manager.DB(dbName)
+		if db == nil {
+			continue
+		}
 
-				// 注入到 Manager
-				if err := c.manager.SetMetricsPlugin(dbName, dbMetrics); err != nil {
-					c.logger.ErrorCtx(ctx, "Failed to inject MetricsPlugin into GORM",
-						zap.String("db_name", dbName),
-						zap.Error(err))
-					continue
-				}
+		// 创建 DBMetrics（默认配置）
+		dbMetrics, err := NewDBMetrics(db, false, 1.0)
+		if err != nil {
+			c.logger.ErrorCtx(ctx, "Failed to create DBMetrics",
+				zap.String("db_name", dbName),
+				zap.Error(err))
+			continue
+		}
 
-				c.logger.DebugCtx(ctx, "✅ MetricsPlugin injected into GORM",
-					zap.String("db_name", dbName))
-			}
-		},
-	)
+		// 注入到 Manager
+		if err := c.manager.SetMetricsPlugin(dbName, dbMetrics); err != nil {
+			c.logger.ErrorCtx(ctx, "Failed to inject MetricsPlugin into GORM",
+				zap.String("db_name", dbName),
+				zap.Error(err))
+			continue
+		}
+
+		c.logger.DebugCtx(ctx, "✅ MetricsPlugin injected into GORM",
+			zap.String("db_name", dbName))
+	}
 }
 
 // Stop 停止数据库组件（关闭连接）

@@ -7,7 +7,6 @@ import (
 	"github.com/KOMKZ/go-yogan-framework/component"
 	"github.com/KOMKZ/go-yogan-framework/logger"
 	"github.com/KOMKZ/go-yogan-framework/redis"
-	"github.com/KOMKZ/go-yogan-framework/registry"
 	goredis "github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
@@ -20,8 +19,7 @@ type Component struct {
 	passwordService *PasswordService
 	attemptStore    LoginAttemptStore
 	providers       map[string]AuthProvider // 认证提供者映射
-	redisComponent  *redis.Component        // Redis 组件依赖（可选）
-	registry        *registry.Registry      // 注册中心
+	redisComponent  *redis.Component        // Redis 组件依赖（可选，需外部注入）
 }
 
 // NewComponent 创建认证组件
@@ -146,12 +144,8 @@ func (c *Component) IsRequired() bool {
 	return false // Auth 是可选组件
 }
 
-// SetRegistry 设置注册中心（由框架自动调用）
-func (c *Component) SetRegistry(r *registry.Registry) {
-	c.registry = r
-}
-
-// SetRedisComponent 注入 Redis Component（用于测试或手动注入）
+// SetRedisComponent 注入 Redis Component
+// 当 login_attempt.storage=redis 时必须调用此方法注入 Redis 组件
 func (c *Component) SetRedisComponent(redisComp *redis.Component) {
 	c.redisComponent = redisComp
 }
@@ -191,19 +185,9 @@ func (c *Component) GetConfig() *Config {
 
 // getRedisClient 从 Redis 组件获取客户端
 func (c *Component) getRedisClient() error {
-	// 如果没有手动注入，从 Registry 获取
 	if c.redisComponent == nil {
-		if c.registry == nil {
-			return fmt.Errorf("registry not set")
-		}
-
-		redisComp, ok := registry.GetTyped[*redis.Component](c.registry, component.ComponentRedis)
-		if !ok {
-			return fmt.Errorf("redis component not found or type mismatch")
-		}
-		c.redisComponent = redisComp
+		return fmt.Errorf("redis component not set, call SetRedisComponent first")
 	}
-
 	return nil
 }
 

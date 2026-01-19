@@ -7,7 +7,6 @@ import (
 	"github.com/KOMKZ/go-yogan-framework/event"
 	"github.com/KOMKZ/go-yogan-framework/logger"
 	frameworkRedis "github.com/KOMKZ/go-yogan-framework/redis"
-	"github.com/KOMKZ/go-yogan-framework/registry"
 	"go.uber.org/zap"
 )
 
@@ -19,9 +18,8 @@ type Component struct {
 	config       *Config
 	orchestrator *DefaultOrchestrator
 	log          *logger.CtxZapLogger
-	registry     *registry.Registry // 🎯 使用具体类型，支持泛型方法
 
-	// 外部依赖（启动时从 Registry 获取）
+	// 外部依赖（需外部注入）
 	redisManager *frameworkRedis.Manager
 	dispatcher   event.Dispatcher
 }
@@ -76,23 +74,12 @@ func (c *Component) Start(ctx context.Context) error {
 		return nil
 	}
 
-	// 从 Registry 获取可选依赖
-	if c.registry != nil {
-		// 获取 Redis 组件
-		if redisComp, ok := registry.GetTyped[*frameworkRedis.Component](c.registry, component.ComponentRedis); ok {
-			c.redisManager = redisComp.GetManager()
-			if c.redisManager != nil {
-				c.log.Debug("cache component: redis manager obtained from registry")
-			}
-		}
-
-		// 获取事件组件
-		if eventComp, ok := registry.GetTyped[*event.Component](c.registry, component.ComponentEvent); ok {
-			if eventComp.IsEnabled() {
-				c.dispatcher = eventComp.GetDispatcher()
-				c.log.Debug("cache component: event dispatcher obtained from registry")
-			}
-		}
+	// 依赖已通过 SetRedisManager / SetEventDispatcher 注入
+	if c.redisManager != nil {
+		c.log.Debug("cache component: redis manager available")
+	}
+	if c.dispatcher != nil {
+		c.log.Debug("cache component: event dispatcher available")
 	}
 
 	// 创建编排中心
@@ -189,12 +176,8 @@ func (c *Component) createStore(name string, cfg StoreConfig) (Store, error) {
 	}
 }
 
-// SetRegistry 设置注册中心（由框架调用）
-func (c *Component) SetRegistry(r *registry.Registry) {
-	c.registry = r
-}
-
-// SetRedisManager 设置 Redis 管理器（可选，用于测试或手动注入）
+// SetRedisManager 设置 Redis 管理器
+// 使用 redis 存储时需调用此方法注入
 func (c *Component) SetRedisManager(manager *frameworkRedis.Manager) {
 	c.redisManager = manager
 }

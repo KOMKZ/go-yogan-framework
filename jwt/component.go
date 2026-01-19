@@ -7,7 +7,6 @@ import (
 	"github.com/KOMKZ/go-yogan-framework/component"
 	"github.com/KOMKZ/go-yogan-framework/logger"
 	"github.com/KOMKZ/go-yogan-framework/redis"
-	"github.com/KOMKZ/go-yogan-framework/registry"
 )
 
 // Component JWT 组件
@@ -16,8 +15,7 @@ type Component struct {
 	logger         *logger.CtxZapLogger
 	tokenStore     TokenStore
 	tokenManager   TokenManager
-	redisComponent *redis.Component   // Redis 组件依赖（可选）
-	registry       *registry.Registry // 🎯 使用具体类型，支持泛型方法
+	redisComponent *redis.Component // Redis 组件依赖（blacklist.storage=redis 时需外部注入）
 }
 
 // NewComponent 创建 JWT 组件
@@ -119,14 +117,10 @@ func (c *Component) GetTokenManager() TokenManager {
 	return c.tokenManager
 }
 
-// SetRedisComponent 注入 Redis Component（用于测试或手动注入）
+// SetRedisComponent 注入 Redis Component
+// 当 blacklist.storage=redis 时必须调用此方法注入 Redis 组件
 func (c *Component) SetRedisComponent(redisComp *redis.Component) {
 	c.redisComponent = redisComp
-}
-
-// SetRegistry 设置注册中心（由框架自动调用，参考 registry.go:50-53）
-func (c *Component) SetRegistry(r *registry.Registry) {
-	c.registry = r
 }
 
 // GetConfig 获取配置
@@ -154,17 +148,8 @@ func (c *Component) createTokenStore() error {
 
 // createRedisTokenStore 创建 Redis TokenStore
 func (c *Component) createRedisTokenStore() error {
-	// 如果没有手动注入，从 Registry 获取
 	if c.redisComponent == nil {
-		if c.registry == nil {
-			return fmt.Errorf("registry not set")
-		}
-
-		redisComp, ok := registry.GetTyped[*redis.Component](c.registry, component.ComponentRedis)
-		if !ok {
-			return fmt.Errorf("redis component not found or type mismatch")
-		}
-		c.redisComponent = redisComp
+		return fmt.Errorf("redis component not set, call SetRedisComponent first")
 	}
 
 	// 获取 Redis Client

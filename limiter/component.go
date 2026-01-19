@@ -7,7 +7,6 @@ import (
 	"github.com/KOMKZ/go-yogan-framework/component"
 	"github.com/KOMKZ/go-yogan-framework/logger"
 	rediscomp "github.com/KOMKZ/go-yogan-framework/redis"
-	"github.com/KOMKZ/go-yogan-framework/registry"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
@@ -15,11 +14,11 @@ import (
 // Component 限流组件
 //
 // 实现 component.Component 接口，提供限流管理能力
-// 依赖：config, logger, redis
+// 依赖：config, logger, redis（当 store_type=redis 时需外部注入）
 type Component struct {
-	manager  *Manager
-	config   Config
-	registry *registry.Registry // 🎯 使用具体类型，支持泛型方法
+	manager        *Manager
+	config         Config
+	redisComponent *rediscomp.Component // Redis 组件依赖（store_type=redis 时需外部注入）
 }
 
 // NewComponent 创建限流组件
@@ -74,7 +73,6 @@ func (c *Component) Init(ctx context.Context, loader component.ConfigLoader) err
 }
 
 // Start 启动限流组件
-// 在此创建 Manager，并从 Registry 获取 Redis 客户端（如果需要）
 func (c *Component) Start(ctx context.Context) error {
 	// 如果配置未加载或未启用，跳过
 	if !c.config.Enabled {
@@ -83,21 +81,14 @@ func (c *Component) Start(ctx context.Context) error {
 
 	ctxLogger := logger.GetLogger("yogan")
 
-	// 如果使用 redis 存储，从 Registry 获取 Redis 组件
+	// 如果使用 redis 存储，需要从已注入的 Redis 组件获取客户端
 	var redisClient *redis.Client
 	if c.config.StoreType == string(StoreTypeRedis) {
-		if c.registry == nil {
-			return fmt.Errorf("Registry 未注入，无法获取 Redis 组件")
+		if c.redisComponent == nil {
+			return fmt.Errorf("使用 redis 存储但 Redis 组件未注入，请先调用 SetRedisComponent")
 		}
 
-		// 🎯 使用泛型函数，一步到位获取类型化组件
-		redisComp, ok := registry.GetTyped[*rediscomp.Component](c.registry, component.ComponentRedis)
-		if !ok {
-			return fmt.Errorf("使用 redis 存储但未注册 redis 组件或类型错误，请先调用 app.Register(redis.NewComponent())")
-		}
-
-		// 直接使用，无需再次类型断言
-		redisManager := redisComp.GetManager()
+		redisManager := c.redisComponent.GetManager()
 		if redisManager == nil {
 			return fmt.Errorf("RedisManager 未初始化")
 		}
@@ -108,7 +99,7 @@ func (c *Component) Start(ctx context.Context) error {
 			return fmt.Errorf("Redis 实例 '%s' 不存在，请在 redis.instances 中配置", c.config.Redis.Instance)
 		}
 
-		ctxLogger.DebugCtx(ctx, "✅ 从 Registry 获取 Redis 客户端成功（泛型方法）",
+		ctxLogger.DebugCtx(ctx, "✅ 获取 Redis 客户端成功",
 			zap.String("instance", c.config.Redis.Instance),
 			zap.String("key_prefix", c.config.Redis.KeyPrefix))
 	}
@@ -125,9 +116,10 @@ func (c *Component) Start(ctx context.Context) error {
 	return nil
 }
 
-// SetRegistry 设置 Registry 引用（由 Registry.Register 自动调用）
-func (c *Component) SetRegistry(r *registry.Registry) {
-	c.registry = r
+// SetRedisComponent 注入 Redis Component
+// 当 store_type=redis 时必须调用此方法注入 Redis 组件
+func (c *Component) SetRedisComponent(redisComp *rediscomp.Component) {
+	c.redisComponent = redisComp
 }
 
 // Stop 停止限流组件（关闭资源）
