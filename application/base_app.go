@@ -90,44 +90,19 @@ func NewBase(configPath, configPrefix, appType string, flags interface{}) *BaseA
 	ctx, cancel := context.WithCancel(context.Background())
 	injector := do.New()
 
-	// ═══════════════════════════════════════════════════════════
-	// Layer 0: Config（无依赖）
-	// ═══════════════════════════════════════════════════════════
-	do.Provide(injector, di.ProvideConfigLoader(di.ConfigOptions{
+	// 注册所有核心组件 Provider（集中管理于 di/core_registrar.go）
+	di.RegisterCoreProviders(injector, di.ConfigOptions{
 		ConfigPath:   configPath,
 		ConfigPrefix: configPrefix,
 		AppType:      appType,
 		Flags:        flags,
-	}))
-	configLoader := do.MustInvoke[*config.Loader](injector)
+	})
 
-	// ═══════════════════════════════════════════════════════════
-	// Layer 1: Logger（依赖 Config）
-	// ═══════════════════════════════════════════════════════════
-	do.Provide(injector, di.ProvideLoggerManager)
-	do.Provide(injector, di.ProvideCtxLogger("yogan"))
+	// 立即获取 Config 和 Logger（基础依赖）
+	configLoader := do.MustInvoke[*config.Loader](injector)
 	coreLogger := do.MustInvoke[*logger.CtxZapLogger](injector)
 
-	// ═══════════════════════════════════════════════════════════
-	// Layer 2: 基础设施组件（懒加载，按需初始化）
-	// ═══════════════════════════════════════════════════════════
-	do.Provide(injector, di.ProvideDatabaseManager)
-	do.Provide(injector, di.ProvideRedisManager)
-	do.Provide(injector, di.ProvideKafkaManager)
-
-	// ═══════════════════════════════════════════════════════════
-	// Layer 3: 业务支撑组件（懒加载）
-	// ═══════════════════════════════════════════════════════════
-	do.Provide(injector, di.ProvideJWTConfig)
-	do.Provide(injector, di.ProvideJWTTokenManagerIndependent)
-	do.Provide(injector, di.ProvideEventDispatcherIndependent)
-	do.Provide(injector, di.ProvideCacheOrchestrator)
-	do.Provide(injector, di.ProvideLimiterManager)
-	do.Provide(injector, di.ProvideHealthAggregator)
-
-	// ═══════════════════════════════════════════════════════════
 	// 加载 AppConfig
-	// ═══════════════════════════════════════════════════════════
 	var appCfg AppConfig
 	if err := configLoader.Unmarshal(&appCfg); err != nil {
 		panic(fmt.Sprintf("加载 AppConfig 失败: %v", err))
