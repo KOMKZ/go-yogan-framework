@@ -128,6 +128,10 @@ func NewBase(configPath, configPrefix, appType string, flags interface{}) *BaseA
 	do.Provide(injector, di.ProvideCtxLogger("yogan"))
 	coreLogger := do.MustInvoke[*logger.CtxZapLogger](injector)
 
+	// 注意：Database/Redis 等组件仍通过 Registry 管理生命周期
+	// 它们会在 registerCoreComponentsToDo() 中通过 ProvideValue 注册到 do
+	// 这是过渡期的设计，后续会逐步迁移
+
 	// ═══════════════════════════════════════════════════════════
 	// 2. 创建 Registry（过渡期仍需要，用于管理业务组件生命周期）
 	// ═══════════════════════════════════════════════════════════
