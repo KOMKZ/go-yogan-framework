@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/KOMKZ/go-yogan-framework/component"
 	"github.com/go-co-op/gocron/v2"
 	"go.uber.org/zap"
 )
@@ -54,12 +53,6 @@ func NewCron(configPath, configPrefix string) (*CronApplication, error) {
 // NewCronWithDefaults 创建 Cron 应用实例（使用默认配置）
 func NewCronWithDefaults(appName string) (*CronApplication, error) {
 	return NewCron("../configs/"+appName, "APP")
-}
-
-// Register 注册组件（链式调用，重写以返回 *CronApplication）
-func (a *CronApplication) Register(components ...component.Component) *CronApplication {
-	a.BaseApplication.Register(components...)
-	return a
 }
 
 // Run 启动 Cron 应用（阻塞直到收到关闭信号）

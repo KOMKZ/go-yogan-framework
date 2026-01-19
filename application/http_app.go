@@ -7,10 +7,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/KOMKZ/go-yogan-framework/component"
 	"github.com/KOMKZ/go-yogan-framework/limiter"
-	"github.com/KOMKZ/go-yogan-framework/registry"
 	"github.com/KOMKZ/go-yogan-framework/telemetry"
+	"github.com/samber/do/v2"
 	"go.uber.org/zap"
 )
 
@@ -57,12 +56,6 @@ func NewWithDefaults(appName string) *Application {
 // flags: 命令行参数（AppFlags 结构体）
 func NewWithFlags(configPath, configPrefix string, flags interface{}) *Application {
 	return New(configPath, configPrefix, flags)
-}
-
-// Register 注册组件（链式调用，重写以返回 *Application）
-func (a *Application) Register(components ...component.Component) *Application {
-	a.BaseApplication.Register(components...)
-	return a
 }
 
 // WithVersion 设置应用版本号（链式调用）
@@ -122,16 +115,16 @@ func (a *Application) startHTTPServer() error {
 		return nil
 	}
 
-	// 🎯 通过 Registry 获取 OpenTelemetry 组件
+	// 🎯 通过 DI 获取 Telemetry 组件（可选）
 	var telemetryComp *telemetry.Component
-	if comp, ok := registry.GetTyped[*telemetry.Component](a.GetRegistry(), component.ComponentTelemetry); ok && comp.IsEnabled() {
+	if comp, err := do.Invoke[*telemetry.Component](a.GetInjector()); err == nil && comp != nil && comp.IsEnabled() {
 		telemetryComp = comp
 	}
 
-	// 🎯 通过 Registry 获取 Limiter 组件
+	// 🎯 通过 DI 获取 Limiter Manager（可选）
 	var limiterMgr *limiter.Manager
-	if limiterComp, ok := registry.GetTyped[*limiter.Component](a.GetRegistry(), component.ComponentLimiter); ok {
-		limiterMgr = limiterComp.GetManager()
+	if mgr, err := do.Invoke[*limiter.Manager](a.GetInjector()); err == nil && mgr != nil {
+		limiterMgr = mgr
 	}
 
 	// 创建 HTTP Server（传递中间件配置、httpx 配置、限流器和 telemetry）
@@ -192,16 +185,6 @@ func (a *Application) Shutdown() {
 }
 
 // OnSetup 注册 Setup 阶段回调（链式调用）
-// OnAfterInit 注册组件初始化后回调（链式调用）
-// 在所有组件 Init 完成后、Start 之前触发
-// 用于在组件启动前注入依赖（如 SetRedisComponent）
-func (a *Application) OnAfterInit(fn func(*Application) error) *Application {
-	a.BaseApplication.OnAfterInit(func(base *BaseApplication) error {
-		return fn(a)
-	})
-	return a
-}
-
 func (a *Application) OnSetup(fn func(*Application) error) *Application {
 	a.BaseApplication.OnSetup(func(base *BaseApplication) error {
 		return fn(a)

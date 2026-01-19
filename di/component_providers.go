@@ -58,20 +58,21 @@ func ProvideConfigLoader(opts ConfigOptions) func(do.Injector) (*config.Loader, 
 // ProvideLoggerManager 创建 logger.Manager 的 Provider
 // 依赖：config.Loader（从配置读取 logger 配置）
 func ProvideLoggerManager(i do.Injector) (*logger.Manager, error) {
+	var loggerCfg logger.ManagerConfig
+
 	// 尝试从配置加载 logger 配置
 	loader, err := do.Invoke[*config.Loader](i)
-	if err != nil {
-		// 无配置时使用默认配置
-		return logger.NewManager(logger.DefaultManagerConfig()), nil
-	}
-
-	var loggerCfg logger.ManagerConfig
-	if err := loader.GetViper().UnmarshalKey("logger", &loggerCfg); err != nil {
-		// 解析失败使用默认配置
-		return logger.NewManager(logger.DefaultManagerConfig()), nil
+	if err == nil && loader != nil {
+		if v := loader.GetViper(); v != nil {
+			_ = v.UnmarshalKey("logger", &loggerCfg)
+		}
 	}
 
 	loggerCfg.ApplyDefaults()
+
+	// 同时初始化全局 Manager（兼容旧代码）
+	logger.InitManager(loggerCfg)
+
 	return logger.NewManager(loggerCfg), nil
 }
 
@@ -79,12 +80,15 @@ func ProvideLoggerManager(i do.Injector) (*logger.Manager, error) {
 // 用于应用层获取特定模块的 logger
 func ProvideCtxLogger(moduleName string) func(do.Injector) (*logger.CtxZapLogger, error) {
 	return func(i do.Injector) (*logger.CtxZapLogger, error) {
+		// 先尝试从 Manager 获取（推荐）
 		mgr, err := do.Invoke[*logger.Manager](i)
-		if err != nil {
-			// 回退到全局 logger
-			return logger.GetLogger(moduleName), nil
+		if err == nil && mgr != nil {
+			if ctxLogger := mgr.GetLogger(moduleName); ctxLogger != nil {
+				return ctxLogger, nil
+			}
 		}
-		return mgr.GetLogger(moduleName), nil
+		// 回退到全局 logger
+		return logger.GetLogger(moduleName), nil
 	}
 }
 
@@ -166,6 +170,30 @@ func ProvideRedisManager(i do.Injector) (*redis.Manager, error) {
 // JWT 组件 Provider
 // 依赖：Config, Logger, Redis(可选)
 // ============================================
+
+// ProvideJWTConfig 提供 JWT 配置
+func ProvideJWTConfig(i do.Injector) (*jwt.Config, error) {
+	loader, err := do.Invoke[*config.Loader](i)
+	if err != nil {
+		return nil, err
+	}
+
+	var cfg jwt.Config
+	if err := loader.GetViper().UnmarshalKey("jwt", &cfg); err != nil {
+		return nil, nil // JWT 未配置
+	}
+	cfg.ApplyDefaults()
+
+	if !cfg.Enabled {
+		return nil, nil // JWT 未启用
+	}
+
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+
+	return &cfg, nil
+}
 
 // ProvideJWTTokenManagerIndependent 创建 jwt.TokenManager 的独立 Provider
 // 依赖：config.Loader, redis.Manager(可选)

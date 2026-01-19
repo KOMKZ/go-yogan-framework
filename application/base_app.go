@@ -11,48 +11,33 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/KOMKZ/go-yogan-framework/auth"
-	"github.com/KOMKZ/go-yogan-framework/cache"
-	"github.com/KOMKZ/go-yogan-framework/component"
 	"github.com/KOMKZ/go-yogan-framework/config"
 	"github.com/KOMKZ/go-yogan-framework/database"
 	"github.com/KOMKZ/go-yogan-framework/di"
-	"github.com/KOMKZ/go-yogan-framework/event"
-	"github.com/KOMKZ/go-yogan-framework/health"
-	"github.com/KOMKZ/go-yogan-framework/jwt"
 	"github.com/KOMKZ/go-yogan-framework/kafka"
-	"github.com/KOMKZ/go-yogan-framework/limiter"
 	"github.com/KOMKZ/go-yogan-framework/logger"
 	"github.com/KOMKZ/go-yogan-framework/redis"
-	"github.com/KOMKZ/go-yogan-framework/registry"
 	"github.com/samber/do/v2"
 	"go.uber.org/zap"
 )
 
 // BaseApplication 应用核心框架（80% 通用逻辑）
 // 支持 HTTP/CLI/Cron 等所有应用类型
+// 🎯 全面使用 samber/do 管理组件生命周期，不再使用 Registry
 type BaseApplication struct {
 	// ═══════════════════════════════════════════════════════════
-	// 组件注册中心（统一管理所有组件）
+	// DI 容器（唯一的组件管理方式）
 	// ═══════════════════════════════════════════════════════════
-	registry *registry.Registry // 🎯 使用具体类型，支持泛型方法
-	injector *do.RootScope      // 🎯 samber/do 注入器（新）
+	injector *do.RootScope // samber/do 注入器
 
-	// 配置管理（仅用于初始化时）
+	// 配置管理
 	configPath   string
 	configPrefix string
-	appConfig    *AppConfig // 缓存加载的配置，避免重复反序列化
+	appConfig    *AppConfig
 
-	// 核心组件缓存（避免重复从 Registry 获取）
+	// 核心组件缓存（快速访问）
 	logger       *logger.CtxZapLogger
 	configLoader *config.Loader
-
-	// ═══════════════════════════════════════════════════════════
-	// 依赖容器（业务扩展）
-	// ═══════════════════════════════════════════════════════════
-	// 业务应用可以注册额外的依赖（如 Redis、MQ 等）
-	dependencies map[string]interface{}
-	depsMu       sync.RWMutex
 
 	// 生命周期
 	ctx    context.Context
@@ -61,14 +46,13 @@ type BaseApplication struct {
 	mu     sync.RWMutex
 
 	// 应用元信息
-	version string // 应用版本号
+	version string
 
-	// 回调函数（应用自定义逻辑）
-	onAfterInit    func(*BaseApplication) error // 组件初始化后、启动前回调（用于注入依赖）
-	onSetup        func(*BaseApplication) error // Setup 阶段回调（组件启动后）
-	onReady        func(*BaseApplication) error // 启动完成回调
-	onConfigReload func(*config.Loader)         // 配置更新回调
-	onShutdown     func(context.Context) error  // 关闭前回调
+	// 回调函数
+	onSetup        func(*BaseApplication) error
+	onReady        func(*BaseApplication) error
+	onConfigReload func(*config.Loader)
+	onShutdown     func(context.Context) error
 }
 
 // AppState 应用状态
@@ -100,67 +84,60 @@ func (s AppState) String() string {
 	}
 }
 
-// NewBase 创建基础应用实例（内部使用）
-// configPath: 配置目录路径（如 ../configs/user-api）
-// configPrefix: 环境变量前缀（如 "APP"）
-// appType: 应用类型（http/grpc/cli/cron）
-// flags: 命令行参数（可选，nil 表示不使用）
+// NewBase 创建基础应用实例
+// 🎯 全面使用 samber/do 管理所有组件，不再使用 Registry
 func NewBase(configPath, configPrefix, appType string, flags interface{}) *BaseApplication {
 	ctx, cancel := context.WithCancel(context.Background())
-
-	// ═══════════════════════════════════════════════════════════
-	// 1. 创建 samber/do 注入器并注册核心 Provider
-	// ═══════════════════════════════════════════════════════════
 	injector := do.New()
 
-	// 注册 Config Provider（Layer 0）
+	// ═══════════════════════════════════════════════════════════
+	// Layer 0: Config（无依赖）
+	// ═══════════════════════════════════════════════════════════
 	do.Provide(injector, di.ProvideConfigLoader(di.ConfigOptions{
 		ConfigPath:   configPath,
 		ConfigPrefix: configPrefix,
 		AppType:      appType,
 		Flags:        flags,
 	}))
-
-	// 立即 Invoke 获取 Config Loader
 	configLoader := do.MustInvoke[*config.Loader](injector)
 
-	// 注册 Logger Provider（Layer 1，依赖 Config）
+	// ═══════════════════════════════════════════════════════════
+	// Layer 1: Logger（依赖 Config）
+	// ═══════════════════════════════════════════════════════════
+	do.Provide(injector, di.ProvideLoggerManager)
 	do.Provide(injector, di.ProvideCtxLogger("yogan"))
 	coreLogger := do.MustInvoke[*logger.CtxZapLogger](injector)
 
-	// 注意：Database/Redis 等组件仍通过 Registry 管理生命周期
-	// 它们会在 registerCoreComponentsToDo() 中通过 ProvideValue 注册到 do
-	// 这是过渡期的设计，后续会逐步迁移
+	// ═══════════════════════════════════════════════════════════
+	// Layer 2: 基础设施组件（懒加载，按需初始化）
+	// ═══════════════════════════════════════════════════════════
+	do.Provide(injector, di.ProvideDatabaseManager)
+	do.Provide(injector, di.ProvideRedisManager)
+	do.Provide(injector, di.ProvideKafkaManager)
 
 	// ═══════════════════════════════════════════════════════════
-	// 2. 创建 Registry（过渡期仍需要，用于管理业务组件生命周期）
+	// Layer 3: 业务支撑组件（懒加载）
 	// ═══════════════════════════════════════════════════════════
-	reg := NewRegistry()
-	reg.SetLogger(coreLogger)
-
-	// 为兼容旧代码，仍注册 ConfigComponent 和 LoggerComponent 到 Registry
-	configComp := NewConfigComponent(configPath, configPrefix, appType, flags)
-	configComp.SetLoader(configLoader) // 复用 DI 创建的 Loader
-	loggerComp := NewLoggerComponent()
-	loggerComp.SetLogger(coreLogger) // 复用 DI 创建的 Logger
-	reg.MustRegister(configComp)
-	reg.MustRegister(loggerComp)
+	do.Provide(injector, di.ProvideJWTConfig)
+	do.Provide(injector, di.ProvideJWTTokenManagerIndependent)
+	do.Provide(injector, di.ProvideEventDispatcherIndependent)
+	do.Provide(injector, di.ProvideCacheOrchestrator)
+	do.Provide(injector, di.ProvideLimiterManager)
+	do.Provide(injector, di.ProvideHealthAggregator)
 
 	// ═══════════════════════════════════════════════════════════
-	// 3. 加载通用 AppConfig
+	// 加载 AppConfig
 	// ═══════════════════════════════════════════════════════════
 	var appCfg AppConfig
 	if err := configLoader.Unmarshal(&appCfg); err != nil {
 		panic(fmt.Sprintf("加载 AppConfig 失败: %v", err))
 	}
 
-	coreLogger.DebugCtx(ctx, "✅ 基础应用初始化完成（DI 模式）",
+	coreLogger.DebugCtx(ctx, "✅ 基础应用初始化完成（纯 DI 模式）",
 		zap.String("configPath", configPath),
-		zap.String("prefix", configPrefix),
 		zap.String("appType", appType))
 
 	return &BaseApplication{
-		registry:     reg,
 		injector:     injector,
 		configPath:   configPath,
 		configPrefix: configPrefix,
@@ -170,7 +147,6 @@ func NewBase(configPath, configPrefix, appType string, flags interface{}) *BaseA
 		ctx:          ctx,
 		cancel:       cancel,
 		state:        StateInit,
-		dependencies: make(map[string]interface{}),
 	}
 }
 
@@ -182,18 +158,6 @@ func NewBase(configPath, configPrefix, appType string, flags interface{}) *BaseA
 func NewBaseWithDefaults(appName, appType string) *BaseApplication {
 	defaultPath := "../configs/" + appName
 	return NewBase(defaultPath, "APP", appType, nil)
-}
-
-// Register 注册组件（链式调用）
-// 业务应用可以注册额外的组件（Database、Redis、自定义组件等）
-// 注册失败会 panic（Fail Fast 策略）
-func (b *BaseApplication) Register(components ...component.Component) *BaseApplication {
-	for _, comp := range components {
-		if err := b.registry.Register(comp); err != nil {
-			panic(fmt.Sprintf("注册组件 '%s' 失败: %v", comp.Name(), err))
-		}
-	}
-	return b
 }
 
 // WithVersion 设置应用版本号（链式调用）
@@ -209,33 +173,38 @@ func (b *BaseApplication) GetVersion() string {
 }
 
 // Setup 初始化所有组件（核心逻辑）
+// 🎯 组件通过 samber/do 懒加载，此处触发关键组件的初始化
 func (b *BaseApplication) Setup() error {
 	b.setState(StateSetup)
+	ctx := b.ctx
 
-	// 1. 初始化所有组件（按依赖顺序）- Registry 已有 Logger，从一开始就有日志
-	if err := b.registry.Init(b.ctx); err != nil {
-		return fmt.Errorf("组件初始化失败: %w", err)
-	}
+	// ═══════════════════════════════════════════════════════════
+	// 按需初始化核心组件（通过 Invoke 触发懒加载）
+	// 同时注册默认实例（便于应用层使用）
+	// ═══════════════════════════════════════════════════════════
 
-	// 2. 自动注入核心组件间的依赖（内核职责，应用层无需关心）
-	b.injectCoreComponentDependencies()
-
-	// 3. 触发 OnAfterInit 回调（用于应用层特定的依赖注入）
-	if b.onAfterInit != nil {
-		if err := b.onAfterInit(b); err != nil {
-			return fmt.Errorf("onAfterInit failed: %w", err)
+	// Database（如果配置了）- 注册默认 *gorm.DB
+	if dbMgr, err := do.Invoke[*database.Manager](b.injector); err == nil && dbMgr != nil {
+		if db := dbMgr.DB("master"); db != nil {
+			do.ProvideValue(b.injector, db) // *gorm.DB（默认 master）
 		}
+		b.logger.DebugCtx(ctx, "✅ Database 组件已初始化")
 	}
 
-	// 4. 启动所有组件 - Registry 会输出启动日志
-	if err := b.registry.Start(b.ctx); err != nil {
-		return fmt.Errorf("组件启动失败: %w", err)
+	// Redis（如果配置了）- 注册默认 *goredis.Client
+	if redisMgr, err := do.Invoke[*redis.Manager](b.injector); err == nil && redisMgr != nil {
+		if client := redisMgr.Client("main"); client != nil {
+			do.ProvideValue(b.injector, client) // *goredis.Client（默认 main）
+		}
+		b.logger.DebugCtx(ctx, "✅ Redis 组件已初始化")
 	}
 
-	// 5. 自动注册核心组件到 samber/do（组件启动后才能获取 Manager 等）
-	b.registerCoreComponentsToDo()
+	// Kafka（如果配置了）
+	if kafkaMgr, err := do.Invoke[*kafka.Manager](b.injector); err == nil && kafkaMgr != nil {
+		b.logger.DebugCtx(ctx, "✅ Kafka 组件已初始化")
+	}
 
-	// 6. 触发 OnSetup 回调（应用自定义准备）
+	// 触发 OnSetup 回调
 	if b.onSetup != nil {
 		if err := b.onSetup(b); err != nil {
 			return fmt.Errorf("onSetup failed: %w", err)
@@ -246,11 +215,12 @@ func (b *BaseApplication) Setup() error {
 }
 
 // Shutdown 优雅关闭（核心逻辑）
+// 🎯 使用 samber/do 的 Shutdown 自动关闭所有实现 Shutdownable 的组件
 func (b *BaseApplication) Shutdown(timeout time.Duration) error {
 	b.setState(StateStopping)
 
-	logger := b.MustGetLogger()
-	logger.DebugCtx(b.ctx, "Starting graceful shutdown...")
+	log := b.MustGetLogger()
+	log.DebugCtx(b.ctx, "🔻 Starting graceful shutdown...")
 
 	// 创建带超时的上下文
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -259,16 +229,16 @@ func (b *BaseApplication) Shutdown(timeout time.Duration) error {
 	// 1. 触发 OnShutdown 回调（业务层清理）
 	if b.onShutdown != nil {
 		if err := b.onShutdown(ctx); err != nil {
-			logger.ErrorCtx(ctx, "OnShutdown callback failed", zap.Error(err))
-			// 继续执行清理流程
+			log.ErrorCtx(ctx, "OnShutdown callback failed", zap.Error(err))
 		}
 	}
 
-	// 2. 停止所有组件（反向顺序）
-	if err := b.registry.Stop(ctx); err != nil {
-		logger.ErrorCtx(ctx, "Component stop failed", zap.Error(err))
+	// 2. 关闭 DI 容器（自动关闭所有实现 Shutdownable 的组件）
+	if err := b.injector.Shutdown(); err != nil {
+		log.ErrorCtx(ctx, "DI container shutdown failed", zap.Error(err))
 	}
 
+	log.DebugCtx(ctx, "✅ 所有组件已关闭")
 	b.setState(StateStopped)
 	return nil
 }
@@ -307,15 +277,7 @@ func (b *BaseApplication) Cancel() {
 	b.cancel()
 }
 
-// OnSetup 注册 Setup 阶段回调（在配置加载后触发）
-// OnAfterInit 注册组件初始化后回调
-// 在所有组件 Init 完成后、Start 之前触发
-// 用于在组件启动前注入依赖（如 SetRedisComponent）
-func (b *BaseApplication) OnAfterInit(fn func(*BaseApplication) error) *BaseApplication {
-	b.onAfterInit = fn
-	return b
-}
-
+// OnSetup 注册 Setup 阶段回调
 func (b *BaseApplication) OnSetup(fn func(*BaseApplication) error) *BaseApplication {
 	b.onSetup = fn
 	return b
@@ -384,46 +346,6 @@ func (b *BaseApplication) Context() context.Context {
 // 依赖容器方法（BaseApplication 作为 IoC 容器）
 // ═══════════════════════════════════════════════════════════
 
-// Set 注册依赖到容器（线程安全）
-func (b *BaseApplication) Set(key string, value interface{}) {
-	b.depsMu.Lock()
-	defer b.depsMu.Unlock()
-	b.dependencies[key] = value
-}
-
-// Get 从容器获取依赖（线程安全）
-func (b *BaseApplication) Get(key string) interface{} {
-	b.depsMu.RLock()
-	defer b.depsMu.RUnlock()
-	return b.dependencies[key]
-}
-
-// MustGet 从容器获取依赖（不存在则 panic）
-func (b *BaseApplication) MustGet(key string) interface{} {
-	val := b.Get(key)
-	if val == nil {
-		panic(fmt.Sprintf("dependency '%s' not found", key))
-	}
-	return val
-}
-
-// Has 检查依赖是否存在
-func (b *BaseApplication) Has(key string) bool {
-	b.depsMu.RLock()
-	defer b.depsMu.RUnlock()
-	_, exists := b.dependencies[key]
-	return exists
-}
-
-// ═══════════════════════════════════════════════════════════
-// 组件访问方法（推荐使用 Registry 直接获取）
-// ═══════════════════════════════════════════════════════════
-
-// GetRegistry 获取组件注册中心
-func (b *BaseApplication) GetRegistry() *registry.Registry {
-	return b.registry
-}
-
 // setState 设置状态（线程安全）
 func (b *BaseApplication) setState(state AppState) {
 	b.mu.Lock()
@@ -438,120 +360,4 @@ func (b *BaseApplication) setState(state AppState) {
 			zap.String("from", oldState.String()),
 			zap.String("to", state.String()))
 	}
-}
-
-// injectCoreComponentDependencies 自动注入核心组件间的依赖
-// 在组件 Init 后、Start 前调用
-// 内核职责：JWT/Auth/Limiter/Cache 需要 Redis，由内核自动处理
-func (b *BaseApplication) injectCoreComponentDependencies() {
-	// 获取 Redis 组件（已初始化）
-	redisComp, ok := registry.GetTyped[*redis.Component](b.registry, component.ComponentRedis)
-	if !ok {
-		// Redis 未注册，跳过依赖注入
-		return
-	}
-
-	// 注入 Redis 到 JWT 组件
-	if jwtComp, ok := registry.GetTyped[*jwt.Component](b.registry, component.ComponentJWT); ok {
-		jwtComp.SetRedisComponent(redisComp)
-		b.logger.DebugCtx(b.ctx, "✅ Redis 注入到 JWT 组件")
-	}
-
-	// 注入 Redis 到 Auth 组件
-	if authComp, ok := registry.GetTyped[*auth.Component](b.registry, component.ComponentAuth); ok {
-		authComp.SetRedisComponent(redisComp)
-		b.logger.DebugCtx(b.ctx, "✅ Redis 注入到 Auth 组件")
-	}
-
-	// 注入 Redis 到 Limiter 组件
-	if limiterComp, ok := registry.GetTyped[*limiter.Component](b.registry, component.ComponentLimiter); ok {
-		limiterComp.SetRedisComponent(redisComp)
-		b.logger.DebugCtx(b.ctx, "✅ Redis 注入到 Limiter 组件")
-	}
-
-	// 注入 Redis Manager 到 Cache 组件
-	if cacheComp, ok := registry.GetTyped[*cache.Component](b.registry, component.ComponentCache); ok {
-		if redisComp.GetManager() != nil {
-			cacheComp.SetRedisManager(redisComp.GetManager())
-			b.logger.DebugCtx(b.ctx, "✅ Redis Manager 注入到 Cache 组件")
-		}
-	}
-}
-
-// registerCoreComponentsToDo 自动注册核心组件到 samber/do
-// 在组件启动后调用，确保 Manager 等已初始化
-// 注册策略：同时注册 Manager（多实例访问）和默认实例（便捷访问）
-func (b *BaseApplication) registerCoreComponentsToDo() {
-	// Database - 注册 Manager 和默认 DB
-	if dbComp, ok := registry.GetTyped[*database.Component](b.registry, component.ComponentDatabase); ok {
-		if mgr := dbComp.GetManager(); mgr != nil {
-			do.ProvideValue(b.injector, mgr) // *database.Manager（多连接访问）
-			if db := mgr.DB("master"); db != nil {
-				do.ProvideValue(b.injector, db) // *gorm.DB（默认 master）
-			}
-		}
-	}
-
-	// Redis - 注册 Manager 和默认 Client
-	if redisComp, ok := registry.GetTyped[*redis.Component](b.registry, component.ComponentRedis); ok {
-		if mgr := redisComp.GetManager(); mgr != nil {
-			do.ProvideValue(b.injector, mgr) // *redis.Manager（多实例访问）
-			if client := mgr.Client("main"); client != nil {
-				do.ProvideValue(b.injector, client) // *goredis.Client（默认 main）
-			}
-		}
-	}
-
-	// JWT - 注册 TokenManager 和 Config
-	if jwtComp, ok := registry.GetTyped[*jwt.Component](b.registry, component.ComponentJWT); ok {
-		do.ProvideValue[jwt.TokenManager](b.injector, jwtComp.GetTokenManager())
-		do.ProvideValue(b.injector, jwtComp.GetConfig())
-	}
-
-	// Auth - 注册 AuthService
-	if authComp, ok := registry.GetTyped[*auth.Component](b.registry, component.ComponentAuth); ok {
-		do.ProvideValue(b.injector, authComp.GetAuthService())
-	}
-
-	// Event - 注册 Component 和 Dispatcher
-	if eventComp, ok := registry.GetTyped[*event.Component](b.registry, component.ComponentEvent); ok {
-		do.ProvideValue(b.injector, eventComp)                               // *event.Component
-		do.ProvideValue[event.Dispatcher](b.injector, eventComp.GetDispatcher()) // event.Dispatcher
-	}
-
-	// Cache - 注册 Component
-	if cacheComp, ok := registry.GetTyped[*cache.Component](b.registry, component.ComponentCache); ok {
-		do.ProvideValue(b.injector, cacheComp)
-	}
-
-	// Health - 注册 Component
-	if healthComp, ok := registry.GetTyped[*health.Component](b.registry, component.ComponentHealth); ok {
-		do.ProvideValue(b.injector, healthComp)
-	}
-
-	// Kafka - 注册 Manager
-	if kafkaComp, ok := registry.GetTyped[*kafka.Component](b.registry, component.ComponentKafka); ok {
-		if mgr := kafkaComp.GetManager(); mgr != nil {
-			do.ProvideValue(b.injector, mgr) // *kafka.Manager
-		}
-	}
-
-	// Limiter - 注册 Manager
-	if limiterComp, ok := registry.GetTyped[*limiter.Component](b.registry, component.ComponentLimiter); ok {
-		if mgr := limiterComp.GetManager(); mgr != nil {
-			do.ProvideValue(b.injector, mgr) // *limiter.Manager
-		}
-	}
-
-	// Event ← Kafka：自动配置 Kafka 发布者
-	if eventComp, ok := registry.GetTyped[*event.Component](b.registry, component.ComponentEvent); ok {
-		if kafkaComp, ok := registry.GetTyped[*kafka.Component](b.registry, component.ComponentKafka); ok {
-			if mgr := kafkaComp.GetManager(); mgr != nil {
-				eventComp.SetKafkaPublisher(mgr)
-				b.logger.DebugCtx(b.ctx, "✅ Kafka 注入到 Event 组件")
-			}
-		}
-	}
-
-	b.logger.DebugCtx(b.ctx, "✅ 核心组件已注册到 samber/do")
 }

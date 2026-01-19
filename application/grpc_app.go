@@ -6,7 +6,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/KOMKZ/go-yogan-framework/component"
 	"github.com/KOMKZ/go-yogan-framework/governance"
 	"go.uber.org/zap"
 )
@@ -50,12 +49,6 @@ func NewGRPCWithDefaults(appName string) *GRPCApplication {
 // flags: 命令行参数（AppFlags 结构体）
 func NewGRPCWithFlags(configPath, configPrefix string, flags interface{}) *GRPCApplication {
 	return NewGRPC(configPath, configPrefix, flags)
-}
-
-// Register 注册组件（链式调用）
-func (g *GRPCApplication) Register(components ...component.Component) *GRPCApplication {
-	g.BaseApplication.Register(components...)
-	return g
 }
 
 // OnSetup 注册 Setup 阶段回调（链式调用）

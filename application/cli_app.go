@@ -5,7 +5,6 @@ package application
 import (
 	"context"
 	"fmt"
-	"github.com/KOMKZ/go-yogan-framework/component"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -44,12 +43,6 @@ func NewCLI(configPath, configPrefix string, rootCmd *cobra.Command) *CLIApplica
 // appName: 应用名称（如 cli-app），用于构建默认配置路径
 func NewCLIWithDefaults(appName string, rootCmd *cobra.Command) *CLIApplication {
 	return NewCLI("../configs/"+appName, "APP", rootCmd)
-}
-
-// Register 注册组件（链式调用，重写以返回 *CLIApplication）
-func (c *CLIApplication) Register(components ...component.Component) *CLIApplication {
-	c.BaseApplication.Register(components...)
-	return c
 }
 
 // OnSetup 注册 Setup 阶段回调（链式调用）
