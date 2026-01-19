@@ -61,3 +61,8 @@ func (l *LoggerComponent) Stop(ctx context.Context) error {
 func (l *LoggerComponent) GetLogger() *logger.CtxZapLogger {
 	return l.coreLogger
 }
+
+// SetLogger 设置日志实例（用于 DI 模式复用已创建的 Logger）
+func (l *LoggerComponent) SetLogger(log *logger.CtxZapLogger) {
+	l.coreLogger = log
+}

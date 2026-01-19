@@ -88,6 +88,11 @@ func (c *ConfigComponent) GetLoader() *config.Loader {
 	return c.loader
 }
 
+// SetLoader 设置配置加载器（用于 DI 模式复用已创建的 Loader）
+func (c *ConfigComponent) SetLoader(loader *config.Loader) {
+	c.loader = loader
+}
+
 // GetAppConfig 获取缓存的 AppConfig
 func (c *ConfigComponent) GetAppConfig() *AppConfig {
 	return c.appConfig
@@ -111,9 +116,6 @@ func (c *ConfigComponent) Unmarshal(key string, v interface{}) error {
 	if key == "" {
 		return c.loader.Unmarshal(v)
 	}
-	// DEBUG: 打印 viper 中该 key 的原始值
-	//rawValue := c.loader.GetViper().Get(key)
-	//fmt.Printf("[DEBUG] Unmarshal key=%s, rawValue=%+v, rawType=%T\n", key, rawValue, rawValue)
 	return c.loader.GetViper().UnmarshalKey(key, v)
 }
 
