@@ -248,3 +248,9 @@ func (m *Manager) Close() error {
 
 	return nil
 }
+
+// Shutdown 实现 samber/do.Shutdownable 接口
+// 用于在 DI 容器关闭时自动关闭 Redis 连接
+func (m *Manager) Shutdown() error {
+	return m.Close()
+}
