@@ -96,7 +96,7 @@ func (ts *TestServer) Close() error {
 func MustNewTestServer(t *testing.T, app TestApp) *TestServer {
 	server, err := NewTestServer(app)
 	if err != nil {
-		t.Fatalf("Failed to create test server: %v: %v", err)
+		t.Fatalf("Failed to create test server: %v", err)
 	}
 	return server
 }

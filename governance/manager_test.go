@@ -136,7 +136,7 @@ func TestManager_RegisterService(t *testing.T) {
 	}
 
 	if mockRegistry.registerCallCount != 1 {
-		t.Errorf("Register Register should be called 1 time, actually called %d times 1 Register should be called 1 time, actually called %d times，Register should be called 1 time, actually called %d times %d Register should be called 1 time, actually called %d times", mockRegistry.registerCallCount)
+		t.Errorf("Register should be called 1 time, actually called %d times", mockRegistry.registerCallCount)
 	}
 
 	if !manager.IsRegistered() {
@@ -146,7 +146,7 @@ func TestManager_RegisterService(t *testing.T) {
 	// Duplicate registration should return an error
 	err = manager.RegisterService(ctx, serviceInfo)
 	if err != ErrAlreadyRegistered {
-		t.Errorf("Duplicate registration should return ErrAlreadyRegistered, actually returned %v ErrAlreadyRegistered，Duplicate registration should return ErrAlreadyRegistered, actually returned %v %v", err)
+		t.Errorf("Duplicate registration should return ErrAlreadyRegistered, actually returned %v", err)
 	}
 }
 
@@ -173,7 +173,7 @@ func TestManager_DeregisterService(t *testing.T) {
 	}
 
 	if mockRegistry.deregisterCallCount != 1 {
-		t.Errorf("Deregister Deregister should be called 1 time, actually called %d times 1 Deregister should be called 1 time, actually called %d times，Deregister should be called 1 time, actually called %d times %d Deregister should be called 1 time, actually called %d times", mockRegistry.deregisterCallCount)
+		t.Errorf("Deregister should be called 1 time, actually called %d times", mockRegistry.deregisterCallCount)
 	}
 
 	if manager.IsRegistered() {
@@ -210,16 +210,16 @@ func TestManager_UpdateMetadata(t *testing.T) {
 	}
 
 	if mockRegistry.updateMetaCallCount != 1 {
-		t.Errorf("UpdateMetadata UpdateMetadata should have been called 1 time, but was actually called %d times 1 UpdateMetadata should have been called 1 time, but was actually called %d times，UpdateMetadata should have been called 1 time, but was actually called %d times %d UpdateMetadata should have been called 1 time, but was actually called %d times", mockRegistry.updateMetaCallCount)
+		t.Errorf("UpdateMetadata should be called 1 time, actually called %d times", mockRegistry.updateMetaCallCount)
 	}
 
 	// Verify metadata has been updated
 	info := manager.GetServiceInfo()
 	if info.Metadata["version"] != "v1.1" {
-		t.Errorf("version The version should be v1.1, but it is actually %s v1.1，The version should be v1.1, but it is actually %s %s", info.Metadata["version"])
+		t.Errorf("version should be v1.1, but it is actually %s", info.Metadata["version"])
 	}
 	if info.Metadata["weight"] != "100" {
-		t.Errorf("weight weight should be 100, actually it is %s 100，weight should be 100, actually it is %s %s", info.Metadata["weight"])
+		t.Errorf("weight should be 100, actually it is %s", info.Metadata["weight"])
 	}
 }
 

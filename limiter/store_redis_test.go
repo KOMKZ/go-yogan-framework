@@ -224,8 +224,6 @@ func TestRedisStore_Incr(t *testing.T) {
 	assert.Equal(t, int64(2), val)
 
 	// Third increment
-English: Third increment
-English: Third increment
 	val, err = store.Incr(ctx, "counter")
 	require.NoError(t, err)
 	assert.Equal(t, int64(3), val)

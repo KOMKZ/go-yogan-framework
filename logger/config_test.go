@@ -146,10 +146,10 @@ func TestNewManager_ApplyDefaults(t *testing.T) {
 	// 1. Empty configuration should be filled with default values
 	m1 := NewManager(ManagerConfig{})
 	if m1.baseConfig.Level != "info" {
-		t.Errorf("Empty configuration should be filled with default Level=info, actual: %s Level=info，Empty configuration should be filled with default Level=info, actual: %s: %s", m1.baseConfig.Level)
+		t.Errorf("Empty configuration should be filled with default Level=info, actual: %s", m1.baseConfig.Level)
 	}
 	if m1.baseConfig.MaxSize != 100 {
-		t.Errorf("English: Empty configuration should be filled with default MaxSize=100, actual: %d MaxSize=100，English: Empty configuration should be filled with default MaxSize=100, actual: %d: %d", m1.baseConfig.MaxSize)
+		t.Errorf("Empty configuration should be filled with default MaxSize=100, actual: %d", m1.baseConfig.MaxSize)
 	}
 
 	// 2. Some configurations should retain user values
@@ -158,13 +158,13 @@ func TestNewManager_ApplyDefaults(t *testing.T) {
 		MaxSize: 200,
 	})
 	if m2.baseConfig.Level != "debug" {
-		t.Errorf("User configuration should be retained Level=debug, actual: %s Level=debug，User configuration should be retained Level=debug, actual: %s: %s", m2.baseConfig.Level)
+		t.Errorf("User configuration should be retained Level=debug, actual: %s", m2.baseConfig.Level)
 	}
 	if m2.baseConfig.MaxSize != 200 {
-		t.Errorf("English: User configuration should retain MaxSize=200, actual: %d MaxSize=200，English: User configuration should retain MaxSize=200, actual: %d: %d", m2.baseConfig.MaxSize)
+		t.Errorf("User configuration should retain MaxSize=200, actual: %d", m2.baseConfig.MaxSize)
 	}
 	if m2.baseConfig.MaxBackups != 3 {
-		t.Errorf("The unconfigured field should be filled with default MaxBackups=3, actual: %d MaxBackups=3，The unconfigured field should be filled with default MaxBackups=3, actual: %d: %d", m2.baseConfig.MaxBackups)
+		t.Errorf("The unconfigured field should be filled with default MaxBackups=3, actual: %d", m2.baseConfig.MaxBackups)
 	}
 
 	// 3. Verify that the loggers map has been initialized

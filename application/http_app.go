@@ -153,7 +153,7 @@ func (a *Application) startHTTPServer() error {
 
 	// Start HTTP Server (non-blocking)
 	if err := a.httpServer.Start(); err != nil {
-		return fmt.Errorf("Failed to start HTTP Server: %w HTTP Server Failed to start HTTP Server: %w: %w", err)
+		return fmt.Errorf("Failed to start HTTP Server: %w", err)
 	}
 
 	return nil

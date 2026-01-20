@@ -59,7 +59,7 @@ func newEtcdClient(cfg etcdClientConfig, log *logger.CtxZapLogger) (*etcdClient,
 	// Connect to etcd
 	client, err := clientv3.New(clientCfg)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to connect to etcd: %w etcd Failed to connect to etcd: %w: %w", err)
+		return nil, fmt.Errorf("Failed to connect to etcd: %w", err)
 	}
 
 	// Test connection
@@ -69,7 +69,7 @@ func newEtcdClient(cfg etcdClientConfig, log *logger.CtxZapLogger) (*etcdClient,
 	_, err = client.Status(ctx, cfg.Endpoints[0])
 	if err != nil {
 		client.Close()
-		return nil, fmt.Errorf("etcd etcd health check failed: %w: %w", err)
+		return nil, fmt.Errorf("etcd health check failed: %w", err)
 	}
 
 	log.DebugCtx(ctx, "✅ etcd ✅ etcd connection successful",
@@ -101,7 +101,7 @@ func (c *etcdClient) Close() error {
 func (c *etcdClient) Put(ctx context.Context, key, value string) error {
 	_, err := c.client.Put(ctx, key, value)
 	if err != nil {
-		return fmt.Errorf("etcd Put etcd Put failed: %w: %w", err)
+		return fmt.Errorf("etcd Put failed: %w", err)
 	}
 	return nil
 }
@@ -110,7 +110,7 @@ func (c *etcdClient) Put(ctx context.Context, key, value string) error {
 func (c *etcdClient) Get(ctx context.Context, key string) (string, error) {
 	resp, err := c.client.Get(ctx, key)
 	if err != nil {
-		return "", fmt.Errorf("etcd Get etcd Get failed: %w: %w", err)
+		return "", fmt.Errorf("etcd Get failed: %w", err)
 	}
 
 	if len(resp.Kvs) == 0 {
@@ -124,7 +124,7 @@ func (c *etcdClient) Get(ctx context.Context, key string) (string, error) {
 func (c *etcdClient) Delete(ctx context.Context, key string) error {
 	_, err := c.client.Delete(ctx, key)
 	if err != nil {
-		return fmt.Errorf("etcd Delete etcd Delete failed: %w: %w", err)
+		return fmt.Errorf("etcd Delete failed: %w", err)
 	}
 	return nil
 }
@@ -133,7 +133,7 @@ func (c *etcdClient) Delete(ctx context.Context, key string) error {
 func (c *etcdClient) GetWithPrefix(ctx context.Context, prefix string) (map[string]string, error) {
 	resp, err := c.client.Get(ctx, prefix, clientv3.WithPrefix())
 	if err != nil {
-		return nil, fmt.Errorf("etcd GetWithPrefix etcd GetWithPrefix failed: %w: %w", err)
+		return nil, fmt.Errorf("etcd GetWithPrefix failed: %w", err)
 	}
 
 	result := make(map[string]string)

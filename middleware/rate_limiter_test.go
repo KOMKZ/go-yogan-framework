@@ -37,7 +37,7 @@ func setupRateLimiterTest() (*gin.Engine, *limiter.Manager) {
 	}
 
 	log := logger.GetLogger("test")
-	manager, _ := limiter.NewManagerWithLogger(cfg, log, nil)
+	manager, _ := limiter.NewManagerWithLogger(cfg, log, nil, nil)
 
 	return router, manager
 }
@@ -108,7 +108,7 @@ func TestRateLimiter_Disabled(t *testing.T) {
 	}
 
 	log := logger.GetLogger("test")
-	manager, _ := limiter.NewManagerWithLogger(cfg, log, nil)
+	manager, _ := limiter.NewManagerWithLogger(cfg, log, nil, nil)
 	defer manager.Close()
 
 	// Add middleware

@@ -81,7 +81,7 @@ func NewCLITestContext(t *testing.T, opts CLITestOptions) (*CLITestContext, func
 	ctxLogger := logger.NewCtxZapLogger("test")
 	dbManager, err := database.NewManager(dbConfig, nil, ctxLogger)
 	if err != nil {
-		t.Fatalf("Database creation failed: %v: %v", err)
+		t.Fatalf("Database creation failed: %v", err)
 	}
 
 	// 4. Automatic table structure migration
@@ -89,7 +89,7 @@ func NewCLITestContext(t *testing.T, opts CLITestOptions) (*CLITestContext, func
 		db := dbManager.DB("master")
 		if err := db.AutoMigrate(opts.AutoMigrate...); err != nil {
 			dbManager.Close()
-			t.Fatalf("Table structure migration failed: %v: %v", err)
+			t.Fatalf("Table structure migration failed: %v", err)
 		}
 	}
 
@@ -107,7 +107,7 @@ func NewCLITestContext(t *testing.T, opts CLITestOptions) (*CLITestContext, func
 	if opts.SetupFunc != nil {
 		if err := opts.SetupFunc(ctx); err != nil {
 			dbManager.Close()
-			t.Fatalf("Custom initialization failed: %v: %v", err)
+			t.Fatalf("Custom initialization failed: %v", err)
 		}
 	}
 
@@ -152,7 +152,7 @@ func SetupTestDB(t *testing.T, models ...interface{}) (*gorm.DB, func()) {
 	ctxLogger := logger.NewCtxZapLogger("test")
 	dbManager, err := database.NewManager(dbConfig, nil, ctxLogger)
 	if err != nil {
-		t.Fatalf("Database creation failed: %v: %v", err)
+		t.Fatalf("Database creation failed: %v", err)
 	}
 
 	// Automatic migration
@@ -160,7 +160,7 @@ func SetupTestDB(t *testing.T, models ...interface{}) (*gorm.DB, func()) {
 	if len(models) > 0 {
 		if err := db.AutoMigrate(models...); err != nil {
 			dbManager.Close()
-			t.Fatalf("Translation failed: %v: %v", err)
+			t.Fatalf("Migration failed: %v", err)
 		}
 	}
 

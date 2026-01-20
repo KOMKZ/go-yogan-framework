@@ -50,7 +50,7 @@ func (d *EtcdDiscovery) Discover(ctx context.Context, serviceName string) ([]*Se
 	// Query all current instances
 	resp, err := d.client.GetClient().Get(ctx, prefix, clientv3.WithPrefix())
 	if err != nil {
-		return nil, fmt.Errorf("Query service failed: %w: %w", err)
+		return nil, fmt.Errorf("Query service failed: %w", err)
 	}
 
 	d.mu.Lock()

@@ -50,11 +50,7 @@ func TestUnaryClientRateLimitInterceptor(t *testing.T) {
 	err = interceptor(context.Background(), "/test.Service/Method", nil, nil, nil, invoker)
 	if err != nil {
 		assert.Equal(t, codes.ResourceExhausted, status.Code(err), "应该返回 ResourceExhausted 错误码")
-		assert.Contains(t, err.Error(), "rate limit exceeded", "The error message should include rate limiting提示
-
-Note: It seems there might be a leftover character "提示" at the end, which means "prompt/tip". If you only need the direct translation of the sentence without this word, here it is:
-
-English: The error message should include rate limiting information.")
+		assert.Contains(t, err.Error(), "rate limit exceeded", "Error message should include rate limiting information")
 	} else {
 		t.Log("WARNING: 第2次请求未被限流，可能是令牌生成太快")
 	}

@@ -244,7 +244,7 @@ func (m *Manager) CloseAll() {
 func (m *Manager) ReloadConfig(newCfg ManagerConfig) error {
 	// Validate new configuration first
 	if err := newCfg.Validate(); err != nil {
-		return fmt.Errorf("Configuration validation failed: %w: %w", err)
+		return fmt.Errorf("Configuration validation failed: %w", err)
 	}
 
 	m.mu.Lock()

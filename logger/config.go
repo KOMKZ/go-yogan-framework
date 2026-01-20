@@ -165,25 +165,25 @@ func (c *Config) Validate() error {
 	// 2. Enum validation
 	validLevels := []string{"debug", "info", "warn", "error", "fatal"}
 	if !contains(validLevels, c.Level) {
-		return fmt.Errorf("[Logger] [Logger] Log level must be: %v, current: %s: %v，[Logger] Log level must be: %v, current: %s: %s", validLevels, c.Level)
+		return fmt.Errorf("[Logger] Log level must be: %v, current: %s", validLevels, c.Level)
 	}
 
 	validEncodings := []string{"json", "console", "console_pretty"}
 	if !contains(validEncodings, c.Encoding) {
-		return fmt.Errorf("[Logger] [Logger] Encoding format must be: %v, current: %s: %v，[Logger] Encoding format must be: %v, current: %s: %s", validEncodings, c.Encoding)
+		return fmt.Errorf("[Logger] Encoding format must be: %v, current: %s", validEncodings, c.Encoding)
 	}
 
 	// 3. Range validation
 	if c.MaxSize < 1 || c.MaxSize > 10000 {
-		return fmt.Errorf("[Logger] [Logger] File size must be between 1-10000MB, current: %d1-10000MB[Logger] File size must be between 1-10000MB, current: %d，[Logger] File size must be between 1-10000MB, current: %d: %d", c.MaxSize)
+		return fmt.Errorf("[Logger] File size must be between 1-10000MB, current: %d", c.MaxSize)
 	}
 
 	if c.MaxBackups < 0 || c.MaxBackups > 100 {
-		return fmt.Errorf("[Logger] [Logger] Number of backups must be between 0-100, current: %d0-100[Logger] Number of backups must be between 0-100, current: %d，[Logger] Number of backups must be between 0-100, current: %d: %d", c.MaxBackups)
+		return fmt.Errorf("[Logger] Number of backups must be between 0-100, current: %d", c.MaxBackups)
 	}
 
 	if c.MaxAge < 1 || c.MaxAge > 365 {
-		return fmt.Errorf("[Logger] [Logger] Days to retain must be between 1 and 365, current: %d1-365[Logger] Days to retain must be between 1 and 365, current: %d，[Logger] Days to retain must be between 1 and 365, current: %d: %d", c.MaxAge)
+		return fmt.Errorf("[Logger] Days to retain must be between 1-365, current: %d", c.MaxAge)
 	}
 
 	// Business logic validation
@@ -217,33 +217,33 @@ func (c ManagerConfig) Validate() error {
 	// Verify log level
 	validLevels := []string{"debug", "info", "warn", "error", "fatal"}
 	if !contains(validLevels, c.Level) {
-		return fmt.Errorf("Invalid log level: %s (valid values: %v): %s (Invalid log level: %s (valid values: %v): %v)", c.Level, validLevels)
+		return fmt.Errorf("Invalid log level: %s (valid values: %v)", c.Level, validLevels)
 	}
 
 	// Validate encoding format
 	validEncodings := []string{"json", "console", "console_pretty"}
 	if !contains(validEncodings, c.Encoding) {
-		return fmt.Errorf("Invalid log encoding: %s (valid values: %v): %s (Invalid log encoding: %s (valid values: %v): %v)", c.Encoding, validEncodings)
+		return fmt.Errorf("Invalid log encoding: %s (valid values: %v)", c.Encoding, validEncodings)
 	}
 
 	// Verify file size
 	if c.MaxSize < 1 || c.MaxSize > 10000 {
-		return fmt.Errorf("MaxSize MaxSize must be between 1-10000 MB, current: %d 1-10000 MB MaxSize must be between 1-10000 MB, current: %d，MaxSize must be between 1-10000 MB, current: %d: %d", c.MaxSize)
+		return fmt.Errorf("MaxSize must be between 1-10000 MB, current: %d", c.MaxSize)
 	}
 
 	// Verify backup count
 	if c.MaxBackups < 0 || c.MaxBackups > 1000 {
-		return fmt.Errorf("MaxBackups MaxBackups must be between 0-1000, current: %d 0-1000 MaxBackups must be between 0-1000, current: %d，MaxBackups must be between 0-1000, current: %d: %d", c.MaxBackups)
+		return fmt.Errorf("MaxBackups must be between 0-1000, current: %d", c.MaxBackups)
 	}
 
 	// Validate reserved days
 	if c.MaxAge < 0 || c.MaxAge > 3650 {
-		return fmt.Errorf("MaxAge MaxAge must be between 0-3650 days, current: %d 0-3650 MaxAge must be between 0-3650 days, current: %d，MaxAge must be between 0-3650 days, current: %d: %d", c.MaxAge)
+		return fmt.Errorf("MaxAge must be between 0-3650 days, current: %d", c.MaxAge)
 	}
 
 	// Verify stack trace level
 	if !contains(validLevels, c.StacktraceLevel) {
-		return fmt.Errorf("Invalid stack trace level: %s (valid values: %v): %s (Invalid stack trace level: %s (valid values: %v): %v)", c.StacktraceLevel, validLevels)
+		return fmt.Errorf("Invalid stack trace level: %s (valid values: %v)", c.StacktraceLevel, validLevels)
 	}
 
 	return nil

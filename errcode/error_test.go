@@ -20,7 +20,7 @@ func TestLayeredError_New(t *testing.T) {
 		t.Errorf("expected msgKey 'error.user.not_found', got %s", err.MsgKey())
 	}
 	if err.Message() != "User not found" {
-		t.Errorf("expected msg 'expected msg 'user does not exist', got %s', got %s", err.Message())
+		t.Errorf("expected msg 'User not found', got %s", err.Message())
 	}
 	if err.HTTPStatus() != http.StatusOK {
 		t.Errorf("expected httpStatus 200, got %d", err.HTTPStatus())
@@ -41,7 +41,7 @@ func TestLayeredError_Error(t *testing.T) {
 	err := New(10, 1, "user", "error.user.not_found", "User not found")
 
 	if err.Error() != "User not found" {
-		t.Errorf("expected error message 'expected error message 'user does not exist', got %s', got %s", err.Error())
+		t.Errorf("expected error message 'User not found', got %s", err.Error())
 	}
 }
 
@@ -68,7 +68,7 @@ func TestLayeredError_WithMsg(t *testing.T) {
 
 	// New instance message has changed
 	if modified.Message() != "用户未找到" {
-		t.Errorf("expected modified message 'expected modified message 'User not found', got %s', got %s", modified.Message())
+		t.Errorf("expected modified message '用户未找到', got %s", modified.Message())
 	}
 
 	// Error code remains unchanged
@@ -253,7 +253,7 @@ func TestLayeredError_ChainOperations(t *testing.T) {
 		WithHTTPStatus(http.StatusNotFound)
 
 	if err.Message() != "用户 123 不存在" {
-		t.Errorf("expected message 'English: expected message 'user 123 does not exist', received %s 123 English: expected message 'user 123 does not exist', received %s', got %s", err.Message())
+		t.Errorf("expected message '用户 123 不存在', got %s", err.Message())
 	}
 	if len(err.Data()) != 2 {
 		t.Errorf("expected 2 data items, got %d", len(err.Data()))
