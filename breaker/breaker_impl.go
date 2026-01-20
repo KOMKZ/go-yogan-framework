@@ -272,6 +272,12 @@ func (cb *circuitBreaker) GetMetrics() *MetricsSnapshot {
 	return cb.metrics.GetSnapshot()
 }
 
+// Reset 重置熔断器状态和指标
+func (cb *circuitBreaker) Reset() {
+	cb.stateMgr.Reset()
+	cb.metrics.Reset()
+}
+
 // Manager 熔断器管理器
 type Manager struct {
 	config   Config

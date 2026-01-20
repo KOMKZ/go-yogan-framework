@@ -135,7 +135,12 @@ func TestManager_Execute_WithFallback(t *testing.T) {
 		},
 	}
 	
-	// 第一次失败，应该执行降级
+	// 触发足够多的失败使熔断器打开
+	for i := 0; i < 10; i++ {
+		mgr.Execute(context.Background(), req)
+	}
+	
+	// 熔断器打开后，请求被拒绝，应该执行降级
 	result, err := mgr.Execute(context.Background(), req)
 	assert.NoError(t, err)
 	assert.Equal(t, "fallback result", result)
