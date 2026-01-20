@@ -5,39 +5,39 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// HandlerFunc 泛型 Handler 函数签名
-// Req: 请求类型（支持 form/json/uri tag）
-// Resp: 响应类型
+// HandlerFunc generic handler function signature
+// Req: Request type (supported types: form/json/uri tag)
+// Response type
 type HandlerFunc[Req any, Resp any] func(c *gin.Context, req *Req) (*Resp, error)
 
-// Wrap 包装 Handler，自动处理解析、验证、响应
-// 将业务逻辑从 HTTP 细节中解耦
+// Wrap Packaging Handler, automatically handle parsing, validation, response
+// Decouple business logic from HTTP details
 func Wrap[Req any, Resp any](handler HandlerFunc[Req, Resp]) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 1. 自动解析请求（query + body + path）
+		// 1. Automatically parse request (query + body + path)
 		var req Req
 		if err := Parse(c, &req); err != nil {
-			HandleError(c, err) // 使用统一错误处理
+			HandleError(c, err) // Use unified error handling
 			return
 		}
 
-		// 2. 执行参数校验（如果请求对象实现了 Validatable 接口）
+		// 2. Execute parameter validation (if the request object implements the Validatable interface)
 		if validatableReq, ok := any(&req).(validator.Validatable); ok {
 			if err := validator.ValidateRequest(validatableReq); err != nil {
-				HandleError(c, err) // 返回 1010 + 字段详情
+				HandleError(c, err) // Return 1010 + field details
 				return
 			}
 		}
 
-		// 3. 调用业务逻辑（纯函数，易于测试）
+		// 3. Call business logic (pure functions, easy to test)
 		resp, err := handler(c, &req)
 		if err != nil {
-			// ✅ 使用智能错误处理（自动识别 404/400/500）
+			// ✅ Use intelligent error handling (automatically identify 404/400/500)
 			HandleError(c, err)
 			return
 		}
 
-		// 4. 自动返回响应
+		// 4. Automatically return response
 		OkJson(c, resp)
 	}
 }

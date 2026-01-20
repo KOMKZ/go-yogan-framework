@@ -8,20 +8,20 @@ import (
 	"github.com/xdg-go/scram"
 )
 
-// SHA256 SCRAM-SHA-256 哈希函数
+// SHA256 SCRAM-SHA-256 hash functions
 var SHA256 scram.HashGeneratorFcn = func() hash.Hash { return sha256.New() }
 
-// SHA512 SCRAM-SHA-512 哈希函数
+// SHA512 SCRAM-SHA-512 hash function
 var SHA512 scram.HashGeneratorFcn = func() hash.Hash { return sha512.New() }
 
-// XDGSCRAMClient SCRAM 客户端实现
+// XDG SCRAM Client SCRAM client implementation
 type XDGSCRAMClient struct {
 	*scram.Client
 	*scram.ClientConversation
 	HashGeneratorFcn scram.HashGeneratorFcn
 }
 
-// Begin 开始 SCRAM 认证
+// Begin SCRAM authentication
 func (x *XDGSCRAMClient) Begin(userName, password, authzID string) (err error) {
 	x.Client, err = x.HashGeneratorFcn.NewClient(userName, password, authzID)
 	if err != nil {
@@ -31,12 +31,12 @@ func (x *XDGSCRAMClient) Begin(userName, password, authzID string) (err error) {
 	return nil
 }
 
-// Step 执行认证步骤
+// Step Execute authentication step
 func (x *XDGSCRAMClient) Step(challenge string) (response string, err error) {
 	return x.ClientConversation.Step(challenge)
 }
 
-// Done 检查认证是否完成
+// Done check if authentication is complete
 func (x *XDGSCRAMClient) Done() bool {
 	return x.ClientConversation.Done()
 }

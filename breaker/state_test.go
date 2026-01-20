@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestNewStateManager 测试创建状态管理器
+// TestNewStateManager test creating state manager
 func TestNewStateManager(t *testing.T) {
 	sm := newStateManager()
 	
@@ -17,7 +17,7 @@ func TestNewStateManager(t *testing.T) {
 	assert.Equal(t, 0, sm.GetSuccessCount())
 }
 
-// TestStateManager_GetState 测试获取状态
+// TestStateManager_GetState test to retrieve state
 func TestStateManager_GetState(t *testing.T) {
 	sm := newStateManager()
 	
@@ -30,7 +30,7 @@ func TestStateManager_GetState(t *testing.T) {
 	assert.Equal(t, StateOpen, sm.GetState())
 }
 
-// TestStateManager_CanAttempt 测试是否允许尝试
+// Test whether attempting is allowed
 func TestStateManager_CanAttempt(t *testing.T) {
 	config := DefaultResourceConfig()
 	config.Timeout = 100 * time.Millisecond
@@ -69,17 +69,17 @@ func TestStateManager_CanAttempt(t *testing.T) {
 		sm.halfOpenAttempts = 0
 		sm.mu.Unlock()
 		
-		// 前3次请求应该被允许
+		// The first 3 requests should be allowed
 		for i := 0; i < 3; i++ {
 			assert.True(t, sm.CanAttempt(config), "第%d次请求", i+1)
 		}
 		
-		// 第4次请求应该被拒绝
+		// The fourth request should be rejected
 		assert.False(t, sm.CanAttempt(config))
 	})
 }
 
-// TestStateManager_RecordSuccess 测试记录成功
+// TestStateManager_RecordSuccess test record success
 func TestStateManager_RecordSuccess(t *testing.T) {
 	config := DefaultResourceConfig()
 	config.HalfOpenRequests = 2
@@ -130,7 +130,7 @@ func TestStateManager_RecordSuccess(t *testing.T) {
 	})
 }
 
-// TestStateManager_RecordFailure 测试记录失败
+// TestStateManager_RecordFailure test record failure
 func TestStateManager_RecordFailure(t *testing.T) {
 	t.Run("Closed状态记录失败增加计数", func(t *testing.T) {
 		sm := newStateManager()
@@ -173,7 +173,7 @@ func TestStateManager_RecordFailure(t *testing.T) {
 	})
 }
 
-// TestStateManager_ShouldOpen 测试判断是否应该熔断
+// TestStateManager_ShouldOpen test to check if circuit breaking should be applied
 func TestStateManager_ShouldOpen(t *testing.T) {
 	t.Run("Closed状态达到阈值切换到Open", func(t *testing.T) {
 		sm := newStateManager()
@@ -220,7 +220,7 @@ func TestStateManager_ShouldOpen(t *testing.T) {
 	})
 }
 
-// TestStateManager_Reset 测试重置状态
+// TestStateManager_Reset test reset state
 func TestStateManager_Reset(t *testing.T) {
 	t.Run("从Open状态重置到Closed", func(t *testing.T) {
 		sm := newStateManager()
@@ -264,14 +264,14 @@ func TestStateManager_Reset(t *testing.T) {
 	})
 }
 
-// TestStateManager_Concurrent 测试并发安全
+// TestStateManager_Concurrent test concurrent safety
 func TestStateManager_Concurrent(t *testing.T) {
 	sm := newStateManager()
 	config := DefaultResourceConfig()
 	
 	done := make(chan bool)
 	
-	// 并发读取状态
+	// Concurrent state reading
 	for i := 0; i < 10; i++ {
 		go func() {
 			for j := 0; j < 100; j++ {
@@ -283,7 +283,7 @@ func TestStateManager_Concurrent(t *testing.T) {
 		}()
 	}
 	
-	// 并发修改状态
+	// concurrently modify status
 	for i := 0; i < 10; i++ {
 		go func() {
 			for j := 0; j < 100; j++ {
@@ -295,17 +295,17 @@ func TestStateManager_Concurrent(t *testing.T) {
 		}()
 	}
 	
-	// 等待完成
+	// wait for completion
 	for i := 0; i < 20; i++ {
 		<-done
 	}
 	
-	// 验证状态是有效的
+	// Validate that the status is valid
 	state := sm.GetState()
 	assert.True(t, state == StateClosed || state == StateOpen || state == StateHalfOpen)
 }
 
-// TestStateManager_GetLastStateChange 测试获取最后状态变化时间
+// TestStateManager_GetLastStateChange test to retrieve the last state change time
 func TestStateManager_GetLastStateChange(t *testing.T) {
 	sm := newStateManager()
 	

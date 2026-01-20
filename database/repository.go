@@ -8,22 +8,22 @@ import (
 	"gorm.io/gorm"
 )
 
-// BaseRepository 泛型 Repository 基类
+// BaseRepository generic Repository base class
 type BaseRepository[T any] struct {
 	db *gorm.DB
 }
 
-// NewBaseRepository 创建 Repository 基类
+// NewBaseRepository creates the base class for Repository
 func NewBaseRepository[T any](db *gorm.DB) *BaseRepository[T] {
 	return &BaseRepository[T]{db: db}
 }
 
-// DB 获取数据库实例
+// Get database instance
 func (r *BaseRepository[T]) DB() *gorm.DB {
 	return r.db
 }
 
-// Create 创建记录
+// Create record
 func (r *BaseRepository[T]) Create(ctx context.Context, entity *T) error {
 	if err := r.db.WithContext(ctx).Create(entity).Error; err != nil {
 		return fmt.Errorf("创建记录失败: %w", err)
@@ -31,7 +31,7 @@ func (r *BaseRepository[T]) Create(ctx context.Context, entity *T) error {
 	return nil
 }
 
-// FindByID 根据 ID 查询（Laravel findOrFail 风格）
+// FindByID queries by ID (Laravel findOrFail style)
 func (r *BaseRepository[T]) FindByID(ctx context.Context, id interface{}) (*T, error) {
 	var entity T
 	result := r.db.WithContext(ctx).First(&entity, id)
@@ -44,7 +44,7 @@ func (r *BaseRepository[T]) FindByID(ctx context.Context, id interface{}) (*T, e
 	return &entity, nil
 }
 
-// FindAll 查询所有记录
+// FindAll query all records
 func (r *BaseRepository[T]) FindAll(ctx context.Context) ([]T, error) {
 	var entities []T
 	if err := r.db.WithContext(ctx).Find(&entities).Error; err != nil {
@@ -53,7 +53,7 @@ func (r *BaseRepository[T]) FindAll(ctx context.Context) ([]T, error) {
 	return entities, nil
 }
 
-// Update 更新记录
+// Update record
 func (r *BaseRepository[T]) Update(ctx context.Context, entity *T) error {
 	if err := r.db.WithContext(ctx).Save(entity).Error; err != nil {
 		return fmt.Errorf("更新记录失败: %w", err)
@@ -61,7 +61,7 @@ func (r *BaseRepository[T]) Update(ctx context.Context, entity *T) error {
 	return nil
 }
 
-// Delete 删除记录（支持软删除）
+// Delete soft delete record
 func (r *BaseRepository[T]) Delete(ctx context.Context, id interface{}) error {
 	var entity T
 	if err := r.db.WithContext(ctx).Delete(&entity, id).Error; err != nil {
@@ -70,7 +70,7 @@ func (r *BaseRepository[T]) Delete(ctx context.Context, id interface{}) error {
 	return nil
 }
 
-// Exists 检查记录是否存在
+// Exists check if record exists
 func (r *BaseRepository[T]) Exists(ctx context.Context, id interface{}) (bool, error) {
 	var count int64
 	var entity T
@@ -80,7 +80,7 @@ func (r *BaseRepository[T]) Exists(ctx context.Context, id interface{}) (bool, e
 	return count > 0, nil
 }
 
-// Count 统计记录数
+// Count Statistic record count
 func (r *BaseRepository[T]) Count(ctx context.Context) (int64, error) {
 	var count int64
 	var entity T
@@ -90,18 +90,18 @@ func (r *BaseRepository[T]) Count(ctx context.Context) (int64, error) {
 	return count, nil
 }
 
-// Paginate 分页查询
+// Paginate query
 func (r *BaseRepository[T]) Paginate(ctx context.Context, page, pageSize int) ([]T, int64, error) {
 	var entities []T
 	var total int64
 
-	// 统计总数
+	// count total number
 	var entity T
 	if err := r.db.WithContext(ctx).Model(&entity).Count(&total).Error; err != nil {
 		return nil, 0, fmt.Errorf("分页查询-统计总数失败: %w", err)
 	}
 
-	// 分页查询
+	// paged query
 	offset := (page - 1) * pageSize
 	if err := r.db.WithContext(ctx).Offset(offset).Limit(pageSize).Find(&entities).Error; err != nil {
 		return nil, 0, fmt.Errorf("分页查询-查询数据失败 (page=%d, pageSize=%d): %w", page, pageSize, err)
@@ -110,7 +110,7 @@ func (r *BaseRepository[T]) Paginate(ctx context.Context, page, pageSize int) ([
 	return entities, total, nil
 }
 
-// Transaction 执行事务
+// Transaction execution
 func (r *BaseRepository[T]) Transaction(ctx context.Context, fn func(tx *gorm.DB) error) error {
 	return r.db.WithContext(ctx).Transaction(fn)
 }

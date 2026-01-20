@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestTokenManager_ParseJWTError_AllCases 测试所有 JWT 错误解析
+// TestTokenManager_ParseJWTError_AllCases_Test all JWT error parsing scenarios
 func TestTokenManager_ParseJWTError_AllCases(t *testing.T) {
 	config := newTestConfig()
 	manager := newTestTokenManager(t, config)
@@ -40,19 +40,19 @@ func TestTokenManager_ParseJWTError_AllCases(t *testing.T) {
 	}
 }
 
-// TestTokenManager_ParseJWTError_UnknownError 测试未知错误
+// TestTokenManager_ParseJWTError_UnknownError Test unknown error
 func TestTokenManager_ParseJWTError_UnknownError(t *testing.T) {
 	config := newTestConfig()
 	manager := newTestTokenManager(t, config)
 	impl := manager.(*tokenManagerImpl)
 
-	// 测试未知错误
+	// Test unknown error
 	err := jwt.ErrTokenMalformed
 	result := impl.parseJWTError(err)
 	assert.Equal(t, ErrTokenInvalid, result)
 }
 
-// TestContains 测试 contains 函数
+// TestContains test the contains function
 func TestContains(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -78,7 +78,7 @@ func TestContains(t *testing.T) {
 	}
 }
 
-// TestTokenManager_VerifyToken_ErrorCases 测试各种验证错误情况
+// TestTokenManager_VerifyToken_ErrorCases Test various verification error cases
 func TestTokenManager_VerifyToken_ErrorCases(t *testing.T) {
 	config := newTestConfig()
 	manager := newTestTokenManager(t, config)
@@ -120,7 +120,7 @@ func TestTokenManager_VerifyToken_ErrorCases(t *testing.T) {
 	}
 }
 
-// TestTokenManager_RevokeToken_NilTokenStore 测试 TokenStore 为 nil 时的撤销
+// TestTokenManager_RevokeToken_NilTokenStore test revoke when TokenStore is nil
 func TestTokenManager_RevokeToken_NilTokenStore(t *testing.T) {
 	config := newTestConfig()
 	config.Blacklist.Enabled = true
@@ -133,13 +133,13 @@ func TestTokenManager_RevokeToken_NilTokenStore(t *testing.T) {
 	token, err := manager.GenerateAccessToken(ctx, "user123", nil)
 	require.NoError(t, err)
 
-	// 撤销 Token（TokenStore 为 nil）
+	// Revoke token (TokenStore is nil)
 	err = manager.RevokeToken(ctx, token)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "blacklist not enabled")
 }
 
-// TestTokenManager_RevokeUserTokens_NilTokenStore 测试 TokenStore 为 nil 时的用户撤销
+// TestTokenManager_RevokeUserTokens_NilTokenStore Test user token revocation when TokenStore is nil
 func TestTokenManager_RevokeUserTokens_NilTokenStore(t *testing.T) {
 	config := newTestConfig()
 	config.Blacklist.Enabled = true
@@ -150,7 +150,7 @@ func TestTokenManager_RevokeUserTokens_NilTokenStore(t *testing.T) {
 
 	ctx := context.Background()
 
-	// 撤销用户 Token（TokenStore 为 nil）
+	// Revoke user token (TokenStore is nil)
 	err = manager.RevokeUserTokens(ctx, "user123")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "blacklist not enabled")

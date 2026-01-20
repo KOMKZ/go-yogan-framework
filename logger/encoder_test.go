@@ -9,7 +9,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// TestPrettyConsoleEncoder_Basic 测试基本格式
+// TestPrettyConsoleEncoder_Basic test basic format
 func TestPrettyConsoleEncoder_Basic(t *testing.T) {
 	encoderCfg := zapcore.EncoderConfig{
 		TimeKey:        "time",
@@ -26,7 +26,7 @@ func TestPrettyConsoleEncoder_Basic(t *testing.T) {
 
 	enc := NewPrettyConsoleEncoder(encoderCfg)
 
-	// 构造日志条目
+	// Construct log entry
 	entry := zapcore.Entry{
 		Level:   zapcore.InfoLevel,
 		Time:    time.Date(2025, 12, 20, 9, 14, 58, 575000000, time.FixedZone("CST", 8*3600)),
@@ -34,7 +34,7 @@ func TestPrettyConsoleEncoder_Basic(t *testing.T) {
 		Caller:  zapcore.NewEntryCaller(0, "order/manager.go", 123, true),
 	}
 
-	// 字段
+	// field
 	fields := []zapcore.Field{
 		zap.String("trace_id", "trace-abc-123"),
 		zap.String("module", "order"),
@@ -49,7 +49,7 @@ func TestPrettyConsoleEncoder_Basic(t *testing.T) {
 	output := buf.String()
 	t.Logf("输出:\n%s", output)
 
-	// 验证格式
+	// Validate format
 	assert.Contains(t, output, "[🔵INFO]")
 	assert.Contains(t, output, "2025-12-20T09:14:58.575+0800")
 	assert.Contains(t, output, "trace-abc-123")
@@ -60,7 +60,7 @@ func TestPrettyConsoleEncoder_Basic(t *testing.T) {
 	assert.Contains(t, output, `"amount":99.99`)
 }
 
-// TestPrettyConsoleEncoder_AllLevels 测试所有日志级别
+// TestPrettyConsoleEncoder_AllLevels test all log levels
 func TestPrettyConsoleEncoder_AllLevels(t *testing.T) {
 	encoderCfg := zapcore.EncoderConfig{
 		TimeKey:       "time",
@@ -109,7 +109,7 @@ func TestPrettyConsoleEncoder_AllLevels(t *testing.T) {
 	}
 }
 
-// TestPrettyConsoleEncoder_NoTraceID 测试无 TraceID
+// TestPrettyConsoleEncoder_NoTraceID test without TraceID
 func TestPrettyConsoleEncoder_NoTraceID(t *testing.T) {
 	encoderCfg := zapcore.EncoderConfig{
 		TimeKey:      "time",
@@ -140,13 +140,13 @@ func TestPrettyConsoleEncoder_NoTraceID(t *testing.T) {
 	output := buf.String()
 	t.Logf("输出:\n%s", output)
 
-	// 验证 TraceID 位置显示 "-"（带padding）
+	// Verify that the TraceID position displays "-" (with padding)
 	assert.Contains(t, output, "[cache]")
 	assert.Contains(t, output, "无 TraceID 日志")
 	assert.Contains(t, output, `"key":"user:100"`)
 }
 
-// TestPrettyConsoleEncoder_FieldTypes 测试各种字段类型
+// TestPrettyConsoleEncoder_FieldTypes test various field types
 func TestPrettyConsoleEncoder_FieldTypes(t *testing.T) {
 	encoderCfg := zapcore.EncoderConfig{
 		TimeKey:      "time",
@@ -183,7 +183,7 @@ func TestPrettyConsoleEncoder_FieldTypes(t *testing.T) {
 	output := buf.String()
 	t.Logf("输出:\n%s", output)
 
-	// 验证各类型
+	// Validate each type
 	assert.Contains(t, output, `"str":"字符串"`)
 	assert.Contains(t, output, `"int":123`)
 	assert.Contains(t, output, `"int64":456`)
@@ -193,7 +193,7 @@ func TestPrettyConsoleEncoder_FieldTypes(t *testing.T) {
 	assert.Contains(t, output, `"duration":5000000000`)
 }
 
-// TestPrettyConsoleEncoder_NoFields 测试无额外字段
+// TestPrettyConsoleEncoder_NoFields test with no additional fields
 func TestPrettyConsoleEncoder_NoFields(t *testing.T) {
 	encoderCfg := zapcore.EncoderConfig{
 		TimeKey:      "time",
@@ -213,7 +213,7 @@ func TestPrettyConsoleEncoder_NoFields(t *testing.T) {
 		Caller:  zapcore.NewEntryCaller(0, "test.go", 1, true),
 	}
 
-	// 只有 module 字段
+	// Only the module field
 	fields := []zapcore.Field{
 		zap.String("module", "test"),
 	}
@@ -227,11 +227,11 @@ func TestPrettyConsoleEncoder_NoFields(t *testing.T) {
 	assert.Contains(t, output, "[🟡WARN]")
 	assert.Contains(t, output, "[test]")
 	assert.Contains(t, output, "仅消息")
-	// 没有额外字段，应该只有空 JSON 对象
+	// Without additional fields, there should be only an empty JSON object
 	assert.Contains(t, output, "{}")
 }
 
-// TestPrettyConsoleEncoder_WithStack 测试堆栈信息
+// TestPrettyConsoleEncoder_WithStack tests stack information
 func TestPrettyConsoleEncoder_WithStack(t *testing.T) {
 	encoderCfg := zapcore.EncoderConfig{
 		TimeKey:       "time",
@@ -270,7 +270,7 @@ func TestPrettyConsoleEncoder_WithStack(t *testing.T) {
 	assert.Contains(t, output, "main.go:10")
 }
 
-// TestPrettyConsoleEncoder_EscapeString 测试字符串转义
+// TestPrettyConsoleEncoder_EscapeString test string escaping
 func TestPrettyConsoleEncoder_EscapeString(t *testing.T) {
 	encoderCfg := zapcore.EncoderConfig{
 		TimeKey:      "time",
@@ -301,12 +301,12 @@ func TestPrettyConsoleEncoder_EscapeString(t *testing.T) {
 	output := buf.String()
 	t.Logf("输出:\n%s", output)
 
-	// 验证转义
+	// Validate escape sequencing
 	assert.Contains(t, output, `\"引号\"`)
 	assert.Contains(t, output, `\n换行`)
 }
 
-// TestPrettyConsoleEncoder_Clone 测试克隆
+// TestPrettyConsoleEncoder_Clone test clone
 func TestPrettyConsoleEncoder_Clone(t *testing.T) {
 	encoderCfg := zapcore.EncoderConfig{
 		TimeKey:      "time",

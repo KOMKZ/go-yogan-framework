@@ -15,23 +15,23 @@ import (
 	gormlogger "gorm.io/gorm/logger"
 )
 
-// GormLoggerFactory GORM Logger 工厂函数类型
+// GormLoggerFactory GORM Logger factory function type
 type GormLoggerFactory func(cfg Config) gormlogger.Interface
 
-// Manager 数据库管理器（支持多实例）
+// Manager database manager (supports multiple instances)
 type Manager struct {
 	instances      map[string]*gorm.DB
 	configs        map[string]Config
-	loggerFactory  GormLoggerFactory    // 注入的 GORM Logger 工厂
-	logger         *logger.CtxZapLogger // 注入的业务日志器（用于连接日志和 TraceID）
-	otelPlugin     *OtelPlugin          // 🎯 OpenTelemetry 插件
+	loggerFactory  GormLoggerFactory    // Injected GORM Logger factory
+	logger         *logger.CtxZapLogger // Injected business logger (for connecting logs and TraceID)
+	otelPlugin     *OtelPlugin          // 🎯 OpenTelemetry plugin
 	mu             sync.RWMutex
 }
 
-// NewManager 创建数据库管理器
-// configs: 数据库配置
-// loggerFactory: GORM Logger 工厂函数，用于创建自定义日志器（依赖注入）
-// logger: 业务日志器（注入的 CtxZapLogger 实例，不能为 nil）
+// Create database manager
+// configs: database configuration
+// loggerFactory: GORM Logger factory function for creating custom loggers (dependency injection)
+// logger: business loggger (injected CtxZapLogger instance, must not be nil)
 func NewManager(configs map[string]Config, loggerFactory GormLoggerFactory, logger *logger.CtxZapLogger) (*Manager, error) {
 	if logger == nil {
 		return nil, fmt.Errorf("logger cannot be nil")
@@ -42,22 +42,22 @@ func NewManager(configs map[string]Config, loggerFactory GormLoggerFactory, logg
 		configs:       make(map[string]Config),
 		loggerFactory: loggerFactory,
 		logger:        logger,
-		otelPlugin:    nil, // 🎯 稍后通过 SetOtelPlugin 注入
+		otelPlugin:    nil, // 🎯 To be injected later via SetOtelPlugin
 	}
 
 	for name, cfg := range configs {
-		// 验证配置
+		// Validate configuration
 		if err := cfg.Validate(); err != nil {
 			return nil, fmt.Errorf("invalid config for %s: %w", name, err)
 		}
 
-		// 打开数据库连接
+		// Open database connection
 		db, err := m.openDB(cfg)
 		if err != nil {
 			return nil, fmt.Errorf("failed to open database %s: %w", name, err)
 		}
 
-		// 配置连接池
+		// Configure connection pool
 		sqlDB, err := db.DB()
 		if err != nil {
 			return nil, fmt.Errorf("failed to get sql.DB for %s: %w", name, err)
@@ -78,9 +78,9 @@ func NewManager(configs map[string]Config, loggerFactory GormLoggerFactory, logg
 	return m, nil
 }
 
-// openDB 打开数据库连接
+// openDB Open database connection
 func (m *Manager) openDB(cfg Config) (*gorm.DB, error) {
-	// 选择驱动
+	// Select driver
 	var dialector gorm.Dialector
 	switch cfg.Driver {
 	case "mysql":
@@ -94,20 +94,20 @@ func (m *Manager) openDB(cfg Config) (*gorm.DB, error) {
 	}
 
 	// ====================================
-	// 配置 GORM Logger（通过依赖注入的工厂函数）
+	// Configure GORM Logger (via factory function with dependency injection)
 	// ====================================
 	var gormLogger gormlogger.Interface
 	if m.loggerFactory != nil {
-		// 使用注入的工厂函数创建 Logger
+		// Use the injected factory function to create a Logger
 		gormLogger = m.loggerFactory(cfg)
 	} else {
-		// 未注入工厂时，使用默认的静默模式
+		// When the factory is not injected, use the default silent mode
 		gormLogger = gormlogger.Default.LogMode(gormlogger.Silent)
 	}
 
-	// 打开连接
+	// Open connection
 	db, err := gorm.Open(dialector, &gorm.Config{
-		Logger: gormLogger, // 使用自定义 Logger
+		Logger: gormLogger, // Use custom Logger
 		NowFunc: func() time.Time {
 			return time.Now().Local()
 		},
@@ -117,7 +117,7 @@ func (m *Manager) openDB(cfg Config) (*gorm.DB, error) {
 		return nil, err
 	}
 
-	// 🎯 如果有 OtelPlugin，注册到数据库实例
+	// 🎯 If there is an OtelPlugin, register it with the database instance
 	if m.otelPlugin != nil {
 		if err := db.Use(m.otelPlugin); err != nil {
 			return nil, fmt.Errorf("failed to use otel plugin: %w", err)
@@ -127,14 +127,14 @@ func (m *Manager) openDB(cfg Config) (*gorm.DB, error) {
 	return db, nil
 }
 
-// DB 获取指定数据库实例
+// English: Get specified database instance
 func (m *Manager) DB(name string) *gorm.DB {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.instances[name]
 }
 
-// Close 关闭所有数据库连接
+// Close all database connections
 func (m *Manager) Close() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -161,13 +161,13 @@ func (m *Manager) Close() error {
 	return nil
 }
 
-// Shutdown 实现 samber/do.Shutdownable 接口
-// 用于在 DI 容器关闭时自动关闭数据库连接
+// Implement the samber/do.Shutdownable interface for shutdown functionality
+// For automatically closing database connections when the DI container shuts down
 func (m *Manager) Shutdown() error {
 	return m.Close()
 }
 
-// Ping 检查所有数据库连接
+// Ping check all database connections
 func (m *Manager) Ping() error {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -186,7 +186,7 @@ func (m *Manager) Ping() error {
 	return nil
 }
 
-// Stats 获取数据库连接池统计信息
+// Get database connection pool statistics
 func (m *Manager) Stats(name string) (sql.DBStats, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -204,16 +204,16 @@ func (m *Manager) Stats(name string) (sql.DBStats, error) {
 	return sqlDB.Stats(), nil
 }
 
-// SetOtelPlugin 设置 OpenTelemetry 插件
-// 注意：会重新注册插件到所有已存在的数据库实例
+// SetOtelPlugin Set OpenTelemetry plugin
+// Note: Will re-register plugin to all existing database instances
 func (m *Manager) SetOtelPlugin(plugin *OtelPlugin) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	
 	m.otelPlugin = plugin
 	
-	// 🎯 从配置中读取 trace_sql 和 trace_sql_max_len 设置
-	// 注意：假设所有数据库实例使用相同的 OTel 配置
+	// 🎯 Read trace_sql and trace_sql_max_len settings from configuration
+	// Note: Assumes all database instances use the same OTel configuration
 	for _, cfg := range m.configs {
 		if cfg.TraceSQL {
 			plugin.WithTraceSQL(true)
@@ -223,10 +223,10 @@ func (m *Manager) SetOtelPlugin(plugin *OtelPlugin) error {
 			plugin.WithSQLMaxLen(cfg.TraceSQLMaxLen)
 			m.logger.Debug("✅ GORM OTel trace_sql_max_len set", zap.Int("max_len", cfg.TraceSQLMaxLen))
 		}
-		break // 只取第一个配置
+		break // Only take the first configuration
 	}
 	
-	// 为所有已存在的数据库实例注册插件
+	// Register the plugin for all existing database instances
 	for name, db := range m.instances {
 		if err := db.Use(plugin); err != nil {
 			m.logger.Error("Failed to register otel plugin",
@@ -241,9 +241,9 @@ func (m *Manager) SetOtelPlugin(plugin *OtelPlugin) error {
 	return nil
 }
 
-// SetMetricsPlugin 为指定数据库实例设置 Metrics Plugin
-// dbName: 数据库实例名称
-// dbMetrics: 数据库指标收集器
+// SetMetricsPlugin sets the Metrics Plugin for the specified database instance
+// dbName: database instance name
+// dbMetrics: Database metric collector
 func (m *Manager) SetMetricsPlugin(dbName string, dbMetrics *DBMetrics) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -257,7 +257,7 @@ func (m *Manager) SetMetricsPlugin(dbName string, dbMetrics *DBMetrics) error {
 		return fmt.Errorf("dbMetrics is nil")
 	}
 
-	// 使用 DBMetrics 的 GORMPlugin() 方法获取 plugin
+	// Use the GORMPlugin() method of DBMetrics to get the plugin
 	plugin := dbMetrics.GORMPlugin()
 	if err := db.Use(plugin); err != nil {
 		return fmt.Errorf("failed to register metrics plugin for %s: %w", dbName, err)
@@ -269,7 +269,7 @@ func (m *Manager) SetMetricsPlugin(dbName string, dbMetrics *DBMetrics) error {
 	return nil
 }
 
-// GetDBNames 获取所有数据库实例名称
+// GetDBNames Retrieve all database instance names
 func (m *Manager) GetDBNames() []string {
 	m.mu.RLock()
 	defer m.mu.RUnlock()

@@ -4,38 +4,38 @@ import (
 	"regexp"
 )
 
-// sanitizeSQL 对 SQL 语句进行脱敏处理
-// 替换敏感信息（密码、手机号、身份证等）为 ***
+// sanitizeSQL sanitizes SQL statements
+// Replace sensitive information (passwords, phone numbers, ID numbers, etc.) with ***
 func sanitizeSQL(sql string) string {
-	// 脱敏密码字段
+	// Mask password field
 	sql = sanitizePassword(sql)
 
-	// 脱敏手机号
+	// mask phone number
 	sql = sanitizePhone(sql)
 
-	// 脱敏身份证号
+	// Mask sensitive ID number
 	sql = sanitizeIDCard(sql)
 
 	return sql
 }
 
-// sanitizePassword 脱敏密码字段
+// sanitizePassword sanitize password field
 func sanitizePassword(sql string) string {
-	// 匹配 password = 'xxx' 或 password='xxx'
+	// match password = 'xxx' or password='xxx'
 	re := regexp.MustCompile(`(?i)(password\s*=\s*['"])([^'"]+)(['"])`)
 	return re.ReplaceAllString(sql, `$1***$3`)
 }
 
-// sanitizePhone 脱敏手机号
+// sanitizePhone mask phone number
 func sanitizePhone(sql string) string {
-	// 匹配 11 位手机号，保留前3位和后4位
+	// Match 11-digit mobile numbers, retain the first 3 digits and last 4 digits
 	re := regexp.MustCompile(`(\d{3})\d{4}(\d{4})`)
 	return re.ReplaceAllString(sql, `$1****$2`)
 }
 
-// sanitizeIDCard 脱敏身份证号
+// sanitizeIDCard mask ID number
 func sanitizeIDCard(sql string) string {
-	// 匹配 18 位身份证号，保留前6位和后4位
+	// Match 18-digit ID numbers, retain the first 6 digits and last 4 digits
 	re := regexp.MustCompile(`(\d{6})\d{8}(\d{4})`)
 	return re.ReplaceAllString(sql, `$1********$2`)
 }

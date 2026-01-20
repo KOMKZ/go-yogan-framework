@@ -17,7 +17,7 @@ func init() {
 	gin.SetMode(gin.TestMode)
 }
 
-// TestOkJson 测试成功响应
+// TestOkJson test successful response
 func TestOkJson(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -35,7 +35,7 @@ func TestOkJson(t *testing.T) {
 	assert.NotNil(t, resp.Data)
 }
 
-// TestErrorJson 测试错误响应
+// TestErrorJson test error response
 func TestErrorJson(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -51,7 +51,7 @@ func TestErrorJson(t *testing.T) {
 	assert.Equal(t, "something went wrong", resp.Msg)
 }
 
-// TestBadRequestJson 测试 400 错误响应
+// TestBadRequestJson test 400 error response
 func TestBadRequestJson(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -67,7 +67,7 @@ func TestBadRequestJson(t *testing.T) {
 	assert.Equal(t, "invalid parameter", resp.Msg)
 }
 
-// TestNotFoundJson 测试 404 错误响应
+// TestNotFoundJson test 404 error response
 func TestNotFoundJson(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -83,7 +83,7 @@ func TestNotFoundJson(t *testing.T) {
 	assert.Equal(t, "resource not found", resp.Msg)
 }
 
-// TestInternalErrorJson 测试 500 错误响应
+// TestInternalErrorJson test 500 error response
 func TestInternalErrorJson(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -99,7 +99,7 @@ func TestInternalErrorJson(t *testing.T) {
 	assert.Equal(t, "internal server error", resp.Msg)
 }
 
-// TestNoRouteHandler 测试 404 路由不存在处理器
+// TestNoRouteHandler tests the 404 route not found handler
 func TestNoRouteHandler(t *testing.T) {
 	engine := gin.New()
 	engine.NoRoute(NoRouteHandler())
@@ -117,7 +117,7 @@ func TestNoRouteHandler(t *testing.T) {
 	assert.Contains(t, resp.Msg, "路由不存在")
 }
 
-// TestNoMethodHandler 测试 405 方法不允许处理器
+// TestNoMethodHandler tests the 405 method not allowed handler
 func TestNoMethodHandler(t *testing.T) {
 	engine := gin.New()
 	engine.HandleMethodNotAllowed = true
@@ -139,7 +139,7 @@ func TestNoMethodHandler(t *testing.T) {
 	assert.Contains(t, resp.Msg, "方法不允许")
 }
 
-// TestHandleError_NilError 测试 nil 错误
+// TestHandleError_NilError test for nil error
 func TestHandleError_NilError(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -147,18 +147,18 @@ func TestHandleError_NilError(t *testing.T) {
 
 	HandleError(c, nil)
 
-	// nil 错误不应该写入响应
+	// nil errors should not be written to the response
 	assert.Equal(t, 200, w.Code)
 	assert.Empty(t, w.Body.String())
 }
 
-// TestHandleError_LayeredError 测试 LayeredError 处理
+// TestHandleError_LayeredError test handling of LayeredError
 func TestHandleError_LayeredError(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request, _ = http.NewRequest("GET", "/test", nil)
 
-	// 使用 errcode.New: moduleCode=10, businessCode=1, module="test", msgKey="test.error", msg="参数错误", httpStatus=400
+	// Use errcode.New: moduleCode=10, businessCode=1, module="test", msgKey="test.error", msg="parameter error", httpStatus=400
 	layeredErr := errcode.New(10, 1, "test", "test.error", "参数错误", http.StatusBadRequest)
 	HandleError(c, layeredErr)
 
@@ -171,13 +171,13 @@ func TestHandleError_LayeredError(t *testing.T) {
 	assert.Equal(t, "参数错误", resp.Msg)
 }
 
-// TestHandleError_LayeredError_WithLogging 测试 LayeredError 带日志配置
+// TestHandleError_LayeredError_WithLogging test LayeredError with logging configuration
 func TestHandleError_LayeredError_WithLogging(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request, _ = http.NewRequest("GET", "/test", nil)
 
-	// 设置启用日志配置
+	// Enable log configuration
 	c.Set(errorLoggingConfigKey, errorLoggingConfigInternal{
 		Enable:          true,
 		IgnoreStatusMap: make(map[int]bool),
@@ -191,7 +191,7 @@ func TestHandleError_LayeredError_WithLogging(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
-// TestHandleError_LayeredError_WarnLevel 测试 warn 日志级别
+// TestHandleError_LayeredError_WarnLevel test warn log level
 func TestHandleError_LayeredError_WarnLevel(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -210,7 +210,7 @@ func TestHandleError_LayeredError_WarnLevel(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
-// TestHandleError_LayeredError_InfoLevel 测试 info 日志级别
+// TestHandleError_LayeredError_InfoLevel test info log level
 func TestHandleError_LayeredError_InfoLevel(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -229,13 +229,13 @@ func TestHandleError_LayeredError_InfoLevel(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
-// TestHandleError_DatabaseNotFound 测试数据库记录不存在错误
+// TestHandleError_DatabaseNotFound test database record not found error
 func TestHandleError_DatabaseNotFound(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request, _ = http.NewRequest("GET", "/test", nil)
 
-	// 启用日志
+	// Enable logging
 	c.Set(errorLoggingConfigKey, errorLoggingConfigInternal{
 		Enable:          true,
 		IgnoreStatusMap: make(map[int]bool),
@@ -248,13 +248,13 @@ func TestHandleError_DatabaseNotFound(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, w.Code)
 }
 
-// TestHandleError_UnknownError 测试未知错误
+// TestHandleError_UnknownError test unknown error
 func TestHandleError_UnknownError(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request, _ = http.NewRequest("GET", "/test", nil)
 
-	// 启用日志
+	// Enable logging
 	c.Set(errorLoggingConfigKey, errorLoggingConfigInternal{
 		Enable:          true,
 		IgnoreStatusMap: make(map[int]bool),
@@ -273,7 +273,7 @@ func TestHandleError_UnknownError(t *testing.T) {
 	assert.Equal(t, "内部服务器错误", resp.Msg)
 }
 
-// TestShouldLogError 测试日志记录判断
+// TestShouldLogError tests logging error detection
 func TestShouldLogError(t *testing.T) {
 	tests := []struct {
 		name     string

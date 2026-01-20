@@ -7,34 +7,34 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// HealthCheckHandler 健康检查 HTTP Handler
-// 提供统一的健康检查端点
+// HealthCheckHandler health check HTTP handler
+// Provide a unified health check endpoint
 type HealthCheckHandler struct {
 	aggregator *health.Aggregator
 }
 
-// NewHealthCheckHandler 创建健康检查 Handler
+// Create new health check handler
 func NewHealthCheckHandler(aggregator *health.Aggregator) *HealthCheckHandler {
 	return &HealthCheckHandler{
 		aggregator: aggregator,
 	}
 }
 
-// Handle 处理健康检查请求
-// GET /health - 完整健康检查
-// GET /health/liveness - 存活探针（K8s liveness probe）
-// GET /health/readiness - 就绪探针（K8s readiness probe）
+// Handle health check request
+// GET /health - Full health check
+// GET /health/liveness - Liveness probe (K8s liveness probe)
+// GET /health/readiness - Readiness probe (K8s readiness probe)
 func (h *HealthCheckHandler) Handle() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 执行健康检查
+		// Perform health check
 		response := h.aggregator.Check(c.Request.Context())
 
-		// 根据整体状态返回 HTTP 状态码
+		// Return HTTP status code based on overall state
 		statusCode := http.StatusOK
 		if response.Status == health.StatusUnhealthy {
 			statusCode = http.StatusServiceUnavailable
 		} else if response.Status == health.StatusDegraded {
-			statusCode = http.StatusOK // 降级状态仍返回 200，但在响应体中标识
+			statusCode = http.StatusOK // Return 200 in degraded status but mark it in the response body
 		}
 
 		c.JSON(statusCode, response)
@@ -42,11 +42,11 @@ func (h *HealthCheckHandler) Handle() gin.HandlerFunc {
 }
 
 // HandleLiveness K8s Liveness Probe
-// 简单检查应用是否存活（不检查依赖项）
+// A simple check to see if the application is alive (does not check dependencies)
 func (h *HealthCheckHandler) HandleLiveness() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Liveness 探针只检查应用本身是否存活
-		// 不检查外部依赖（数据库、Redis 等）
+		// The liveness probe only checks if the application itself is alive
+		// Do not check for external dependencies (database, Redis, etc.)
 		c.JSON(http.StatusOK, gin.H{
 			"status": "alive",
 		})
@@ -54,14 +54,14 @@ func (h *HealthCheckHandler) HandleLiveness() gin.HandlerFunc {
 }
 
 // HandleReadiness K8s Readiness Probe
-// 检查应用是否就绪（包括所有依赖项）
+// Check if the application is ready (including all dependencies)
 func (h *HealthCheckHandler) HandleReadiness() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Readiness 探针检查应用是否准备好接收流量
-		// 包括检查所有依赖项
+		// Readiness probe checks if the application is ready to receive traffic
+		// Include check for all dependencies
 		response := h.aggregator.Check(c.Request.Context())
 
-		// 只有完全健康才返回 200
+		// Only return 200 if fully healthy
 		statusCode := http.StatusOK
 		if response.Status != health.StatusHealthy {
 			statusCode = http.StatusServiceUnavailable
@@ -73,8 +73,8 @@ func (h *HealthCheckHandler) HandleReadiness() gin.HandlerFunc {
 	}
 }
 
-// RegisterHealthRoutes 注册健康检查路由
-// 便捷方法，自动注册所有健康检查端点
+// RegisterHealthRoutes Register health check routes
+// Convenient method, automatically registers all health check endpoints
 func RegisterHealthRoutes(router gin.IRouter, aggregator *health.Aggregator) {
 	if aggregator == nil {
 		return
@@ -82,7 +82,7 @@ func RegisterHealthRoutes(router gin.IRouter, aggregator *health.Aggregator) {
 
 	handler := NewHealthCheckHandler(aggregator)
 
-	// 注册路由
+	// Register routes
 	router.GET("/health", handler.Handle())
 	router.GET("/health/liveness", handler.HandleLiveness())
 	router.GET("/health/readiness", handler.HandleReadiness())

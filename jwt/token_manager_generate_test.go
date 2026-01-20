@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestTokenManager_GenerateAccessToken_AllCombinations 测试所有组合
+// TestTokenManager_GenerateAccessToken_AllCombinations_TestAllCombinations
 func TestTokenManager_GenerateAccessToken_AllCombinations(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -62,26 +62,26 @@ func TestTokenManager_GenerateAccessToken_AllCombinations(t *testing.T) {
 			assert.NoError(t, err)
 			assert.NotEmpty(t, token)
 
-			// 验证 Token
+			// Verify Token
 			claims, err := manager.VerifyToken(ctx, token)
 			assert.NoError(t, err)
 			assert.NotNil(t, claims)
 
-			// 验证 JTI
+			// Validate JTI
 			if tt.enableJTI {
 				assert.NotEmpty(t, claims.JTI)
 			} else {
 				assert.Empty(t, claims.JTI)
 			}
 
-			// 验证 NBF
+			// Validate NBF
 			if tt.enableNBF {
 				assert.False(t, claims.NotBefore.IsZero())
 			} else {
 				assert.True(t, claims.NotBefore.IsZero())
 			}
 
-			// 验证 Audience
+			// Verify Audience
 			if tt.audience != "" {
 				assert.Equal(t, tt.audience, claims.Audience)
 			} else {
@@ -91,7 +91,7 @@ func TestTokenManager_GenerateAccessToken_AllCombinations(t *testing.T) {
 	}
 }
 
-// TestTokenManager_GenerateRefreshToken_AllCombinations 测试 Refresh Token 的所有组合
+// TestTokenManager_GenerateRefreshToken_AllCombinations Test all combinations of Refresh Token
 func TestTokenManager_GenerateRefreshToken_AllCombinations(t *testing.T) {
 	config := newTestConfig()
 	config.RefreshToken.Enabled = true
@@ -99,7 +99,7 @@ func TestTokenManager_GenerateRefreshToken_AllCombinations(t *testing.T) {
 
 	ctx := context.Background()
 
-	// 生成多个 Refresh Token
+	// Generate multiple Refresh Tokens
 	tokens := make([]string, 3)
 	for i := 0; i < 3; i++ {
 		token, err := manager.GenerateRefreshToken(ctx, "user123")
@@ -107,30 +107,30 @@ func TestTokenManager_GenerateRefreshToken_AllCombinations(t *testing.T) {
 		tokens[i] = token
 	}
 
-	// 验证所有 Token 都不同（包含唯一的 JTI）
+	// Verify that all tokens are different (contain unique JTIs)
 	for i := 0; i < len(tokens); i++ {
 		for j := i + 1; j < len(tokens); j++ {
 			assert.NotEqual(t, tokens[i], tokens[j])
 		}
 	}
 
-	// 验证所有 Token 都有效
+	// Validate that all tokens are valid
 	for _, token := range tokens {
 		claims, err := manager.VerifyToken(ctx, token)
 		assert.NoError(t, err)
 		assert.Equal(t, "refresh", claims.TokenType)
-		assert.NotEmpty(t, claims.JTI) // Refresh Token 总是有 JTI
+		assert.NotEmpty(t, claims.JTI) // Refresh Token always has JTI
 	}
 }
 
-// TestTokenManager_ParseCustomClaims_EmptyRoles 测试空 roles 数组
+// TestTokenManager_ParseCustomClaims_EmptyRoles test empty roles array
 func TestTokenManager_ParseCustomClaims_EmptyRoles(t *testing.T) {
 	config := newTestConfig()
 	manager := newTestTokenManager(t, config)
 
 	ctx := context.Background()
 	customClaims := map[string]interface{}{
-		"roles": []string{}, // 空数组
+		"roles": []string{}, // empty array
 	}
 
 	token, err := manager.GenerateAccessToken(ctx, "user123", customClaims)

@@ -1,5 +1,5 @@
-// Package application 提供通用的应用启动框架
-// CLIApplication 是 CLI 应用专用（组合 BaseApplication）
+// Provides a generic application startup framework
+// CLIApplication is for CLI applications specifically (composes BaseApplication)
 package application
 
 import (
@@ -11,22 +11,22 @@ import (
 	"go.uber.org/zap"
 )
 
-// CLIApplication CLI 应用（组合 BaseApplication + CLI 专有功能）
+// CLIApplication CLI application (combination of BaseApplication + CLI specific features)
 type CLIApplication struct {
-	*BaseApplication // 组合核心框架（80% 通用逻辑）
+	*BaseApplication // Combines core framework (80% general logic)
 
-	// CLI 专有字段
+	// CLI specific fields
 	rootCmd *cobra.Command
 }
 
-// NewCLI 创建 CLI 应用实例
-// configPath: 配置目录路径（如 ../configs/cli-app）
-// configPrefix: 环境变量前缀（如 "APP"）
-// rootCmd: Cobra 根命令
+// Create CLI application instance
+// configPath: Configuration directory path (e.g., ../configs/cli-app)
+// configPrefix: Configuration prefix (e.g., "APP")
+// rootCmd: Cobra root command
 func NewCLI(configPath, configPrefix string, rootCmd *cobra.Command) *CLIApplication {
-	// 默认值处理
+	// Default value handling
 	if configPath == "" {
-		configPath = "../configs" // 不应该用，但防御性默认
+		configPath = "../configs" // Not recommended to use, but defensive default
 	}
 	if configPrefix == "" {
 		configPrefix = "APP"
@@ -40,47 +40,47 @@ func NewCLI(configPath, configPrefix string, rootCmd *cobra.Command) *CLIApplica
 	}
 }
 
-// NewCLIWithDefaults 创建 CLI 应用实例（使用默认配置）
-// appName: 应用名称（如 cli-app），用于构建默认配置路径
+// Create CLI application instance with default configuration
+// appName: Application name (e.g., cli-app), used for building default configuration paths
 func NewCLIWithDefaults(appName string, rootCmd *cobra.Command) *CLIApplication {
 	return NewCLI("../configs/"+appName, "APP", rootCmd)
 }
 
-// OnSetup 注册 Setup 阶段回调（链式调用）
+// OnSetup registers the Setup stage callback (chained call)
 func (c *CLIApplication) OnSetup(fn func(*CLIApplication) error) *CLIApplication {
-	// 转换为 BaseApplication 回调
+	// Convert to BaseApplication callback
 	c.BaseApplication.OnSetup(func(base *BaseApplication) error {
 		return fn(c)
 	})
 	return c
 }
 
-// OnReady 注册启动完成回调（链式调用）
+// Register completion callback on ready (chained call)
 func (c *CLIApplication) OnReady(fn func(*CLIApplication) error) *CLIApplication {
-	// 转换为 BaseApplication 回调
+	// Convert to BaseApplication callback
 	c.BaseApplication.OnReady(func(base *BaseApplication) error {
 		return fn(c)
 	})
 	return c
 }
 
-// OnShutdown 注册关闭前回调（链式调用）
+// OnShutdown register shutdown callback (chained call)
 func (c *CLIApplication) OnShutdown(fn func(*CLIApplication) error) *CLIApplication {
-	// 转换为 BaseApplication 回调
+	// Convert to BaseApplication callback
 	c.BaseApplication.onShutdown = func(ctx context.Context) error {
 		return fn(c)
 	}
 	return c
 }
 
-// Execute 执行 CLI 命令（同步执行，完成后退出）
+// Execute CLI command (synchronous execution, exit after completion)
 func (c *CLIApplication) Execute() error {
-	// 1. Setup 阶段（初始化所有组件）
+	// 1. Setup stage (initialize all components)
 	if err := c.Setup(); err != nil {
 		return fmt.Errorf("setup failed: %w", err)
 	}
 
-	// 2. 触发 OnReady（CLI 应用自定义初始化）
+	// 2. Trigger OnReady (custom initialization for CLI application)
 	c.BaseApplication.setState(StateRunning)
 	if c.BaseApplication.onReady != nil {
 		if err := c.BaseApplication.onReady(c.BaseApplication); err != nil {
@@ -91,10 +91,10 @@ func (c *CLIApplication) Execute() error {
 	logger := c.MustGetLogger()
 	logger.DebugCtx(c.ctx, "✅ CLI application initialized", zap.Duration("startup_time", c.GetStartDuration()))
 
-	// 3. 执行 Cobra 命令（同步）
+	// Execute Cobra command (sync)
 	err := c.rootCmd.Execute()
 
-	// 4. 优雅关闭（无论成功失败都要清理资源）
+	// 4. Graceful shutdown (clean up resources whether successful or failed)
 	shutdownErr := c.gracefulShutdown()
 
 	if err != nil {
@@ -103,21 +103,21 @@ func (c *CLIApplication) Execute() error {
 	return shutdownErr
 }
 
-// gracefulShutdown CLI 应用优雅关闭
+// graceful shutdown for CLI application
 func (c *CLIApplication) gracefulShutdown() error {
 	logger := c.MustGetLogger()
 	logger.DebugCtx(c.ctx, "Starting CLI application graceful shutdown...")
 
-	// 调用 Base 的通用关闭逻辑（5秒超时，CLI 应用通常很快）
+	// Call the generic close logic in Base (5-second timeout, CLI applications typically finish quickly)
 	return c.BaseApplication.Shutdown(5 * time.Second)
 }
 
-// GetRootCmd 获取根命令（供测试使用）
+// GetRootCmd获取根命令（用于测试）
 func (c *CLIApplication) GetRootCmd() *cobra.Command {
 	return c.rootCmd
 }
 
-// AddCommand 添加子命令（便捷方法）
+// AddCommand Adds subcommands (convenience method)
 func (c *CLIApplication) AddCommand(cmds ...*cobra.Command) *CLIApplication {
 	c.rootCmd.AddCommand(cmds...)
 	return c

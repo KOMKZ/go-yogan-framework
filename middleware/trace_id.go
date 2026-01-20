@@ -9,29 +9,29 @@ import (
 )
 
 const (
-	// TraceIDKeyDefault Context 中的 TraceID Key 默认值
+	// TraceIDKeyDefault TraceID key default value in the Context
 	TraceIDKeyDefault = "trace_id"
 
-	// TraceIDHeaderDefault HTTP Header 中的 TraceID Key 默认值
+	// The default value for the TraceID key in the TraceIDHeaderDefault HTTP header
 	TraceIDHeaderDefault = "X-Trace-ID"
 )
 
-// TraceConfig Trace 中间件配置
+// TraceConfig Trace middleware configuration
 type TraceConfig struct {
-	// TraceIDKey Context 中存储的 Key（默认 "trace_id"）
+	// TraceIDKey stored in Context (default "trace_id")
 	TraceIDKey string
 
-	// TraceIDHeader HTTP Header 中的 Key（默认 "X-Trace-ID"）
+	// TraceIDHeader is the key in the HTTP Header (default "X-Trace-ID")
 	TraceIDHeader string
 
-	// EnableResponseHeader 是否将 TraceID 写入 Response Header（默认 true）
+	// EnableResponseHeader whether to write TraceID into Response Header (default true)
 	EnableResponseHeader bool
 
-	// Generator 自定义 TraceID 生成器（默认使用 UUID）
+	// Generator custom TraceID generator (default uses UUID)
 	Generator func() string
 }
 
-// DefaultTraceConfig 默认配置
+// Default configuration for DefaultTraceConfig
 func DefaultTraceConfig() TraceConfig {
 	return TraceConfig{
 		TraceIDKey:           TraceIDKeyDefault,
@@ -41,18 +41,18 @@ func DefaultTraceConfig() TraceConfig {
 	}
 }
 
-// TraceID 创建 TraceID 中间件
+// Create TraceID middleware
 // 
-// 功能：
-//   1. 从 Header 提取或生成 TraceID
-//   2. 注入到 gin.Context 和 context.Context
-//   3. 可选：将 TraceID 写入 Response Header
-//   4. 🎯 智能切换：如果 OpenTelemetry 已启用，优先使用 OTel Trace ID
+// Function:
+// 1. Extract or generate TraceID from Header
+// Inject into gin.Context and context.Context
+// Optional: Write TraceID to Response Header
+// 4. 🎯 Intelligent switch: If OpenTelemetry is enabled, prioritize using the OTel Trace ID
 //
-// 用法：
+// Usage:
 //   engine.Use(middleware.TraceID(middleware.DefaultTraceConfig()))
 func TraceID(cfg TraceConfig) gin.HandlerFunc {
-	// 应用默认值
+	// Apply default values
 	if cfg.TraceIDKey == "" {
 		cfg.TraceIDKey = TraceIDKeyDefault
 	}
@@ -65,49 +65,49 @@ func TraceID(cfg TraceConfig) gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 		// ===========================
-		// 🎯 1. 检查 OpenTelemetry 是否启用
+		// 🎯 1. Check if OpenTelemetry is enabled
 		// ===========================
 		span := trace.SpanFromContext(c.Request.Context())
 		
 		var traceID string
 		if span.SpanContext().IsValid() {
-			// OTel 已启用，使用 OTel Trace ID
+			// Otel is enabled, using Otel Trace ID
 			traceID = span.SpanContext().TraceID().String()
 		} else {
-			// OTel 未启用，使用自定义 TraceID 逻辑
+			// OTel not enabled, using custom TraceID logic
 			traceID = c.GetHeader(cfg.TraceIDHeader)
 			if traceID == "" {
 				traceID = cfg.Generator()
 			}
-			// 注入到 context（兼容旧逻辑）
+			// Inject into context (compatible with old logic)
 			ctx := context.WithValue(c.Request.Context(), cfg.TraceIDKey, traceID)
 			c.Request = c.Request.WithContext(ctx)
 		}
 
 		// ===========================
-		// 2. 注入到 gin.Context（便于 Handler 直接获取）
+		// 2. Inject into gin.Context (for easy direct access by Handler)
 		// ===========================
 		c.Set(cfg.TraceIDKey, traceID)
 
 		// ===========================
-		// 3. 可选：将 TraceID 写入 Response Header
+		// Optional: Write TraceID to Response Header
 		// ===========================
 		if cfg.EnableResponseHeader {
 			c.Writer.Header().Set(cfg.TraceIDHeader, traceID)
 		}
 
-		// 处理请求
+		// Handle request
 		c.Next()
 	}
 }
 
-// GetTraceID 从 gin.Context 获取 TraceID（便捷方法）
-// 使用默认 Key
+// GetTraceID retrieves the TraceID from gin.Context (convenience method)
+// Use default key
 func GetTraceID(c *gin.Context) string {
 	return GetTraceIDWithKey(c, TraceIDKeyDefault)
 }
 
-// GetTraceIDWithKey 从 gin.Context 获取 TraceID（指定 Key）
+// GetTraceIDWithKey retrieves the TraceID from gin.Context (specified by Key)
 func GetTraceIDWithKey(c *gin.Context, key string) string {
 	traceID, exists := c.Get(key)
 	if !exists {

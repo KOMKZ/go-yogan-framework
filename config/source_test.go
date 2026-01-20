@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// TestFileSource 测试文件数据源
+// TestFileSource test file data source
 func TestFileSource(t *testing.T) {
 	testdataDir := "testdata"
 
@@ -44,7 +44,7 @@ func TestFileSource(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			source := NewFileSource(tt.filePath, tt.priority)
 
-			// 验证基本属性
+			// Validate basic properties
 			if source.Name() != "file:"+tt.filePath {
 				t.Errorf("Name() = %s, want %s", source.Name(), "file:"+tt.filePath)
 			}
@@ -53,7 +53,7 @@ func TestFileSource(t *testing.T) {
 				t.Errorf("Priority() = %d, want %d", source.Priority(), tt.priority)
 			}
 
-			// 加载配置
+			// Load configuration
 			data, err := source.Load()
 			if tt.expectError && err == nil {
 				t.Error("expected error, got nil")
@@ -62,7 +62,7 @@ func TestFileSource(t *testing.T) {
 				t.Errorf("unexpected error: %v", err)
 			}
 
-			// 验证关键 key 存在
+			// Validate that the key exists
 			for _, key := range tt.expectKeys {
 				if _, ok := data[key]; !ok {
 					t.Errorf("expected key %s not found in data", key)
@@ -72,7 +72,7 @@ func TestFileSource(t *testing.T) {
 	}
 }
 
-// TestFileSource_Values 测试配置值
+// TestFileSource_Values test configuration values
 func TestFileSource_Values(t *testing.T) {
 	source := NewFileSource("testdata/config.yaml", 10)
 	data, err := source.Load()
@@ -100,14 +100,14 @@ func TestFileSource_Values(t *testing.T) {
 				return
 			}
 
-			// 类型转换和比较
+			// Type conversion and comparison
 			switch expected := tt.expected.(type) {
 			case string:
 				if value != expected {
 					t.Errorf("value = %v, want %v", value, expected)
 				}
 			case int:
-				// Viper 可能返回 int 或 int64
+				// Viper may return int or int64
 				switch v := value.(type) {
 				case int:
 					if v != expected {
@@ -125,9 +125,9 @@ func TestFileSource_Values(t *testing.T) {
 	}
 }
 
-// TestEnvSource 测试环境变量数据源
+// TestEnvSource test environment variable data source
 func TestEnvSource(t *testing.T) {
-	// 设置测试环境变量
+	// Set test environment variables
 	os.Setenv("TEST_GRPC_SERVER_PORT", "9999")
 	os.Setenv("TEST_GRPC_SERVER_ADDRESS", "192.168.1.1")
 	os.Setenv("TEST_API_SERVER_PORT", "8888")
@@ -176,9 +176,9 @@ func TestEnvSource(t *testing.T) {
 	}
 }
 
-// TestFlagSource 测试命令行参数数据源
+// TestFlagSource test command line parameter data source
 func TestFlagSource(t *testing.T) {
-	// 定义测试用的 flags 结构
+	// Define the test flags structure
 	type TestFlags struct {
 		Port    int    `config:"grpc.server.port,api_server.port"`
 		Address string `config:"grpc.server.address"`
@@ -231,7 +231,7 @@ func TestFlagSource(t *testing.T) {
 				t.Fatalf("Load() error: %v", err)
 			}
 
-			// 验证期望的 key
+			// Verify the expected key
 			for key, expected := range tt.expectKeys {
 				value, ok := data[key]
 				if !ok {
@@ -244,7 +244,7 @@ func TestFlagSource(t *testing.T) {
 				}
 			}
 
-			// 验证没有多余的 key
+			// Verify there are no extra keys
 			if len(data) != len(tt.expectKeys) {
 				t.Errorf("data length = %d, want %d, data=%v", len(data), len(tt.expectKeys), data)
 			}
@@ -252,9 +252,9 @@ func TestFlagSource(t *testing.T) {
 	}
 }
 
-// TestFlagSource_DefaultMapping 测试默认映射规则
+// TestFlagSource_DefaultMapping test default mapping rules
 func TestFlagSource_DefaultMapping(t *testing.T) {
-	// 使用与 application.AppFlags 相似的结构
+	// Use a structure similar to application.AppFlags
 	type AppFlags struct {
 		Port    int
 		Address string

@@ -5,50 +5,50 @@ import (
 	"time"
 )
 
-// Algorithm 限流算法接口（策略模式）
+// Rate limiting algorithm interface (strategy pattern)
 type Algorithm interface {
-	// Allow 检查是否允许请求
+	// Allow check if the request is permitted
 	Allow(ctx context.Context, store Store, resource string, n int64, cfg ResourceConfig) (*Response, error)
 
-	// Wait 等待获取许可（阻塞直到获取或超时）
+	// Wait for permission (blocking until acquired or timed out)
 	Wait(ctx context.Context, store Store, resource string, n int64, cfg ResourceConfig, timeout time.Duration) error
 
-	// GetMetrics 获取当前指标
+	// GetMetrics获取当前指标
 	GetMetrics(ctx context.Context, store Store, resource string) (*AlgorithmMetrics, error)
 
-	// Reset 重置状态
+	// Reset reset status
 	Reset(ctx context.Context, store Store, resource string) error
 
-	// Name 返回算法名称
+	// Name Returns algorithm name
 	Name() string
 }
 
-// AlgorithmMetrics 算法指标
+// AlgorithmMetrics algorithm metrics
 type AlgorithmMetrics struct {
-	Current   int64     // 当前值（并发数/已用令牌/请求数）
-	Limit     int64     // 限制值
-	Remaining int64     // 剩余配额
-	ResetAt   time.Time // 重置时间
+	Current   int64     // Current value (concurrency count/token usage/request count)
+	Limit     int64     // Limit value
+	Remaining int64     // remaining quota
+	ResetAt   time.Time // Reset time
 }
 
-// AlgorithmType 算法类型
+// AlgorithmType algorithm type
 type AlgorithmType string
 
 const (
-	// AlgorithmTokenBucket 令牌桶算法
+	// AlgorithmTokenBucket token bucket algorithm
 	AlgorithmTokenBucket AlgorithmType = "token_bucket"
 
-	// AlgorithmSlidingWindow 滑动窗口算法
+	// AlgorithmSlidingWindow Sliding Window Algorithm
 	AlgorithmSlidingWindow AlgorithmType = "sliding_window"
 
-	// AlgorithmConcurrency 并发限流算法
+	// AlgorithmConcurrency concurrency rate limiting algorithm
 	AlgorithmConcurrency AlgorithmType = "concurrency"
 
-	// AlgorithmAdaptive 自适应限流算法
+	// Algorithm Adaptive for rate limiting
 	AlgorithmAdaptive AlgorithmType = "adaptive"
 )
 
-// GetAlgorithm 根据配置获取算法实例
+// GetAlgorithm obtains an algorithm instance according to the configuration
 func GetAlgorithm(cfg ResourceConfig, provider AdaptiveProvider) Algorithm {
 	switch AlgorithmType(cfg.Algorithm) {
 	case AlgorithmTokenBucket:
@@ -60,7 +60,7 @@ func GetAlgorithm(cfg ResourceConfig, provider AdaptiveProvider) Algorithm {
 	case AlgorithmAdaptive:
 		return NewAdaptiveAlgorithm(provider)
 	default:
-		// 默认使用令牌桶
+		// Use token bucket by default
 		return NewTokenBucketAlgorithm()
 	}
 }

@@ -417,7 +417,7 @@ func TestProducerConfig_ApplyDefaults_Idempotent(t *testing.T) {
 	}
 	cfg.ApplyDefaults()
 
-	// 幂等模式下 RequiredAcks 保持 0（会在 sarama 中设置为 -1）
+	// Idempotent mode RequiredAcks remains 0 (will be set to -1 in sarama)
 	assert.Equal(t, 0, cfg.RequiredAcks)
 }
 

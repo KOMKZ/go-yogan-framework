@@ -13,7 +13,7 @@ import (
 	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
-// TestNewClientManager 测试创建 ClientManager
+// TestNewClientManager test creating ClientManager
 func TestNewClientManager(t *testing.T) {
 	log := logger.GetLogger("grpc_test")
 
@@ -33,7 +33,7 @@ func TestNewClientManager(t *testing.T) {
 	assert.Equal(t, 2, len(manager.configs))
 }
 
-// TestClientManager_GetConn_NotConfigured 测试获取未配置的服务连接
+// TestClientManager_GetConn_NotConfigured test getting a connection for an unconfigured service
 func TestClientManager_GetConn_NotConfigured(t *testing.T) {
 	log := logger.GetLogger("grpc_test")
 
@@ -47,18 +47,18 @@ func TestClientManager_GetConn_NotConfigured(t *testing.T) {
 	manager := NewClientManager(configs, log)
 	require.NotNil(t, manager)
 
-	// 获取未配置的服务
+	// Get unconfigured services
 	conn, err := manager.GetConn("not-exist-service")
 	assert.Error(t, err)
 	assert.Nil(t, conn)
 	assert.Contains(t, err.Error(), "未配置服务")
 }
 
-// TestClientManager_GetConn_Success 测试成功获取连接
+// TestClientManager_GetConn_Success Successfully obtained connection
 func TestClientManager_GetConn_Success(t *testing.T) {
 	log := logger.GetLogger("grpc_test")
 
-	// 启动一个测试服务器
+	// Start a test server
 	server := startTestGRPCServer(t)
 	defer server.Stop(context.Background())
 
@@ -72,12 +72,12 @@ func TestClientManager_GetConn_Success(t *testing.T) {
 	manager := NewClientManager(configs, log)
 	require.NotNil(t, manager)
 
-	// 获取连接
+	// Get connection
 	conn, err := manager.GetConn("test-service")
 	assert.NoError(t, err)
 	assert.NotNil(t, conn)
 
-	// 测试连接可用
+	// Test connection availability
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
@@ -87,11 +87,11 @@ func TestClientManager_GetConn_Success(t *testing.T) {
 	assert.Equal(t, grpc_health_v1.HealthCheckResponse_SERVING, resp.Status)
 }
 
-// TestClientManager_GetConn_Cached 测试连接缓存
+// TestClientManager_GetConn_Cached test connection cache
 func TestClientManager_GetConn_Cached(t *testing.T) {
 	log := logger.GetLogger("grpc_test")
 
-	// 启动一个测试服务器
+	// Start a test server
 	server := startTestGRPCServer(t)
 	defer server.Stop(context.Background())
 
@@ -105,46 +105,46 @@ func TestClientManager_GetConn_Cached(t *testing.T) {
 	manager := NewClientManager(configs, log)
 	require.NotNil(t, manager)
 
-	// 第一次获取连接
+	// First connection retrieval
 	conn1, err := manager.GetConn("test-service")
 	assert.NoError(t, err)
 	assert.NotNil(t, conn1)
 
-	// 第二次获取连接（应该返回缓存的连接）
+	// The second attempt to get a connection (should return a cached connection)
 	conn2, err := manager.GetConn("test-service")
 	assert.NoError(t, err)
 	assert.NotNil(t, conn2)
 
-	// 应该是同一个连接对象
+	// It should be the same connection object
 	assert.Equal(t, conn1, conn2)
 }
 
-// TestClientManager_GetConn_ConnectionFailed 测试连接失败
+// TestClientManager_GetConn_ConnectionFailed_Test connection failed
 func TestClientManager_GetConn_ConnectionFailed(t *testing.T) {
 	log := logger.GetLogger("grpc_test")
 
 	configs := map[string]ClientConfig{
 		"invalid-service": {
-			Target:  "127.0.0.1:99999", // 无效端口
-			Timeout: 1,                 // 1 秒超时
+			Target:  "127.0.0.1:99999", // invalid port
+			Timeout: 1,                 // 1 second timeout
 		},
 	}
 
 	manager := NewClientManager(configs, log)
 	require.NotNil(t, manager)
 
-	// 获取连接（应该超时失败）
+	// Get connection (should timeout and fail)
 	conn, err := manager.GetConn("invalid-service")
 	assert.Error(t, err)
 	assert.Nil(t, conn)
 	assert.Contains(t, err.Error(), "连接服务失败")
 }
 
-// TestClientManager_Close 测试关闭所有连接
+// TestClientManager_Close_TestCloseAllConnections
 func TestClientManager_Close(t *testing.T) {
 	log := logger.GetLogger("grpc_test")
 
-	// 启动两个测试服务器
+	// Start two test servers
 	server1 := startTestGRPCServer(t)
 	defer server1.Stop(context.Background())
 
@@ -165,7 +165,7 @@ func TestClientManager_Close(t *testing.T) {
 	manager := NewClientManager(configs, log)
 	require.NotNil(t, manager)
 
-	// 创建连接
+	// Establish connection
 	conn1, err := manager.GetConn("service1")
 	assert.NoError(t, err)
 	assert.NotNil(t, conn1)
@@ -174,10 +174,10 @@ func TestClientManager_Close(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, conn2)
 
-	// 关闭所有连接
+	// Close all connections
 	manager.Close()
 
-	// 验证连接已关闭（再次调用会失败）
+	// Verify that the connection is closed (calling again will fail)
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
@@ -186,11 +186,11 @@ func TestClientManager_Close(t *testing.T) {
 	assert.Error(t, err) // 连接已关闭，应该失败
 }
 
-// TestClientManager_GetConn_Concurrent 测试并发获取连接
+// TestClientManager_GetConn-Concurrent Test concurrent connection acquisition
 func TestClientManager_GetConn_Concurrent(t *testing.T) {
 	log := logger.GetLogger("grpc_test")
 
-	// 启动测试服务器
+	// Start test server
 	server := startTestGRPCServer(t)
 	defer server.Stop(context.Background())
 
@@ -204,7 +204,7 @@ func TestClientManager_GetConn_Concurrent(t *testing.T) {
 	manager := NewClientManager(configs, log)
 	require.NotNil(t, manager)
 
-	// 并发获取连接
+	// concurrently obtain connection
 	const concurrency = 10
 	conns := make([]*grpc.ClientConn, concurrency)
 	errors := make([]error, concurrency)
@@ -217,12 +217,12 @@ func TestClientManager_GetConn_Concurrent(t *testing.T) {
 		}(i)
 	}
 
-	// 等待所有 goroutine 完成
+	// wait for all goroutines to finish
 	for i := 0; i < concurrency; i++ {
 		<-done
 	}
 
-	// 验证所有连接都成功且是同一个
+	// Verify that all connections are successful and belong to the same entity
 	var firstConn *grpc.ClientConn
 	for i := 0; i < concurrency; i++ {
 		assert.NoError(t, errors[i])
@@ -236,13 +236,13 @@ func TestClientManager_GetConn_Concurrent(t *testing.T) {
 	}
 }
 
-// startTestGRPCServer 启动一个测试用 gRPC 服务器
+// startTestGRPCServer Starts a test gRPC server
 func startTestGRPCServer(t *testing.T) *Server {
 	log := logger.GetLogger("grpc_test")
 
 	config := ServerConfig{
 		Enabled:       true,
-		Port:          0, // 自动分配端口
+		Port:          0, // Automatically assign port
 		MaxRecvSize:   4,
 		MaxSendSize:   4,
 		EnableReflect: true,
@@ -251,13 +251,13 @@ func startTestGRPCServer(t *testing.T) *Server {
 	server := NewServer(config, log)
 	require.NotNil(t, server)
 
-	// 注册健康检查服务
+	// Register health check service
 	grpc_health_v1.RegisterHealthServer(server.GetGRPCServer(), &mockHealthServer{})
 
 	err := server.Start(context.Background())
 	require.NoError(t, err)
 
-	// 等待服务器完全启动
+	// wait for the server to fully start up
 	time.Sleep(100 * time.Millisecond)
 
 	return server

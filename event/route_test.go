@@ -13,13 +13,13 @@ func TestRouter_Match_ExactMatch(t *testing.T) {
 		"user.login":    {Driver: DriverKafka, Topic: "events.user"},
 	})
 
-	// 精确匹配
+	// Exact match
 	route := router.Match("order.created")
 	assert.NotNil(t, route)
 	assert.Equal(t, DriverKafka, route.Driver)
 	assert.Equal(t, "events.order", route.Topic)
 
-	// 不匹配
+	// mismatched
 	route = router.Match("order.updated")
 	assert.Nil(t, route)
 }
@@ -30,14 +30,14 @@ func TestRouter_Match_WildcardSuffix(t *testing.T) {
 		"order.*": {Driver: DriverKafka, Topic: "events.order"},
 	})
 
-	// 通配符匹配
+	// wildcard matching
 	assert.NotNil(t, router.Match("order.created"))
 	assert.NotNil(t, router.Match("order.updated"))
 	assert.NotNil(t, router.Match("order.cancelled"))
 
-	// 不匹配
+	// mismatch
 	assert.Nil(t, router.Match("user.login"))
-	assert.Nil(t, router.Match("order")) // 没有点
+	assert.Nil(t, router.Match("order")) // There is no dot
 }
 
 func TestRouter_Match_UniversalWildcard(t *testing.T) {
@@ -46,7 +46,7 @@ func TestRouter_Match_UniversalWildcard(t *testing.T) {
 		"*": {Driver: DriverKafka, Topic: "events.all"},
 	})
 
-	// 匹配所有
+	// Match all
 	assert.NotNil(t, router.Match("order.created"))
 	assert.NotNil(t, router.Match("user.login"))
 	assert.NotNil(t, router.Match("anything"))
@@ -60,17 +60,17 @@ func TestRouter_Match_Priority(t *testing.T) {
 		"order.created": {Driver: DriverKafka, Topic: "events.order.created"},
 	})
 
-	// 精确匹配优先
+	// Prefer exact matches
 	route := router.Match("order.created")
 	assert.NotNil(t, route)
 	assert.Equal(t, "events.order.created", route.Topic)
 
-	// 通配符次之
+	// Wildcard next priority
 	route = router.Match("order.updated")
 	assert.NotNil(t, route)
 	assert.Equal(t, "events.order", route.Topic)
 
-	// 通用通配符最后
+	// General wildcard at last
 	route = router.Match("user.login")
 	assert.NotNil(t, route)
 	assert.Equal(t, "events.all", route.Topic)
@@ -82,14 +82,14 @@ func TestRouter_Match_MiddleWildcard(t *testing.T) {
 		"order.*.done": {Driver: DriverKafka, Topic: "events.order.done"},
 	})
 
-	// 中间通配符
+	// middle wildcard
 	assert.NotNil(t, router.Match("order.created.done"))
 	assert.NotNil(t, router.Match("order.updated.done"))
 
-	// 不匹配
+	// mismatch
 	assert.Nil(t, router.Match("order.created"))
 	assert.Nil(t, router.Match("order.done"))
-	assert.Nil(t, router.Match("order.created.updated.done")) // 层级不对
+	assert.Nil(t, router.Match("order.created.updated.done")) // Hierarchy mismatch
 }
 
 func TestRouter_HasRoutes(t *testing.T) {
@@ -106,6 +106,6 @@ func TestRouter_HasRoutes(t *testing.T) {
 func TestRouter_EmptyRoutes(t *testing.T) {
 	router := NewRouter()
 
-	// 空路由返回 nil
+	// An empty route returns nil
 	assert.Nil(t, router.Match("order.created"))
 }

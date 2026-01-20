@@ -7,30 +7,30 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// CORSConfig CORS 中间件配置
+// CORSConfig CORS middleware configuration
 type CORSConfig struct {
-	// AllowOrigins 允许的源列表（默认 ["*"]）
-	// 示例：["https://example.com", "https://app.example.com"]
+	// AllowOrigins list of allowed sources (default ["*"])
+	// Example: ["https://example.com", "https://app.example.com"]
 	AllowOrigins []string
 
-	// AllowMethods 允许的 HTTP 方法列表（默认 ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]）
+	// AllowMethods list of allowed HTTP methods (default ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"])
 	AllowMethods []string
 
-	// AllowHeaders 允许的请求头列表（默认 ["Origin", "Content-Type", "Accept", "Authorization"]）
+	// AllowHeaders list of allowed request headers (default ["Origin", "Content-Type", "Accept", "Authorization"])
 	AllowHeaders []string
 
-	// ExposeHeaders 暴露给客户端的响应头列表（默认 []）
+	// ExposeHeaders list of response headers exposed to the client (default [])
 	ExposeHeaders []string
 
-	// AllowCredentials 是否允许发送凭证（Cookie、HTTP认证等）（默认 false）
-	// 注意：当为 true 时，AllowOrigins 不能使用 "*"
+	// AllowCredentials whether to allow sending credentials (such as Cookies, HTTP authentication, etc.) (default false)
+	// Note: When set to true, AllowOrigins cannot use "*"
 	AllowCredentials bool
 
-	// MaxAge 预检请求缓存时间（秒）（默认 43200，即12小时）
+	// MaxAge preflight request cache time (seconds) (default 43200,即12 hours)
 	MaxAge int
 }
 
-// DefaultCORSConfig 默认 CORS 配置
+// DefaultCORSConfig default CORS configuration
 func DefaultCORSConfig() CORSConfig {
 	return CORSConfig{
 		AllowOrigins:     []string{"*"},
@@ -38,26 +38,26 @@ func DefaultCORSConfig() CORSConfig {
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders:    []string{},
 		AllowCredentials: false,
-		MaxAge:           43200, // 12小时
+		MaxAge:           43200, // 12 hours
 	}
 }
 
-// CORS 创建 CORS 中间件（使用默认配置）
+// Create CORS middleware (using default configuration)
 //
-// 功能：
-//   - 处理跨域资源共享（CORS）
-//   - 自动响应 OPTIONS 预检请求
-//   - 设置 CORS 相关响应头
+// Function:
+// - Handle Cross-Origin Resource Sharing (CORS)
+// - Automatically respond to OPTIONS preflight requests
+// - Set CORS related response headers
 //
-// 用法：
+// Usage:
 //   engine.Use(middleware.CORS())
 func CORS() gin.HandlerFunc {
 	return CORSWithConfig(DefaultCORSConfig())
 }
 
-// CORSWithConfig 创建 CORS 中间件（自定义配置）
+// CORSWithConfig creates CORS middleware (custom configuration)
 func CORSWithConfig(cfg CORSConfig) gin.HandlerFunc {
-	// 应用默认值
+	// Apply default values
 	if len(cfg.AllowOrigins) == 0 {
 		cfg.AllowOrigins = []string{"*"}
 	}
@@ -71,24 +71,24 @@ func CORSWithConfig(cfg CORSConfig) gin.HandlerFunc {
 		cfg.MaxAge = 43200
 	}
 
-	// 预处理配置（转换为字符串）
+	// Preprocess configuration (convert to string)
 	allowMethodsStr := strings.Join(cfg.AllowMethods, ", ")
 	allowHeadersStr := strings.Join(cfg.AllowHeaders, ", ")
 	exposeHeadersStr := strings.Join(cfg.ExposeHeaders, ", ")
 
 	return func(c *gin.Context) {
-		// 获取请求的 Origin
+		// Get the request's Origin
 		origin := c.Request.Header.Get("Origin")
 
 		// ===========================
-		// 1. 检查 Origin 是否允许
+		// Check if Origin is allowed
 		// ===========================
 		allowOrigin := ""
 		if len(cfg.AllowOrigins) == 1 && cfg.AllowOrigins[0] == "*" {
-			// 允许所有源
+			// Allow all sources
 			allowOrigin = "*"
 		} else if origin != "" {
-			// 检查是否在允许列表中
+			// Check if in allowed list
 			for _, allowedOrigin := range cfg.AllowOrigins {
 				if allowedOrigin == origin {
 					allowOrigin = origin
@@ -97,14 +97,14 @@ func CORSWithConfig(cfg CORSConfig) gin.HandlerFunc {
 			}
 		}
 
-		// 如果 Origin 不允许，且不是通配符，跳过 CORS 处理
+		// If Origin is not allowed and is not a wildcard, skip CORS handling
 		if allowOrigin == "" && origin != "" {
 			c.Next()
 			return
 		}
 
 		// ===========================
-		// 2. 设置 CORS 响应头
+		// Set CORS response headers
 		// ===========================
 		if allowOrigin != "" {
 			c.Writer.Header().Set("Access-Control-Allow-Origin", allowOrigin)
@@ -122,18 +122,18 @@ func CORSWithConfig(cfg CORSConfig) gin.HandlerFunc {
 		}
 
 		// ===========================
-		// 3. 处理 OPTIONS 预检请求
+		// Handle OPTIONS preflight requests
 		// ===========================
 		if c.Request.Method == "OPTIONS" {
-			// 设置预检请求缓存时间
+			// Set preflight request cache time
 			c.Writer.Header().Set("Access-Control-Max-Age", fmt.Sprintf("%d", cfg.MaxAge))
 			
-			// 直接返回 204 No Content
+			// directly return 204 No Content
 			c.AbortWithStatus(204)
 			return
 		}
 
-		// 继续处理请求
+		// Proceed to handle the request
 		c.Next()
 	}
 }

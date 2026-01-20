@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestNewCLI 测试创建 CLI 应用
+// TestNewCLI test creating CLI application
 func TestNewCLI(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -29,7 +29,7 @@ func TestNewCLI(t *testing.T) {
 	assert.Equal(t, rootCmd, app.GetRootCmd())
 }
 
-// TestNewCLIWithDefaults 测试使用默认配置创建 CLI 应用
+// TestNewCLIWithDefaults test creating CLI app with default configuration
 func TestNewCLIWithDefaults(t *testing.T) {
 	tmpDir := t.TempDir()
 	appDir := filepath.Join(tmpDir, "configs", "cli-app")
@@ -49,7 +49,7 @@ func TestNewCLIWithDefaults(t *testing.T) {
 	assert.NotNil(t, app)
 }
 
-// TestCLIApplication_Callbacks 测试回调注册
+// TestCLIApplication_Callbacks test callback registration
 func TestCLIApplication_Callbacks(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -84,7 +84,7 @@ func TestCLIApplication_Callbacks(t *testing.T) {
 	_ = shutdownCalled
 }
 
-// TestCLIApplication_AddCommand 测试添加子命令
+// TestCLIApplication_AddCommand_TestAddingSubcommand
 func TestCLIApplication_AddCommand(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -103,7 +103,7 @@ func TestCLIApplication_AddCommand(t *testing.T) {
 	assert.Len(t, rootCmd.Commands(), 1)
 }
 
-// TestCLIApplication_Execute 测试执行 CLI 命令
+// TestCLIApplication_Execute test executing CLI command
 func TestCLIApplication_Execute(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -125,14 +125,14 @@ func TestCLIApplication_Execute(t *testing.T) {
 	assert.Equal(t, StateStopped, app.GetState())
 }
 
-// TestNewCLI_DefaultValues 测试默认值处理
+// TestNewCLI_DefaultValues test default value handling
 func TestNewCLI_DefaultValues(t *testing.T) {
 	rootCmd := &cobra.Command{Use: "test"}
 	app := NewCLI("", "", rootCmd)
 	assert.NotNil(t, app)
 }
 
-// TestCLIApplication_Execute_WithCallbacks 测试执行 CLI 命令时回调被调用
+// TestCLIApplication_Execute_WithCallbacks tests that callbacks are called when executing a CLI command
 func TestCLIApplication_Execute_WithCallbacks(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -166,7 +166,7 @@ func TestCLIApplication_Execute_WithCallbacks(t *testing.T) {
 	assert.True(t, shutdownCalled)
 }
 
-// TestCLIApplication_Execute_SetupError 测试 Setup 失败
+// TestCLIApplication_Execute_SetupError Setup failure test
 func TestCLIApplication_Execute_SetupError(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -183,7 +183,7 @@ func TestCLIApplication_Execute_SetupError(t *testing.T) {
 	assert.Contains(t, err.Error(), "setup failed")
 }
 
-// TestCLIApplication_Execute_ReadyError 测试 Ready 失败
+// TestCLIApplication_Execute_ReadyError Test Ready failure
 func TestCLIApplication_Execute_ReadyError(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -200,7 +200,7 @@ func TestCLIApplication_Execute_ReadyError(t *testing.T) {
 	assert.Contains(t, err.Error(), "onReady failed")
 }
 
-// TestCLIApplication_Execute_CommandError 测试命令执行失败
+// TestCLIApplication_Execute_CommandError_test_command_execution_failure
 func TestCLIApplication_Execute_CommandError(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -219,7 +219,7 @@ func TestCLIApplication_Execute_CommandError(t *testing.T) {
 	assert.Error(t, err)
 }
 
-// TestCLIApplication_GracefulShutdown 测试优雅关闭
+// TestCLIApplication_GracefulShutdown test graceful shutdown
 func TestCLIApplication_GracefulShutdown(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")

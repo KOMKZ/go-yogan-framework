@@ -1,4 +1,4 @@
-// Package di 提供依赖注入相关功能
+// Package di provides dependency injection related functionality
 package di
 
 import (
@@ -10,34 +10,34 @@ import (
 	"gorm.io/gorm"
 )
 
-// RegisterCoreProviders 注册所有核心组件 Provider 到 injector
-// 按依赖层级注册，懒加载模式
+// RegisterCoreProviders registers all core component providers to the injector
+// Register by dependency level, lazy loading mode
 func RegisterCoreProviders(injector *do.RootScope, opts ConfigOptions) {
 	// ═══════════════════════════════════════════════════════════
-	// Layer 0: Config（无依赖）
+	// Layer 0: Config (no dependencies)
 	// ═══════════════════════════════════════════════════════════
 	do.Provide(injector, ProvideConfigLoader(opts))
 
 	// ═══════════════════════════════════════════════════════════
-	// Layer 1: Logger（依赖 Config）
+	// Layer 1: Logger (depends on Config)
 	// ═══════════════════════════════════════════════════════════
 	do.Provide(injector, ProvideLoggerManager)
 	do.Provide(injector, ProvideCtxLogger("yogan"))
 
 	// ═══════════════════════════════════════════════════════════
-	// Layer 2: 基础设施组件（懒加载）
+	// Layer 2: Infrastructure components (lazy loading)
 	// ═══════════════════════════════════════════════════════════
 	do.Provide(injector, ProvideDatabaseManager)
 	do.Provide(injector, ProvideRedisManager)
 	do.Provide(injector, ProvideKafkaManager)
 
-	// 便捷访问：*gorm.DB（从 Manager 获取 master）
+	// Convenient access: *gorm.DB (from Manager get master)
 	do.Provide(injector, ProvideDefaultDB)
-	// 便捷访问：redis.UniversalClient（从 Manager 获取 main）
+	// Convenient access: redis.UniversalClient (obtained from Manager as main)
 	do.Provide(injector, ProvideDefaultRedisClient)
 
 	// ═══════════════════════════════════════════════════════════
-	// Layer 3: 业务支撑组件（懒加载）
+	// Layer 3: Business Support Components (Lazy Loading)
 	// ═══════════════════════════════════════════════════════════
 	do.Provide(injector, ProvideJWTConfig)
 	do.Provide(injector, ProvideJWTTokenManagerIndependent)
@@ -47,12 +47,12 @@ func RegisterCoreProviders(injector *do.RootScope, opts ConfigOptions) {
 	do.Provide(injector, ProvideHealthAggregator)
 
 	// ═══════════════════════════════════════════════════════════
-	// Layer 4: 文档和辅助组件（懒加载）
+	// Layer 4: Documentation and auxiliary components (lazy loading)
 	// ═══════════════════════════════════════════════════════════
 	do.Provide(injector, swagger.ProvideManager)
 }
 
-// ProvideDefaultDB 提供默认数据库连接（master）
+// ProvideDefaultDB provides default database connection (master)
 func ProvideDefaultDB(i do.Injector) (*gorm.DB, error) {
 	mgr, err := do.Invoke[*database.Manager](i)
 	if err != nil || mgr == nil {
@@ -61,7 +61,7 @@ func ProvideDefaultDB(i do.Injector) (*gorm.DB, error) {
 	return mgr.DB("master"), nil
 }
 
-// ProvideDefaultRedisClient 提供默认 Redis 客户端（main）
+// ProvideDefaultRedisClient Provides the default Redis client (main)
 func ProvideDefaultRedisClient(i do.Injector) (goredis.UniversalClient, error) {
 	mgr, err := do.Invoke[*redis.Manager](i)
 	if err != nil || mgr == nil {

@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestTokenManager_RefreshToken_AllCustomClaims 测试所有自定义 Claims 的刷新
+// TestTokenManager_RefreshToken_AllCustomClaims test refresh with all custom claims
 func TestTokenManager_RefreshToken_AllCustomClaims(t *testing.T) {
 	config := newTestConfig()
 	config.RefreshToken.Enabled = true
@@ -17,7 +17,7 @@ func TestTokenManager_RefreshToken_AllCustomClaims(t *testing.T) {
 	ctx := context.Background()
 	subject := "user123"
 
-	// 生成带所有自定义 Claims 的 Access Token
+	// Generate an Access Token with all custom Claims
 	customClaims := map[string]interface{}{
 		"user_id":   int64(123),
 		"username":  "testuser",
@@ -27,7 +27,7 @@ func TestTokenManager_RefreshToken_AllCustomClaims(t *testing.T) {
 	accessToken, err := manager.GenerateAccessToken(ctx, subject, customClaims)
 	require.NoError(t, err)
 
-	// 验证 Access Token
+	// Verify Access Token
 	accessClaims, err := manager.VerifyToken(ctx, accessToken)
 	require.NoError(t, err)
 	assert.Equal(t, int64(123), accessClaims.UserID)
@@ -35,22 +35,22 @@ func TestTokenManager_RefreshToken_AllCustomClaims(t *testing.T) {
 	assert.Equal(t, []string{"admin", "user"}, accessClaims.Roles)
 	assert.Equal(t, "tenant-001", accessClaims.TenantID)
 
-	// 生成 Refresh Token
+	// Generate Refresh Token
 	refreshToken, err := manager.GenerateRefreshToken(ctx, subject)
 	require.NoError(t, err)
 
-	// 使用 Refresh Token 获取新的 Access Token
+	// Use Refresh Token to obtain new Access Token
 	newAccessToken, err := manager.RefreshToken(ctx, refreshToken)
 	require.NoError(t, err)
 
-	// 验证新的 Access Token
+	// Verify new Access Token
 	newAccessClaims, err := manager.VerifyToken(ctx, newAccessToken)
 	require.NoError(t, err)
 	assert.Equal(t, subject, newAccessClaims.Subject)
 	assert.Equal(t, "access", newAccessClaims.TokenType)
 }
 
-// TestTokenManager_RefreshToken_OnlyUsername 测试只有 username 的刷新
+// TestTokenManager_RefreshToken_OnlyUsername test refresh with username only
 func TestTokenManager_RefreshToken_OnlyUsername(t *testing.T) {
 	config := newTestConfig()
 	config.RefreshToken.Enabled = true
@@ -59,28 +59,28 @@ func TestTokenManager_RefreshToken_OnlyUsername(t *testing.T) {
 	ctx := context.Background()
 	subject := "user123"
 
-	// 生成带 username 的 Access Token
+	// Generate Access Token with username
 	customClaims := map[string]interface{}{
 		"username": "testuser",
 	}
 	_, err := manager.GenerateAccessToken(ctx, subject, customClaims)
 	require.NoError(t, err)
 
-	// 生成 Refresh Token
+	// Generate Refresh Token
 	refreshToken, err := manager.GenerateRefreshToken(ctx, subject)
 	require.NoError(t, err)
 
-	// 使用 Refresh Token 获取新的 Access Token
+	// Use Refresh Token to obtain new Access Token
 	newAccessToken, err := manager.RefreshToken(ctx, refreshToken)
 	require.NoError(t, err)
 
-	// 验证新的 Access Token
+	// Validate new Access Token
 	newAccessClaims, err := manager.VerifyToken(ctx, newAccessToken)
 	require.NoError(t, err)
 	assert.Equal(t, subject, newAccessClaims.Subject)
 }
 
-// TestTokenManager_RefreshToken_OnlyRoles 测试只有 roles 的刷新
+// TestTokenManager_RefreshToken_OnlyRoles test refresh with only roles
 func TestTokenManager_RefreshToken_OnlyRoles(t *testing.T) {
 	config := newTestConfig()
 	config.RefreshToken.Enabled = true
@@ -89,28 +89,28 @@ func TestTokenManager_RefreshToken_OnlyRoles(t *testing.T) {
 	ctx := context.Background()
 	subject := "user123"
 
-	// 生成带 roles 的 Access Token
+	// Generate Access Token with roles
 	customClaims := map[string]interface{}{
 		"roles": []string{"admin"},
 	}
 	_, err := manager.GenerateAccessToken(ctx, subject, customClaims)
 	require.NoError(t, err)
 
-	// 生成 Refresh Token
+	// Generate Refresh Token
 	refreshToken, err := manager.GenerateRefreshToken(ctx, subject)
 	require.NoError(t, err)
 
-	// 使用 Refresh Token 获取新的 Access Token
+	// Use Refresh Token to obtain new Access Token
 	newAccessToken, err := manager.RefreshToken(ctx, refreshToken)
 	require.NoError(t, err)
 
-	// 验证新的 Access Token
+	// Verify new Access Token
 	newAccessClaims, err := manager.VerifyToken(ctx, newAccessToken)
 	require.NoError(t, err)
 	assert.Equal(t, subject, newAccessClaims.Subject)
 }
 
-// TestTokenManager_RefreshToken_OnlyTenantID 测试只有 tenant_id 的刷新
+// TestTokenManager_RefreshToken_OnlyTenantID Test refresh with only tenant_id
 func TestTokenManager_RefreshToken_OnlyTenantID(t *testing.T) {
 	config := newTestConfig()
 	config.RefreshToken.Enabled = true
@@ -119,22 +119,22 @@ func TestTokenManager_RefreshToken_OnlyTenantID(t *testing.T) {
 	ctx := context.Background()
 	subject := "user123"
 
-	// 生成带 tenant_id 的 Access Token
+	// Generate Access Token with tenant_id
 	customClaims := map[string]interface{}{
 		"tenant_id": "tenant-001",
 	}
 	_, err := manager.GenerateAccessToken(ctx, subject, customClaims)
 	require.NoError(t, err)
 
-	// 生成 Refresh Token
+	// Generate Refresh Token
 	refreshToken, err := manager.GenerateRefreshToken(ctx, subject)
 	require.NoError(t, err)
 
-	// 使用 Refresh Token 获取新的 Access Token
+	// Use Refresh Token to obtain new Access Token
 	newAccessToken, err := manager.RefreshToken(ctx, refreshToken)
 	require.NoError(t, err)
 
-	// 验证新的 Access Token
+	// Validate new Access Token
 	newAccessClaims, err := manager.VerifyToken(ctx, newAccessToken)
 	require.NoError(t, err)
 	assert.Equal(t, subject, newAccessClaims.Subject)

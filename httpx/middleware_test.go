@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestErrorLoggingMiddleware 测试错误日志中间件
+// TestErrorLoggingMiddleware tests error logging middleware
 func TestErrorLoggingMiddleware(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -23,7 +23,7 @@ func TestErrorLoggingMiddleware(t *testing.T) {
 	engine := gin.New()
 	engine.Use(ErrorLoggingMiddleware(cfg))
 	engine.GET("/test", func(c *gin.Context) {
-		// 验证配置是否正确注入
+		// Verify that the configuration has been correctly injected
 		internalCfg := getErrorLoggingConfig(c)
 		assert.True(t, internalCfg.Enable)
 		assert.True(t, internalCfg.IgnoreStatusMap[400])
@@ -41,7 +41,7 @@ func TestErrorLoggingMiddleware(t *testing.T) {
 	assert.Equal(t, 200, w.Code)
 }
 
-// TestErrorLoggingMiddleware_EmptyIgnoreList 测试空忽略列表
+// TestErrorLoggingMiddleware_EmptyIgnoreList_test empty ignore list
 func TestErrorLoggingMiddleware_EmptyIgnoreList(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -70,7 +70,7 @@ func TestErrorLoggingMiddleware_EmptyIgnoreList(t *testing.T) {
 	assert.Equal(t, 200, w.Code)
 }
 
-// TestGetErrorLoggingConfig_NoMiddleware 测试没有中间件时的默认配置
+// TestGetErrorLoggingConfig_NoMiddleware test default configuration without middleware
 func TestGetErrorLoggingConfig_NoMiddleware(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -85,19 +85,19 @@ func TestGetErrorLoggingConfig_NoMiddleware(t *testing.T) {
 	assert.Equal(t, "error", cfg.LogLevel)
 }
 
-// TestGetErrorLoggingConfig_InvalidType 测试配置类型错误
+// TestGetErrorLoggingConfig_InvalidType test configuration type error
 func TestGetErrorLoggingConfig_InvalidType(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 
-	// 设置错误类型的配置
+	// Set error type configuration
 	c.Set(errorLoggingConfigKey, "invalid type")
 
 	cfg := getErrorLoggingConfig(c)
 
-	// 应该返回默认配置
+	// Should return default configuration
 	assert.False(t, cfg.Enable)
 	assert.Empty(t, cfg.IgnoreStatusMap)
 	assert.True(t, cfg.FullErrorChain)

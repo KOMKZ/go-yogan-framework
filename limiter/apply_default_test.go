@@ -8,13 +8,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestDefaultConfig_NotConfigured 测试未配置 default 时的行为
+// TestDefaultConfig_NotConfigured tests the behavior when default is not configured
 func TestDefaultConfig_NotConfigured(t *testing.T) {
-	// 准备配置：没有配置 default（或 default 无效）
+	// Preparing configuration: No default configuration (or default configuration is invalid)
 	cfg := Config{
 		Enabled:   true,
 		StoreType: "memory",
-		Default:   ResourceConfig{}, // 空 default 配置（无效）
+		Default:   ResourceConfig{}, // Empty default configuration (invalid)
 		Resources: map[string]ResourceConfig{
 			"configured-resource": {
 				Algorithm:  "token_bucket",
@@ -32,7 +32,7 @@ func TestDefaultConfig_NotConfigured(t *testing.T) {
 
 	ctx := context.Background()
 
-	// 测试1：已配置的资源应该受限流控制
+	// Test 1: Configured resources should be subject to rate limiting control
 	allowed, err := mgr.Allow(ctx, "configured-resource")
 	assert.NoError(t, err)
 	assert.True(t, allowed, "第一次请求应该通过")
@@ -41,7 +41,7 @@ func TestDefaultConfig_NotConfigured(t *testing.T) {
 	assert.NoError(t, err)
 	assert.False(t, allowed, "第二次请求应该被限流")
 
-	// 测试2：未配置的资源应该直接放行（因为 default 无效）
+	// Test 2: Unconfigured resources should be allowed through (because default is invalid)
 	for i := 0; i < 20; i++ {
 		allowed, err = mgr.Allow(ctx, "unknown-resource")
 		assert.NoError(t, err)
@@ -51,17 +51,17 @@ func TestDefaultConfig_NotConfigured(t *testing.T) {
 	mgr.Close()
 }
 
-// TestDefaultConfig_Configured 测试配置了有效 default 时的行为
+// TestDefaultConfig_Configured Tests the behavior when a valid default is configured
 func TestDefaultConfig_Configured(t *testing.T) {
-	// 准备配置：配置了有效的 default
+	// Prepare configuration: effective default configured
 	cfg := Config{
 		Enabled:   true,
 		StoreType: "memory",
 		Default: ResourceConfig{
 			Algorithm:  "token_bucket",
-			Rate:       1,  // 严格限流：每秒1个令牌
-			Capacity:   1,  // 桶容量1
-			InitTokens: 1,  // 初始1个令牌
+			Rate:       1,  // Strict rate limiting: 1 token per second
+			Capacity:   1,  // Bucket capacity 1
+			InitTokens: 1,  // Initial 1 token
 		},
 		Resources: map[string]ResourceConfig{
 			"configured-resource": {
@@ -80,14 +80,14 @@ func TestDefaultConfig_Configured(t *testing.T) {
 
 	ctx := context.Background()
 
-	// 测试1：已配置的资源使用自己的配置
+	// Test 1: Configured resources use their own settings
 	for i := 0; i < 5; i++ {
 		allowed, err := mgr.Allow(ctx, "configured-resource")
 		assert.NoError(t, err)
 		assert.True(t, allowed, "已配置资源前5次请求应该通过（rate=10）")
 	}
 
-	// 测试2：未配置的资源应该使用 default 配置限流
+	// Test 2: Unconfigured resources should use the default configuration for rate limiting
 	allowed, err := mgr.Allow(ctx, "unknown-resource")
 	assert.NoError(t, err)
 	assert.True(t, allowed, "未配置资源第1次请求应该通过（使用default配置）")
@@ -96,7 +96,7 @@ func TestDefaultConfig_Configured(t *testing.T) {
 	assert.NoError(t, err)
 	assert.False(t, allowed, "未配置资源第2次请求应该被限流（default: rate=1）")
 
-	// 测试3：另一个未配置资源也应该使用 default 配置
+	// Test 3: Another unconfigured resource should also use the default configuration
 	allowed, err = mgr.Allow(ctx, "another-unknown-resource")
 	assert.NoError(t, err)
 	assert.True(t, allowed, "另一个未配置资源第1次请求应该通过")
@@ -108,25 +108,25 @@ func TestDefaultConfig_Configured(t *testing.T) {
 	mgr.Close()
 }
 
-// TestDefaultConfig_MixedScenario 测试混合场景
+// TestDefaultConfig_MixedScenario test mixed scenario
 func TestDefaultConfig_MixedScenario(t *testing.T) {
 	cfg := Config{
 		Enabled:   true,
 		StoreType: "memory",
 		Default: ResourceConfig{
 			Algorithm:  "token_bucket",
-			Rate:       5,  // 默认每秒5个令牌
+			Rate:       5,  // Default 5 tokens per second
 			Capacity:   5,
 			InitTokens: 5,
 		},
 		Resources: map[string]ResourceConfig{
-			"high-qps-service": { // 高 QPS 服务
+			"high-qps-service": { // High QPS service
 				Algorithm:  "token_bucket",
 				Rate:       100,
 				Capacity:   100,
 				InitTokens: 100,
 			},
-			"low-qps-service": { // 低 QPS 服务
+			"low-qps-service": { // low QPS service
 				Algorithm:  "token_bucket",
 				Rate:       1,
 				Capacity:   1,
@@ -142,7 +142,7 @@ func TestDefaultConfig_MixedScenario(t *testing.T) {
 
 	ctx := context.Background()
 
-	// 测试1：高 QPS 服务使用自己的配置
+	// Test 1: High QPS service uses its own configuration
 	successCount := 0
 	for i := 0; i < 50; i++ {
 		allowed, err := mgr.Allow(ctx, "high-qps-service")
@@ -153,7 +153,7 @@ func TestDefaultConfig_MixedScenario(t *testing.T) {
 	}
 	assert.GreaterOrEqual(t, successCount, 40, "高QPS服务应该通过大部分请求")
 
-	// 测试2：低 QPS 服务使用自己的配置
+	// Test 2: Low QPS service uses its own configuration
 	allowed, err := mgr.Allow(ctx, "low-qps-service")
 	assert.NoError(t, err)
 	assert.True(t, allowed, "低QPS服务第1次应该通过")
@@ -162,7 +162,7 @@ func TestDefaultConfig_MixedScenario(t *testing.T) {
 	assert.NoError(t, err)
 	assert.False(t, allowed, "低QPS服务第2次应该被限流")
 
-	// 测试3：未配置服务使用 default 配置
+	// Test 3: Unconfigured service uses default configuration
 	successCount = 0
 	for i := 0; i < 10; i++ {
 		allowed, err = mgr.Allow(ctx, "unconfigured-service")

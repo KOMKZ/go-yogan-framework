@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestNewEventBus 测试创建事件总线
+// TestNewEventBus test creating event bus
 func TestNewEventBus(t *testing.T) {
 	bus := NewEventBus(100)
 	assert.NotNil(t, bus)
@@ -18,7 +18,7 @@ func TestNewEventBus(t *testing.T) {
 	defer bus.Close()
 }
 
-// TestEventBus_SubscribeUnsubscribe 测试订阅和取消订阅
+// TestEventBus_SubscribeUnsubscribe Test subscription and unsubscription
 func TestEventBus_SubscribeUnsubscribe(t *testing.T) {
 	bus := NewEventBus(100)
 	defer bus.Close()
@@ -28,11 +28,11 @@ func TestEventBus_SubscribeUnsubscribe(t *testing.T) {
 		atomic.AddInt32(&called, 1)
 	})
 	
-	// 订阅
+	// subscribe
 	id := bus.Subscribe(listener)
 	assert.NotEmpty(t, id)
 	
-	// 发布事件
+	// Publish event
 	event := &StateChangedEvent{
 		BaseEvent: NewBaseEvent(EventStateChanged, "test", context.Background()),
 		FromState: StateClosed,
@@ -43,15 +43,15 @@ func TestEventBus_SubscribeUnsubscribe(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 	assert.Equal(t, int32(1), atomic.LoadInt32(&called))
 	
-	// 取消订阅
+	// Unsubscribe
 	bus.Unsubscribe(id)
 	bus.Publish(event)
 	
 	time.Sleep(50 * time.Millisecond)
-	assert.Equal(t, int32(1), atomic.LoadInt32(&called)) // 不应该再被调用
+	assert.Equal(t, int32(1), atomic.LoadInt32(&called)) // Should not be called again
 }
 
-// TestEventBus_FilteredSubscribe 测试过滤订阅
+// TestEventBus_FilteredSubscribe test filtered subscription
 func TestEventBus_FilteredSubscribe(t *testing.T) {
 	bus := NewEventBus(100)
 	defer bus.Close()
@@ -59,7 +59,7 @@ func TestEventBus_FilteredSubscribe(t *testing.T) {
 	var stateChangedCount int32
 	var callSuccessCount int32
 	
-	// 只订阅状态变化事件
+	// Only subscribe to state change events
 	listener1 := EventListenerFunc(func(event Event) {
 		if event.Type() == EventStateChanged {
 			atomic.AddInt32(&stateChangedCount, 1)
@@ -67,7 +67,7 @@ func TestEventBus_FilteredSubscribe(t *testing.T) {
 	})
 	bus.Subscribe(listener1, EventStateChanged)
 	
-	// 只订阅调用成功事件
+	// Only subscribe to successful call events
 	listener2 := EventListenerFunc(func(event Event) {
 		if event.Type() == EventCallSuccess {
 			atomic.AddInt32(&callSuccessCount, 1)
@@ -75,7 +75,7 @@ func TestEventBus_FilteredSubscribe(t *testing.T) {
 	})
 	bus.Subscribe(listener2, EventCallSuccess)
 	
-	// 发布不同类型的事件
+	// Publish different types of events
 	bus.Publish(&StateChangedEvent{
 		BaseEvent: NewBaseEvent(EventStateChanged, "test", context.Background()),
 	})
@@ -92,7 +92,7 @@ func TestEventBus_FilteredSubscribe(t *testing.T) {
 	assert.Equal(t, int32(1), atomic.LoadInt32(&callSuccessCount))
 }
 
-// TestEventBus_MultipleSubscribers 测试多个订阅者
+// TestMultipleSubscribers 测试多个订阅者
 func TestEventBus_MultipleSubscribers(t *testing.T) {
 	bus := NewEventBus(100)
 	defer bus.Close()
@@ -116,12 +116,12 @@ func TestEventBus_MultipleSubscribers(t *testing.T) {
 		wg.Done()
 	}))
 	
-	// 发布一个事件
+	// Publish an event
 	bus.Publish(&CallEvent{
 		BaseEvent: NewBaseEvent(EventCallSuccess, "test", context.Background()),
 	})
 	
-	// 使用超时等待，避免永久阻塞
+	// Use timeout waiting to avoid permanent blocking
 	done := make(chan struct{})
 	go func() {
 		wg.Wait()
@@ -130,18 +130,18 @@ func TestEventBus_MultipleSubscribers(t *testing.T) {
 	
 	select {
 	case <-done:
-		// 所有订阅者都应该收到
+		// All subscribers should receive
 		assert.Equal(t, int32(1), atomic.LoadInt32(&count1))
 		assert.Equal(t, int32(1), atomic.LoadInt32(&count2))
 		assert.Equal(t, int32(1), atomic.LoadInt32(&count3))
 	case <-time.After(2 * time.Second):
 		t.Logf("警告：等待订阅者超时，可能是异步通知延迟。实际计数: count1=%d, count2=%d, count3=%d",
 			atomic.LoadInt32(&count1), atomic.LoadInt32(&count2), atomic.LoadInt32(&count3))
-		// 不标记为失败，因为这可能是异步延迟导致的
+		// do not mark as failed, as this may be due to asynchronous delay
 	}
 }
 
-// TestEventBus_PublishOrder 测试事件发布（异步通知，不保证顺序）
+// TestEventBus_PublishOrder test event publication (asynchronous notification, order not guaranteed)
 func TestEventBus_PublishOrder(t *testing.T) {
 	bus := NewEventBus(100)
 	defer bus.Close()
@@ -160,7 +160,7 @@ func TestEventBus_PublishOrder(t *testing.T) {
 	
 	bus.Subscribe(listener)
 	
-	// 按顺序发布事件
+	// Publish events in sequence
 	bus.Publish(&CallEvent{BaseEvent: NewBaseEvent(EventCallSuccess, "test", context.Background())})
 	bus.Publish(&CallEvent{BaseEvent: NewBaseEvent(EventCallFailure, "test", context.Background())})
 	bus.Publish(&CallEvent{BaseEvent: NewBaseEvent(EventCallTimeout, "test", context.Background())})
@@ -170,32 +170,32 @@ func TestEventBus_PublishOrder(t *testing.T) {
 	mu.Lock()
 	defer mu.Unlock()
 	
-	// 验证接收到了所有事件（但不保证顺序，因为是异步通知）
+	// Verify that all events have been received (but do not guarantee order, as it is asynchronous notification)
 	assert.Len(t, received, 3)
 	assert.Contains(t, received, EventCallSuccess)
 	assert.Contains(t, received, EventCallFailure)
 	assert.Contains(t, received, EventCallTimeout)
 }
 
-// TestEventBus_BufferFull 测试缓冲区满的情况
+// TestEventBus_BufferFull test buffer full scenario
 func TestEventBus_BufferFull(t *testing.T) {
-	bus := NewEventBus(2) // 小缓冲区
+	bus := NewEventBus(2) // small buffer
 	defer bus.Close()
 	
-	// 不订阅，让事件堆积
+	// Do not subscribe, let events pile up
 	
-	// 发布超过缓冲区的事件
+	// Publish events exceeding the buffer
 	for i := 0; i < 5; i++ {
 		bus.Publish(&CallEvent{
 			BaseEvent: NewBaseEvent(EventCallSuccess, "test", context.Background()),
 		})
 	}
 	
-	// 应该不会panic或阻塞
+	// should not panic or block
 	time.Sleep(10 * time.Millisecond)
 }
 
-// TestEventBus_Close 测试关闭事件总线
+// TestEventBus_Close Test closing event bus
 func TestEventBus_Close(t *testing.T) {
 	bus := NewEventBus(100)
 	
@@ -206,7 +206,7 @@ func TestEventBus_Close(t *testing.T) {
 	
 	bus.Subscribe(listener)
 	
-	// 发布事件
+	// Publish event
 	bus.Publish(&CallEvent{
 		BaseEvent: NewBaseEvent(EventCallSuccess, "test", context.Background()),
 	})
@@ -214,31 +214,31 @@ func TestEventBus_Close(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 	assert.Equal(t, int32(1), atomic.LoadInt32(&count))
 	
-	// 关闭总线
+	// Disable bus
 	bus.Close()
 	
-	// 再次发布应该不会被处理
+	// Reposting should not be handled
 	bus.Publish(&CallEvent{
 		BaseEvent: NewBaseEvent(EventCallSuccess, "test", context.Background()),
 	})
 	
 	time.Sleep(50 * time.Millisecond)
-	assert.Equal(t, int32(1), atomic.LoadInt32(&count)) // 计数不变
+	assert.Equal(t, int32(1), atomic.LoadInt32(&count)) // counter remains unchanged
 }
 
-// TestEventBus_ListenerPanic 测试监听者panic不影响其他监听者
+// TestEventBus_ListenerPanic test that a listener panic does not affect other listeners
 func TestEventBus_ListenerPanic(t *testing.T) {
 	bus := NewEventBus(100)
 	defer bus.Close()
 	
 	var normalCalled int32
 	
-	// 会panic的监听者
+	// listener that will panic
 	panicListener := EventListenerFunc(func(event Event) {
 		panic("test panic")
 	})
 	
-	// 正常的监听者
+	// normal listener
 	normalListener := EventListenerFunc(func(event Event) {
 		atomic.AddInt32(&normalCalled, 1)
 	})
@@ -246,18 +246,18 @@ func TestEventBus_ListenerPanic(t *testing.T) {
 	bus.Subscribe(panicListener)
 	bus.Subscribe(normalListener)
 	
-	// 发布事件
+	// Publish event
 	bus.Publish(&CallEvent{
 		BaseEvent: NewBaseEvent(EventCallSuccess, "test", context.Background()),
 	})
 	
 	time.Sleep(50 * time.Millisecond)
 	
-	// 正常监听者应该仍然收到事件
+	// Normal listeners should still receive events
 	assert.Equal(t, int32(1), atomic.LoadInt32(&normalCalled))
 }
 
-// TestEventBus_Concurrent 测试并发安全
+// TestEventBus_Concurrent test concurrent safety
 func TestEventBus_Concurrent(t *testing.T) {
 	bus := NewEventBus(1000)
 	defer bus.Close()
@@ -268,7 +268,7 @@ func TestEventBus_Concurrent(t *testing.T) {
 		atomic.AddInt32(&receivedCount, 1)
 	})
 	
-	// 并发订阅
+	// concurrent subscription
 	var wg sync.WaitGroup
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
@@ -280,7 +280,7 @@ func TestEventBus_Concurrent(t *testing.T) {
 	
 	wg.Wait()
 	
-	// 并发发布
+	// concurrent publishing
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
 		go func() {
@@ -296,26 +296,26 @@ func TestEventBus_Concurrent(t *testing.T) {
 	wg.Wait()
 	time.Sleep(100 * time.Millisecond)
 	
-	// 验证收到了事件（具体数量取决于订阅者数量）
+	// Verify that the event has been received (the exact number depends on the number of subscribers)
 	assert.True(t, atomic.LoadInt32(&receivedCount) > 0)
 }
 
-// TestEventBus_NoSubscribers 测试没有订阅者时发布事件
+// TestEventBus_NoSubscribers test publishing events when there are no subscribers
 func TestEventBus_NoSubscribers(t *testing.T) {
 	bus := NewEventBus(100)
 	defer bus.Close()
 	
-	// 没有订阅者，直接发布事件
+	// No subscribers, publish event directly
 	bus.Publish(&CallEvent{
 		BaseEvent: NewBaseEvent(EventCallSuccess, "test", context.Background()),
 	})
 	
 	time.Sleep(10 * time.Millisecond)
 	
-	// 应该不会panic
+	// Should not cause panic
 }
 
-// TestBaseEvent 测试基础事件
+// TestBaseEvent test basic events
 func TestBaseEvent(t *testing.T) {
 	ctx := context.Background()
 	event := NewBaseEvent(EventStateChanged, "test-resource", ctx)
@@ -326,7 +326,7 @@ func TestBaseEvent(t *testing.T) {
 	assert.True(t, time.Since(event.Timestamp()) < time.Second)
 }
 
-// TestStateChangedEvent 测试状态变化事件
+// TestStateChangedEvent test state change event
 func TestStateChangedEvent(t *testing.T) {
 	event := &StateChangedEvent{
 		BaseEvent: NewBaseEvent(EventStateChanged, "test", context.Background()),

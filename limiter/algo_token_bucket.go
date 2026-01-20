@@ -7,20 +7,20 @@ import (
 	"time"
 )
 
-// tokenBucketAlgorithm 令牌桶算法实现
+// tokenBucketAlgorithm implementation of the token bucket algorithm
 type tokenBucketAlgorithm struct{}
 
-// NewTokenBucketAlgorithm 创建令牌桶算法
+// NewTokenBucketAlgorithm Creates the token bucket algorithm
 func NewTokenBucketAlgorithm() Algorithm {
 	return &tokenBucketAlgorithm{}
 }
 
-// Name 返回算法名称
+// Name Returns the algorithm name
 func (a *tokenBucketAlgorithm) Name() string {
 	return string(AlgorithmTokenBucket)
 }
 
-// Allow 检查是否允许请求
+// Allow check if the request is permitted
 func (a *tokenBucketAlgorithm) Allow(ctx context.Context, store Store, resource string, n int64, cfg ResourceConfig) (*Response, error) {
 	if n <= 0 {
 		n = 1
@@ -28,11 +28,11 @@ func (a *tokenBucketAlgorithm) Allow(ctx context.Context, store Store, resource 
 
 	now := time.Now()
 
-	// 生成存储键
+	// Generate storage key
 	tokensKey := a.tokensKey(resource)
 	lastRefillKey := a.lastRefillKey(resource)
 
-	// 获取当前令牌数和上次填充时间
+	// Get current token count and last refill time
 	tokens, err := store.GetInt64(ctx, tokensKey)
 	if err != nil && err != ErrKeyNotFound {
 		return nil, fmt.Errorf("get tokens failed: %w", err)
@@ -43,16 +43,16 @@ func (a *tokenBucketAlgorithm) Allow(ctx context.Context, store Store, resource 
 		return nil, fmt.Errorf("get last refill time failed: %w", err2)
 	}
 
-	// 如果是首次访问（两个键都不存在），初始化
+	// If it is the first visit (both keys do not exist), initialize
 	if err == ErrKeyNotFound && err2 == ErrKeyNotFound {
-		// 使用配置的InitTokens，如果未设置则使用Capacity
+		// Use configured InitTokens, if not set use Capacity
 		tokens = cfg.InitTokens
 		if cfg.InitTokens == 0 {
-			tokens = cfg.Capacity // 默认满桶
+			tokens = cfg.Capacity // Default full bucket
 		}
 		lastRefillNano = now.UnixNano()
 
-		// 初始化存储
+		// Initialize storage
 		if err := store.SetInt64(ctx, tokensKey, tokens, 0); err != nil {
 			return nil, fmt.Errorf("init tokens failed: %w", err)
 		}
@@ -60,19 +60,19 @@ func (a *tokenBucketAlgorithm) Allow(ctx context.Context, store Store, resource 
 			return nil, fmt.Errorf("init last refill failed: %w", err)
 		}
 	} else {
-		// 计算新增令牌数
+		// Calculate the number of new tokens
 		lastRefill := time.Unix(0, lastRefillNano)
 		elapsed := now.Sub(lastRefill)
 		newTokens := int64(float64(cfg.Rate) * elapsed.Seconds())
 		tokens = min(tokens+newTokens, cfg.Capacity)
 	}
 
-	// 检查是否有足够的令牌
+	// Check if there are enough tokens
 	if tokens >= n {
-		// 扣除令牌
+		// deduct token
 		tokens -= n
 
-		// 更新存储
+		// Update storage
 		if err := store.SetInt64(ctx, tokensKey, tokens, 0); err != nil {
 			return nil, fmt.Errorf("set tokens failed: %w", err)
 		}
@@ -88,12 +88,12 @@ func (a *tokenBucketAlgorithm) Allow(ctx context.Context, store Store, resource 
 		}, nil
 	}
 
-	// 令牌不足，更新lastRefill时间（避免下次重复计算）
+	// Token insufficient, update lastRefill time (to avoid recalculation next time)
 	if err := store.SetInt64(ctx, lastRefillKey, now.UnixNano(), 0); err != nil {
 		return nil, fmt.Errorf("set last refill failed: %w", err)
 	}
 
-	// 计算重试时间
+	// Calculate retry time
 	tokensNeeded := n - tokens
 	retryAfter := time.Duration(float64(tokensNeeded) / float64(cfg.Rate) * float64(time.Second))
 
@@ -106,7 +106,7 @@ func (a *tokenBucketAlgorithm) Allow(ctx context.Context, store Store, resource 
 	}, nil
 }
 
-// Wait 等待获取许可
+// Wait for permission acquisition
 func (a *tokenBucketAlgorithm) Wait(ctx context.Context, store Store, resource string, n int64, cfg ResourceConfig, timeout time.Duration) error {
 	if n <= 0 {
 		n = 1
@@ -115,12 +115,12 @@ func (a *tokenBucketAlgorithm) Wait(ctx context.Context, store Store, resource s
 	deadline := time.Now().Add(timeout)
 
 	for {
-		// 检查是否已超时
+		// Check if timeout has occurred
 		if time.Now().After(deadline) {
 			return ErrWaitTimeout
 		}
 
-		// 尝试获取许可
+		// Try to get permission
 		resp, err := a.Allow(ctx, store, resource, n, cfg)
 		if err != nil {
 			return err
@@ -130,14 +130,14 @@ func (a *tokenBucketAlgorithm) Wait(ctx context.Context, store Store, resource s
 			return nil
 		}
 
-		// 计算等待时间（取重试时间和剩余时间的较小值）
+		// Calculate the waiting time (take the smaller value of retry time and remaining time)
 		remaining := time.Until(deadline)
 		waitTime := resp.RetryAfter
 		if waitTime > remaining {
 			waitTime = remaining
 		}
 
-		// 如果等待时间过小，直接返回超时
+		// If the wait time is too short, return timeout directly
 		if waitTime <= 0 {
 			return ErrWaitTimeout
 		}
@@ -146,17 +146,17 @@ func (a *tokenBucketAlgorithm) Wait(ctx context.Context, store Store, resource s
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-time.After(waitTime):
-			// 继续重试
+			// Continue retrying
 		}
 	}
 }
 
-// GetMetrics 获取当前指标
+// GetMetrics获取当前指标
 func (a *tokenBucketAlgorithm) GetMetrics(ctx context.Context, store Store, resource string) (*AlgorithmMetrics, error) {
 	tokensKey := a.tokensKey(resource)
 	lastRefillKey := a.lastRefillKey(resource)
 
-	// 获取当前令牌数
+	// Get current token count
 	tokens, err := store.GetInt64(ctx, tokensKey)
 	if err != nil && err != ErrKeyNotFound {
 		return nil, fmt.Errorf("get tokens failed: %w", err)
@@ -166,7 +166,7 @@ func (a *tokenBucketAlgorithm) GetMetrics(ctx context.Context, store Store, reso
 		tokens = 0
 	}
 
-	// 获取上次填充时间
+	// Get last fill time
 	lastRefillNano, err := store.GetInt64(ctx, lastRefillKey)
 	if err != nil && err != ErrKeyNotFound {
 		return nil, fmt.Errorf("get last refill failed: %w", err)
@@ -179,13 +179,13 @@ func (a *tokenBucketAlgorithm) GetMetrics(ctx context.Context, store Store, reso
 
 	return &AlgorithmMetrics{
 		Current:   tokens,
-		Limit:     0, // 令牌桶没有明确的limit概念
+		Limit:     0, // The token bucket does not have a clear limit concept
 		Remaining: tokens,
 		ResetAt:   resetAt,
 	}, nil
 }
 
-// Reset 重置状态
+// Reset reset status
 func (a *tokenBucketAlgorithm) Reset(ctx context.Context, store Store, resource string) error {
 	tokensKey := a.tokensKey(resource)
 	lastRefillKey := a.lastRefillKey(resource)
@@ -193,17 +193,17 @@ func (a *tokenBucketAlgorithm) Reset(ctx context.Context, store Store, resource 
 	return store.Del(ctx, tokensKey, lastRefillKey)
 }
 
-// tokensKey 返回令牌存储键
+// tokensKey returns the token storage key
 func (a *tokenBucketAlgorithm) tokensKey(resource string) string {
 	return fmt.Sprintf("limiter:token:%s:tokens", resource)
 }
 
-// lastRefillKey 返回上次填充时间存储键
+// lastRefillKey returns the storage key for the last refill time
 func (a *tokenBucketAlgorithm) lastRefillKey(resource string) string {
 	return fmt.Sprintf("limiter:token:%s:last_refill", resource)
 }
 
-// min 返回两个int64的最小值
+// min returns the smaller of two int64 values
 func min(a, b int64) int64 {
 	if a < b {
 		return a
@@ -211,7 +211,7 @@ func min(a, b int64) int64 {
 	return b
 }
 
-// min64Duration 返回time.Duration的最小值
+// min64Duration returns the minimum value of time.Duration
 func min64Duration(a, b time.Duration) time.Duration {
 	if a < b {
 		return a
@@ -219,7 +219,7 @@ func min64Duration(a, b time.Duration) time.Duration {
 	return b
 }
 
-// maxInt64 返回最大的int64值
+// returns the maximum int64 value
 func maxInt64(a, b int64) int64 {
 	if a > b {
 		return a
@@ -227,12 +227,12 @@ func maxInt64(a, b int64) int64 {
 	return b
 }
 
-// minFloat64 返回最小的float64值
+// returns the minimum float64 value
 func minFloat64(a, b float64) float64 {
 	return math.Min(a, b)
 }
 
-// maxFloat64 返回最大的float64值
+// returns the maximum float64 value
 func maxFloat64(a, b float64) float64 {
 	return math.Max(a, b)
 }

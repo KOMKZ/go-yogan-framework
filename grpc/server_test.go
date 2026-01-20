@@ -14,7 +14,7 @@ import (
 	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
-// TestNewServer 测试创建 Server
+// TestNewServer test create Server
 func TestNewServer(t *testing.T) {
 	log := logger.GetLogger("grpc_test")
 
@@ -26,7 +26,7 @@ func TestNewServer(t *testing.T) {
 			name: "默认配置",
 			config: ServerConfig{
 				Enabled:       true,
-				Port:          0, // 自动分配端口
+				Port:          0, // Automatically assign port
 				MaxRecvSize:   4,
 				MaxSendSize:   4,
 				EnableReflect: true,
@@ -54,13 +54,13 @@ func TestNewServer(t *testing.T) {
 	}
 }
 
-// TestServer_StartStop 测试服务启动和停止
+// TestServer_StartStop test server start and stop
 func TestServer_StartStop(t *testing.T) {
 	log := logger.GetLogger("grpc_test")
 
 	config := ServerConfig{
 		Enabled:       true,
-		Port:          0, // 自动分配端口
+		Port:          0, // Automatically assign port
 		MaxRecvSize:   4,
 		MaxSendSize:   4,
 		EnableReflect: true,
@@ -69,15 +69,15 @@ func TestServer_StartStop(t *testing.T) {
 	server := NewServer(config, log)
 	require.NotNil(t, server)
 
-	// 启动服务器
+	// Start server
 	err := server.Start(context.Background())
 	assert.NoError(t, err)
 	assert.NotZero(t, server.Port, "端口应该被自动分配")
 
-	// 等待服务器完全启动
+	// wait for the server to fully start up
 	time.Sleep(100 * time.Millisecond)
 
-	// 测试连接（使用 health check）
+	// Test connection (using health check)
 	ctx2, cancel2 := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel2()
 
@@ -91,17 +91,17 @@ func TestServer_StartStop(t *testing.T) {
 		conn.Close()
 	}
 
-	// 停止服务器
+	// Shut down server
 	server.Stop(context.Background())
 }
 
-// TestServer_StartStop_SpecificPort 测试指定端口启动
+// TestServer_StartStop_SpecificPort test start with specific port
 func TestServer_StartStop_SpecificPort(t *testing.T) {
 	log := logger.GetLogger("grpc_test")
 
 	config := ServerConfig{
 		Enabled:       true,
-		Port:          50051, // 指定端口
+		Port:          50051, // specify port
 		MaxRecvSize:   4,
 		MaxSendSize:   4,
 		EnableReflect: false,
@@ -110,21 +110,21 @@ func TestServer_StartStop_SpecificPort(t *testing.T) {
 	server := NewServer(config, log)
 	require.NotNil(t, server)
 
-	// 启动服务器
+	// Start server
 	err := server.Start(context.Background())
 	if err != nil {
-		// 端口可能被占用，跳过测试
+		// Port may be in use, skip test
 		t.Skipf("端口 %d 被占用: %v", config.Port, err)
 	}
 	defer server.Stop(context.Background())
 
 	assert.Equal(t, 50051, server.Port)
 
-	// 等待服务器完全启动
+	// wait for the server to fully start up
 	time.Sleep(100 * time.Millisecond)
 }
 
-// TestServer_GetGRPCServer 测试获取原始 gRPC Server
+// TestServer_GetGRPCServer test to retrieve the original gRPC server
 func TestServer_GetGRPCServer(t *testing.T) {
 	log := logger.GetLogger("grpc_test")
 
@@ -144,7 +144,7 @@ func TestServer_GetGRPCServer(t *testing.T) {
 	assert.IsType(t, &grpc.Server{}, grpcServer)
 }
 
-// TestServer_MultipleStartStop 测试多次启动停止
+// TestServer_MultipleStartStop test multiple start and stop
 func TestServer_MultipleStartStop(t *testing.T) {
 	log := logger.GetLogger("grpc_test")
 
@@ -169,7 +169,7 @@ func TestServer_MultipleStartStop(t *testing.T) {
 	}
 }
 
-// TestServer_RegisterService 测试注册服务
+// TestServer_RegisterService test service registration
 func TestServer_RegisterService(t *testing.T) {
 	log := logger.GetLogger("grpc_test")
 
@@ -184,7 +184,7 @@ func TestServer_RegisterService(t *testing.T) {
 	server := NewServer(config, log)
 	require.NotNil(t, server)
 
-	// 注册健康检查服务（grpc 内置）
+	// Register health check service (gRPC built-in)
 	grpc_health_v1.RegisterHealthServer(server.GetGRPCServer(), &mockHealthServer{})
 
 	err := server.Start(context.Background())
@@ -193,7 +193,7 @@ func TestServer_RegisterService(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	// 测试连接
+	// Test connection
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
@@ -205,14 +205,14 @@ func TestServer_RegisterService(t *testing.T) {
 	)
 	if err == nil {
 		defer conn.Close()
-		// 可以调用健康检查
+		// Can call health check
 		client := grpc_health_v1.NewHealthClient(conn)
 		_, err := client.Check(ctx, &grpc_health_v1.HealthCheckRequest{})
 		assert.NoError(t, err)
 	}
 }
 
-// mockHealthServer 模拟健康检查服务
+// mockHealthServer simulate health check service
 type mockHealthServer struct {
 	grpc_health_v1.UnimplementedHealthServer
 }

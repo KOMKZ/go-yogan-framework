@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// mockChecker 模拟健康检查器
+// mockChecker simulated health checker
 type mockChecker struct {
 	name string
 	err  error

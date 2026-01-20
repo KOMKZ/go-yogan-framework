@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// testEvent 测试用事件
+// testEvent test event
 type testEvent struct {
 	name string
 }
@@ -19,7 +19,7 @@ func (e *testEvent) Name() string {
 	return e.name
 }
 
-// mockKafkaPublisher 模拟 Kafka 发布者
+// mockKafkaPublisher simulate Kafka publisher
 type mockKafkaPublisher struct {
 	mu       sync.Mutex
 	messages []mockKafkaMessage
@@ -52,7 +52,7 @@ func (m *mockKafkaPublisher) getMessages() []mockKafkaMessage {
 	return append([]mockKafkaMessage{}, m.messages...)
 }
 
-// TestDispatchOption_WithKafka 测试 WithKafka 选项
+// TestDispatchOption_WithKafka tests the WithKafka option
 func TestDispatchOption_WithKafka(t *testing.T) {
 	opts := &dispatchOptions{}
 	WithKafka("test-topic")(opts)
@@ -61,7 +61,7 @@ func TestDispatchOption_WithKafka(t *testing.T) {
 	assert.Equal(t, "test-topic", opts.topic)
 }
 
-// TestDispatchOption_WithKafkaKey 测试 WithKafkaKey 选项
+// TestDispatchOption_WithKafkaKey tests the WithKafkaKey option
 func TestDispatchOption_WithKafkaKey(t *testing.T) {
 	opts := &dispatchOptions{}
 	WithKafkaKey("my-key")(opts)
@@ -69,7 +69,7 @@ func TestDispatchOption_WithKafkaKey(t *testing.T) {
 	assert.Equal(t, "my-key", opts.key)
 }
 
-// TestDispatchOption_WithDispatchAsync 测试 WithDispatchAsync 选项
+// TestDispatchOption_WithDispatchAsync tests the WithDispatchAsync option
 func TestDispatchOption_WithDispatchAsync(t *testing.T) {
 	opts := &dispatchOptions{}
 	WithDispatchAsync()(opts)
@@ -77,7 +77,7 @@ func TestDispatchOption_WithDispatchAsync(t *testing.T) {
 	assert.True(t, opts.async)
 }
 
-// TestDispatchOptions_ApplyDefaults 测试默认值
+// TestDispatchOptions_ApplyDefaults test default values
 func TestDispatchOptions_ApplyDefaults(t *testing.T) {
 	opts := &dispatchOptions{}
 	opts.applyDefaults()
@@ -85,7 +85,7 @@ func TestDispatchOptions_ApplyDefaults(t *testing.T) {
 	assert.Equal(t, DriverMemory, opts.driver)
 }
 
-// TestDispatch_WithKafka 测试发送到 Kafka
+// TestDispatch_WithKafka test sending to Kafka
 func TestDispatch_WithKafka(t *testing.T) {
 	publisher := &mockKafkaPublisher{}
 	d := NewDispatcher(WithKafkaPublisher(publisher))
@@ -98,10 +98,10 @@ func TestDispatch_WithKafka(t *testing.T) {
 	messages := publisher.getMessages()
 	require.Len(t, messages, 1)
 	assert.Equal(t, "events.user", messages[0].Topic)
-	assert.Equal(t, "user.created", messages[0].Key) // 默认使用事件名作为 key
+	assert.Equal(t, "user.created", messages[0].Key) // Use the event name as the key by default
 }
 
-// TestDispatch_WithKafka_CustomKey 测试自定义 Key
+// TestDispatch_WithKafka_CustomKey test custom key
 func TestDispatch_WithKafka_CustomKey(t *testing.T) {
 	publisher := &mockKafkaPublisher{}
 	d := NewDispatcher(WithKafkaPublisher(publisher))
@@ -118,9 +118,9 @@ func TestDispatch_WithKafka_CustomKey(t *testing.T) {
 	assert.Equal(t, "order:123", messages[0].Key)
 }
 
-// TestDispatch_WithKafka_NoPublisher 测试未配置 Kafka 发布者
+// TestDispatch_WithKafka_NoPublisher tests scenario with no Kafka publisher configured
 func TestDispatch_WithKafka_NoPublisher(t *testing.T) {
-	d := NewDispatcher() // 无 KafkaPublisher
+	d := NewDispatcher() // No KafkaPublisher
 	defer d.Close()
 
 	event := &testEvent{name: "test.event"}
@@ -129,23 +129,23 @@ func TestDispatch_WithKafka_NoPublisher(t *testing.T) {
 	assert.ErrorIs(t, err, ErrKafkaNotAvailable)
 }
 
-// TestDispatch_WithKafka_NoTopic 测试未指定 Topic
+// TestDispatch_WithKafka_NoTopic tests no topic specified
 func TestDispatch_WithKafka_NoTopic(t *testing.T) {
 	publisher := &mockKafkaPublisher{}
 	d := NewDispatcher(WithKafkaPublisher(publisher))
 	defer d.Close()
 
 	event := &testEvent{name: "test.event"}
-	// 手动设置 driver 为 kafka 但不设置 topic
+	// Manually set driver to kafka but do not set topic
 	err := d.Dispatch(context.Background(), event, func(o *dispatchOptions) {
 		o.driver = DriverKafka
-		// 不设置 topic
+		// Do not set topic
 	})
 
 	assert.ErrorIs(t, err, ErrKafkaTopicRequired)
 }
 
-// TestDispatch_WithKafka_Async 测试异步发送到 Kafka
+// TestDispatch_WithKafka_Async tests asynchronous sending to Kafka
 func TestDispatch_WithKafka_Async(t *testing.T) {
 	publisher := &mockKafkaPublisher{}
 	d := NewDispatcher(WithKafkaPublisher(publisher))
@@ -158,7 +158,7 @@ func TestDispatch_WithKafka_Async(t *testing.T) {
 
 	require.NoError(t, err)
 
-	// 等待异步完成
+	// wait for async completion
 	time.Sleep(100 * time.Millisecond)
 
 	messages := publisher.getMessages()
@@ -166,7 +166,7 @@ func TestDispatch_WithKafka_Async(t *testing.T) {
 	assert.Equal(t, "events.async", messages[0].Topic)
 }
 
-// TestDispatch_DefaultMemory 测试默认走内存
+// TestDispatch_DefaultMemory test default memory route
 func TestDispatch_DefaultMemory(t *testing.T) {
 	d := NewDispatcher()
 	defer d.Close()
@@ -184,7 +184,7 @@ func TestDispatch_DefaultMemory(t *testing.T) {
 	assert.True(t, called)
 }
 
-// TestDispatch_MemoryAsync 测试内存异步分发
+// TestDispatch_MemoryAsync test memory async dispatch
 func TestDispatch_MemoryAsync(t *testing.T) {
 	d := NewDispatcher()
 	defer d.Close()
@@ -203,7 +203,7 @@ func TestDispatch_MemoryAsync(t *testing.T) {
 
 	require.NoError(t, err)
 
-	// 等待异步完成
+	// await asynchronous completion
 	time.Sleep(100 * time.Millisecond)
 
 	mu.Lock()
@@ -211,7 +211,7 @@ func TestDispatch_MemoryAsync(t *testing.T) {
 	mu.Unlock()
 }
 
-// TestDispatch_CombinedOptions 测试组合选项
+// TestDispatch_CombinedOptions test combined options
 func TestDispatch_CombinedOptions(t *testing.T) {
 	publisher := &mockKafkaPublisher{}
 	d := NewDispatcher(WithKafkaPublisher(publisher))
@@ -225,7 +225,7 @@ func TestDispatch_CombinedOptions(t *testing.T) {
 
 	require.NoError(t, err)
 
-	// 等待异步完成
+	// wait for asynchronous completion
 	time.Sleep(100 * time.Millisecond)
 
 	messages := publisher.getMessages()

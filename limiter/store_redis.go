@@ -9,13 +9,13 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// RedisStore Redis存储实现
+// RedisStore Redis storage implementation
 type RedisStore struct {
 	client    *redis.Client
-	keyPrefix string // key前缀
+	keyPrefix string // key prefix
 }
 
-// NewRedisStore 创建Redis存储
+// NewRedisStore creates Redis storage
 func NewRedisStore(client *redis.Client, keyPrefix string) *RedisStore {
 	if keyPrefix == "" {
 		keyPrefix = "limiter:"
@@ -26,33 +26,33 @@ func NewRedisStore(client *redis.Client, keyPrefix string) *RedisStore {
 	}
 }
 
-// buildKey 构建完整的key
+// buildKey Construct the complete key
 func (s *RedisStore) buildKey(key string) string {
 	return s.keyPrefix + key
 }
 
-// Get 获取值（字符串）
+// Get Retrieve value (string)
 func (s *RedisStore) Get(ctx context.Context, key string) (string, error) {
 	fullKey := s.buildKey(key)
 	val, err := s.client.Get(ctx, fullKey).Result()
 	if err == redis.Nil {
-		return "", nil // key不存在返回空字符串
+		return "", nil // return an empty string if the key does not exist
 	}
 	return val, err
 }
 
-// Set 设置值（字符串）
+// Set the value (string)
 func (s *RedisStore) Set(ctx context.Context, key string, value string, ttl time.Duration) error {
 	fullKey := s.buildKey(key)
 	return s.client.Set(ctx, fullKey, value, ttl).Err()
 }
 
-// GetInt64 获取整数值
+// GetInt64 get integer value
 func (s *RedisStore) GetInt64(ctx context.Context, key string) (int64, error) {
 	fullKey := s.buildKey(key)
 	val, err := s.client.Get(ctx, fullKey).Result()
 	if err == redis.Nil {
-		return 0, nil // key不存在返回0
+		return 0, nil // return 0 if key does not exist
 	}
 	if err != nil {
 		return 0, fmt.Errorf("redis get failed: %w", err)
@@ -65,43 +65,43 @@ func (s *RedisStore) GetInt64(ctx context.Context, key string) (int64, error) {
 	return count, nil
 }
 
-// SetInt64 设置整数值
+// SetInt64 set integer value
 func (s *RedisStore) SetInt64(ctx context.Context, key string, value int64, ttl time.Duration) error {
 	fullKey := s.buildKey(key)
 	return s.client.Set(ctx, fullKey, value, ttl).Err()
 }
 
-// Decr 原子递减
+// Decrement atomic decrement
 func (s *RedisStore) Decr(ctx context.Context, key string) (int64, error) {
 	fullKey := s.buildKey(key)
 	return s.client.Decr(ctx, fullKey).Result()
 }
 
-// DecrBy 原子递减指定值
+// Atomically decrement by the specified value
 func (s *RedisStore) DecrBy(ctx context.Context, key string, delta int64) (int64, error) {
 	fullKey := s.buildKey(key)
 	return s.client.DecrBy(ctx, fullKey, delta).Result()
 }
 
-// Incr 原子递增
+// Increment atomic increment
 func (s *RedisStore) Incr(ctx context.Context, key string) (int64, error) {
 	fullKey := s.buildKey(key)
 	return s.client.Incr(ctx, fullKey).Result()
 }
 
-// IncrBy 原子递增指定值
+// IncrBy atomic increment by specified value
 func (s *RedisStore) IncrBy(ctx context.Context, key string, value int64) (int64, error) {
 	fullKey := s.buildKey(key)
 	return s.client.IncrBy(ctx, fullKey, value).Result()
 }
 
-// Expire 设置过期时间
+// Set expiration time
 func (s *RedisStore) Expire(ctx context.Context, key string, expiration time.Duration) error {
 	fullKey := s.buildKey(key)
 	return s.client.Expire(ctx, fullKey, expiration).Err()
 }
 
-// Del 删除key
+// Delete key deletion
 func (s *RedisStore) Del(ctx context.Context, keys ...string) error {
 	if len(keys) == 0 {
 		return nil
@@ -114,7 +114,7 @@ func (s *RedisStore) Del(ctx context.Context, keys ...string) error {
 	return s.client.Del(ctx, fullKeys...).Err()
 }
 
-// Exists 检查key是否存在
+// Exists check if key exists
 func (s *RedisStore) Exists(ctx context.Context, key string) (bool, error) {
 	fullKey := s.buildKey(key)
 	count, err := s.client.Exists(ctx, fullKey).Result()
@@ -124,13 +124,13 @@ func (s *RedisStore) Exists(ctx context.Context, key string) (bool, error) {
 	return count > 0, nil
 }
 
-// TTL 获取key的剩余过期时间
+// Get the remaining time-to-live for the key
 func (s *RedisStore) TTL(ctx context.Context, key string) (time.Duration, error) {
 	fullKey := s.buildKey(key)
 	return s.client.TTL(ctx, fullKey).Result()
 }
 
-// ZAdd 添加有序集合成员
+// Add ordered set members
 func (s *RedisStore) ZAdd(ctx context.Context, key string, score float64, member string) error {
 	fullKey := s.buildKey(key)
 	return s.client.ZAdd(ctx, fullKey, redis.Z{
@@ -139,7 +139,7 @@ func (s *RedisStore) ZAdd(ctx context.Context, key string, score float64, member
 	}).Err()
 }
 
-// ZRemRangeByScore 删除有序集合中指定分数范围的成员
+// Remove members from a sorted set that are within a specified score range
 func (s *RedisStore) ZRemRangeByScore(ctx context.Context, key string, min, max float64) error {
 	fullKey := s.buildKey(key)
 	minStr := fmt.Sprintf("%f", min)
@@ -147,7 +147,7 @@ func (s *RedisStore) ZRemRangeByScore(ctx context.Context, key string, min, max 
 	return s.client.ZRemRangeByScore(ctx, fullKey, minStr, maxStr).Err()
 }
 
-// ZCount 统计有序集合中指定分数范围的成员数量
+// ZCount statistics the number of members in a sorted set within a specified score range
 func (s *RedisStore) ZCount(ctx context.Context, key string, min, max float64) (int64, error) {
 	fullKey := s.buildKey(key)
 	minStr := fmt.Sprintf("%f", min)
@@ -155,7 +155,7 @@ func (s *RedisStore) ZCount(ctx context.Context, key string, min, max float64) (
 	return s.client.ZCount(ctx, fullKey, minStr, maxStr).Result()
 }
 
-// Eval 执行Lua脚本
+// Evaluate execution of Lua script
 func (s *RedisStore) Eval(ctx context.Context, script string, keys []string, args []interface{}) (interface{}, error) {
 	fullKeys := make([]string, len(keys))
 	for i, key := range keys {
@@ -164,8 +164,8 @@ func (s *RedisStore) Eval(ctx context.Context, script string, keys []string, arg
 	return s.client.Eval(ctx, script, fullKeys, args).Result()
 }
 
-// Close 关闭连接（RedisStore不拥有client，所以不需要关闭）
+// Close Close the connection (RedisStore does not own the client, so there is no need to close)
 func (s *RedisStore) Close() error {
-	// Redis客户端由RedisManager管理，这里不关闭
+	// The Redis client is managed by RedisManager, so it is not closed here
 	return nil
 }

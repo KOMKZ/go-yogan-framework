@@ -10,45 +10,45 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// Config 模块日志配置（内部使用）
+// Config module log configuration (for internal use)
 type Config struct {
 	Level           string
 	Development     bool
-	Encoding        string // json, console 或 console_pretty
+	Encoding        string // json, console or console_pretty
 	ConsoleEncoding string
 
-	// 内部字段（由 Manager 自动设置，用户无需关心）
-	moduleName string // 业务模块名称（如：order、auth、user）
-	logDir     string // 日志根目录（默认 logs/）
+	// Internal fields (set automatically by Manager, no user action required)
+	moduleName string // Business module name (e.g., order, auth, user)
+	logDir     string // Log root directory (default logs/)
 
 	EnableFile    bool
 	EnableConsole bool
 
-	// 文件名格式配置
-	EnableLevelInFilename    bool   // 是否包含级别（info/error）
-	EnableSequenceInFilename bool   // 是否包含序号（01/02）
-	SequenceNumber           string // 序号（如："01"）
-	EnableDateInFilename     bool   // 是否包含日期
-	DateFormat               string // 日期格式（默认 2006-01-02）
+	// file name format configuration
+	EnableLevelInFilename    bool   // Whether it includes level (info/error)
+	EnableSequenceInFilename bool   // Whether it includes an ordinal number (01/02)
+	SequenceNumber           string // Sequence number (e.g., "01")
+	EnableDateInFilename     bool   // Does it contain a date
+	DateFormat               string // Date format (default 2006-01-02)
 
-	// 文件切割配置
-	MaxSize    int  // 单个文件最大大小（MB）
-	MaxBackups int  // 保留旧文件数量
-	MaxAge     int  // 保留天数
-	Compress   bool // 是否压缩
+	// File slicing configuration
+	MaxSize    int  // Maximum size of individual file (MB)
+	MaxBackups int  // Keep the number of old files
+	MaxAge     int  // Number of days to retain
+	Compress   bool // Whether to compress
 
-	// 调用栈配置
+	// stack configuration
 	EnableCaller     bool
 	EnableStacktrace bool
-	StacktraceLevel  string // 从哪个级别开始记录栈（默认 error）
-	StacktraceDepth  int    // 堆栈深度限制（0=不限制，建议 5-10）
+	StacktraceLevel  string // From which level to start recording the stack (default is error)
+	StacktraceDepth  int    // Stack depth limit (0=unlimited, recommended 5-10)
 }
 
-// ManagerConfig 全局管理器配置（所有模块共享）
+// ManagerConfig global manager configuration (shared by all modules)
 type ManagerConfig struct {
-	BaseLogDir               string `mapstructure:"base_log_dir"` // 固定根目录（默认 logs/）
+	BaseLogDir               string `mapstructure:"base_log_dir"` // Fix root directory (default logs/)
 	Level                    string `mapstructure:"level"`
-	AppName                  string `mapstructure:"app_name"`      // 应用名称（自动注入所有日志，空值也注入）
+	AppName                  string `mapstructure:"app_name"`      // Application name (automatically injects all logs, including null values)
 	Encoding                 string `mapstructure:"encoding"`
 	ConsoleEncoding          string `mapstructure:"console_encoding"`
 	EnableConsole            bool   `mapstructure:"enable_console"`
@@ -63,21 +63,21 @@ type ManagerConfig struct {
 	EnableCaller             bool   `mapstructure:"enable_caller"`
 	EnableStacktrace         bool   `mapstructure:"enable_stacktrace"`
 	StacktraceLevel          string `mapstructure:"stacktrace_level"`
-	StacktraceDepth          int    `mapstructure:"stacktrace_depth"` // 堆栈深度（0=不限制）
+	StacktraceDepth          int    `mapstructure:"stacktrace_depth"` // stack depth (0=unlimited)
 	LoggerName               string `mapstructure:"logger_name"`
 	ModuleNumber             int    `mapstructure:"module_number"`
 
-	// 渲染样式配置（仅对 console_pretty 编码器有效）
-	// 可选值：single_line（默认）、key_value
+	// Render style configuration (valid for console_pretty encoder only)
+	// Optional values: single_line (default), key_value
 	RenderStyle string `mapstructure:"render_style"`
 
-	// TraceID 配置
-	EnableTraceID    bool   `mapstructure:"enable_trace_id"`     // 是否启用 traceID 自动提取
-	TraceIDKey       string `mapstructure:"trace_id_key"`        // context 中的 key（默认 "trace_id"）
-	TraceIDFieldName string `mapstructure:"trace_id_field_name"` // 日志字段名（默认 "trace_id"）
+	// Trace ID configuration
+	EnableTraceID    bool   `mapstructure:"enable_trace_id"`     // Whether to enable automatic extraction of traceID
+	TraceIDKey       string `mapstructure:"trace_id_key"`        // the key in context (default "trace_id")
+	TraceIDFieldName string `mapstructure:"trace_id_field_name"` // Log field name (default "trace_id")
 }
 
-// DefaultManagerConfig 返回默认管理器配置
+// Returns default manager configuration
 func DefaultManagerConfig() ManagerConfig {
 	return ManagerConfig{
 		BaseLogDir:               "logs",
@@ -95,20 +95,20 @@ func DefaultManagerConfig() ManagerConfig {
 		Compress:                 true,
 		EnableCaller:             true,
 		EnableStacktrace:         true,
-		StacktraceLevel:          "error", // 从 error 级别开始记录堆栈
-		StacktraceDepth:          5,       // 默认只记录 5 层堆栈，避免日志过长
+		StacktraceLevel:          "error", // Start logging stack from ERROR level
+		StacktraceDepth:          5,       // By default, only record 5 stack levels to avoid overly long logs
 		EnableTraceID:            true,
 		TraceIDKey:               "trace_id",
 		TraceIDFieldName:         "trace_id",
 	}
 }
 
-// ApplyDefaults 将零值字段填充为默认值（原地修改）
-// 用于处理配置文件中缺失或为零值的字段
+// ApplyDefaults fills zero-valued fields with default values (in-place modification)
+// For handling missing or zero-valued fields in configuration files
 func (c *ManagerConfig) ApplyDefaults() {
 	defaults := DefaultManagerConfig()
 
-	// 字符串类型：空字符串视为未配置
+	// String type: an empty string is considered unconfigured
 	if c.BaseLogDir == "" {
 		c.BaseLogDir = defaults.BaseLogDir
 	}
@@ -140,7 +140,7 @@ func (c *ManagerConfig) ApplyDefaults() {
 		c.TraceIDFieldName = defaults.TraceIDFieldName
 	}
 
-	// 数值类型：0 视为未配置（注意：MaxBackups=0 是合法值，但很少用）
+	// Numeric type: 0 is considered unconfigured (note: MaxBackups=0 is a valid value but rarely used)
 	if c.MaxSize == 0 {
 		c.MaxSize = defaults.MaxSize
 	}
@@ -151,18 +151,18 @@ func (c *ManagerConfig) ApplyDefaults() {
 		c.MaxAge = defaults.MaxAge
 	}
 
-	// 布尔类型：无法判断是否配置，保持原值
-	// 如果需要默认值，应在配置文件中显式设置
+	// Boolean type: Unable to determine if configured, retain original value
+	// If default values are needed, they should be explicitly set in the configuration file
 }
 
-// Validate 验证配置（实现 config.Validator 接口）
+// Validate configuration (implement config.Validator interface)
 func (c *Config) Validate() error {
-	// 1. 基础验证
+	// 1. Basic validation
 	if c.logDir == "" {
 		return fmt.Errorf("[Logger] 日志目录不能为空")
 	}
 
-	// 2. 枚举验证
+	// 2. Enum validation
 	validLevels := []string{"debug", "info", "warn", "error", "fatal"}
 	if !contains(validLevels, c.Level) {
 		return fmt.Errorf("[Logger] 日志级别必须是: %v，当前: %s", validLevels, c.Level)
@@ -173,7 +173,7 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("[Logger] 编码格式必须是: %v，当前: %s", validEncodings, c.Encoding)
 	}
 
-	// 3. 范围验证
+	// 3. Range validation
 	if c.MaxSize < 1 || c.MaxSize > 10000 {
 		return fmt.Errorf("[Logger] 文件大小必须在1-10000MB之间，当前: %d", c.MaxSize)
 	}
@@ -186,7 +186,7 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("[Logger] 保留天数必须在1-365之间，当前: %d", c.MaxAge)
 	}
 
-	// 4. 业务逻辑验证
+	// Business logic validation
 	if c.EnableDateInFilename && c.DateFormat == "" {
 		return fmt.Errorf("[Logger] 启用日期文件名时必须指定日期格式")
 	}
@@ -194,7 +194,7 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-// ParseLevel 解析日志级别字符串
+// ParseLevel parse log level string
 func ParseLevel(level string) zapcore.Level {
 	switch level {
 	case "debug":
@@ -212,36 +212,36 @@ func ParseLevel(level string) zapcore.Level {
 	}
 }
 
-// Validate 验证 ManagerConfig 配置
+// Validate ManagerConfig configuration
 func (c ManagerConfig) Validate() error {
-	// 验证日志级别
+	// Verify log level
 	validLevels := []string{"debug", "info", "warn", "error", "fatal"}
 	if !contains(validLevels, c.Level) {
 		return fmt.Errorf("无效的日志级别: %s (有效值: %v)", c.Level, validLevels)
 	}
 
-	// 验证编码格式
+	// Validate encoding format
 	validEncodings := []string{"json", "console", "console_pretty"}
 	if !contains(validEncodings, c.Encoding) {
 		return fmt.Errorf("无效的日志编码: %s (有效值: %v)", c.Encoding, validEncodings)
 	}
 
-	// 验证文件大小
+	// Verify file size
 	if c.MaxSize < 1 || c.MaxSize > 10000 {
 		return fmt.Errorf("MaxSize 必须在 1-10000 MB 之间，当前: %d", c.MaxSize)
 	}
 
-	// 验证备份数量
+	// Verify backup count
 	if c.MaxBackups < 0 || c.MaxBackups > 1000 {
 		return fmt.Errorf("MaxBackups 必须在 0-1000 之间，当前: %d", c.MaxBackups)
 	}
 
-	// 验证保留天数
+	// Validate reserved days
 	if c.MaxAge < 0 || c.MaxAge > 3650 {
 		return fmt.Errorf("MaxAge 必须在 0-3650 天之间，当前: %d", c.MaxAge)
 	}
 
-	// 验证栈追踪级别
+	// Verify stack trace level
 	if !contains(validLevels, c.StacktraceLevel) {
 		return fmt.Errorf("无效的栈追踪级别: %s (有效值: %v)", c.StacktraceLevel, validLevels)
 	}
@@ -249,7 +249,7 @@ func (c ManagerConfig) Validate() error {
 	return nil
 }
 
-// contains 检查字符串切片是否包含指定字符串
+// contains Check if the string slice contains the specified string
 func contains(slice []string, str string) bool {
 	for _, s := range slice {
 		if s == str {
@@ -259,8 +259,8 @@ func contains(slice []string, str string) bool {
 	return false
 }
 
-// getModuleLogDir 获取模块日志目录（内部方法）
-// 返回：logs/order/ 或 logs/auth/
+// Get module log directory (internal method)
+// Return: logs/order/ or logs/auth/
 func (c Config) getModuleLogDir() string {
 	if c.moduleName == "" {
 		return c.logDir
@@ -268,45 +268,45 @@ func (c Config) getModuleLogDir() string {
 	return filepath.Join(c.logDir, c.moduleName)
 }
 
-// getInfoFilePath 获取 Info 日志完整路径（内部方法）
+// getInfoFilePath Get the complete path of the Info log (internal method)
 func (c Config) getInfoFilePath() string {
 	return c.buildFilePath("info")
 }
 
-// getErrorFilePath 获取 Error 日志完整路径（内部方法）
+// Get error log full path (internal method)
 func (c Config) getErrorFilePath() string {
 	return c.buildFilePath("error")
 }
 
-// buildFilePath 构建日志文件路径（内部方法）
-// 支持格式：
-//   - logs/order/order.log（仅模块名）
-//   - logs/order/order-info.log（模块名 + 级别）
-//   - logs/order/order-info-01.log（模块名 + 级别 + 序号）
-//   - logs/order/order-info-2024-12-19.log（模块名 + 级别 + 日期）
-//   - logs/order/order-info-01-2024-12-19.log（完整格式）
+// buildFilePath Build log file path (internal method)
+// Support formats:
+// - logs/order/order.log (module name only)
+// - logs/order/order-info.log (module name + level)
+// - logs/order/order-info-01.log (module name + level + sequence number)
+// - logs/order/order-info-2024-12-19.log (module name + level + date)
+// - logs/order/order-info-01-2024-12-19.log (full format)
 func (c Config) buildFilePath(level string) string {
 	parts := []string{c.moduleName}
 
-	// 添加级别
+	// Add level
 	if c.EnableLevelInFilename {
 		parts = append(parts, level)
 	}
 
-	// 添加序号
+	// Add numbering
 	if c.EnableSequenceInFilename && c.SequenceNumber != "" {
 		parts = append(parts, c.SequenceNumber)
 	}
 
-	// 添加日期
+	// Add date
 	if c.EnableDateInFilename {
 		date := time.Now().Format(c.DateFormat)
 		parts = append(parts, date)
 	}
 
-	// 组合文件名
+	// Combine file names
 	filename := strings.Join(parts, "-")
 
-	// 返回完整路径
+	// Return full path
 	return filepath.Join(c.getModuleLogDir(), filename+".log")
 }

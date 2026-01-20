@@ -13,11 +13,11 @@ import (
 )
 
 func TestProvideManager_Disabled(t *testing.T) {
-	// 创建临时配置目录
+	// Create temporary configuration directory
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
 
-	// 写入禁用 Swagger 的配置
+	// Write the configuration to disable Swagger
 	configContent := `
 swagger:
   enabled: false
@@ -25,30 +25,30 @@ swagger:
 	err := os.WriteFile(configFile, []byte(configContent), 0644)
 	require.NoError(t, err)
 
-	// 创建 Config Loader
+	// Create Config Loader
 	loader, err := config.NewLoaderBuilder().
 		WithConfigPath(tmpDir).
 		WithAppType("http").
 		Build()
 	require.NoError(t, err)
 
-	// 创建 DI 容器
+	// Create DI container
 	injector := do.New()
 	do.ProvideValue(injector, loader)
 	do.ProvideValue(injector, logger.GetLogger("test"))
 
-	// 测试 Provider
+	// Test Provider
 	mgr, err := ProvideManager(injector)
 	assert.NoError(t, err)
 	assert.Nil(t, mgr, "禁用时应返回 nil")
 }
 
 func TestProvideManager_Enabled(t *testing.T) {
-	// 创建临时配置目录
+	// Create temporary configuration directory
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
 
-	// 写入启用 Swagger 的配置
+	// Write the configuration to enable Swagger
 	configContent := `
 swagger:
   enabled: true
@@ -62,19 +62,19 @@ swagger:
 	err := os.WriteFile(configFile, []byte(configContent), 0644)
 	require.NoError(t, err)
 
-	// 创建 Config Loader
+	// Create Config Loader
 	loader, err := config.NewLoaderBuilder().
 		WithConfigPath(tmpDir).
 		WithAppType("http").
 		Build()
 	require.NoError(t, err)
 
-	// 创建 DI 容器
+	// Create DI container
 	injector := do.New()
 	do.ProvideValue(injector, loader)
 	do.ProvideValue(injector, logger.GetLogger("test"))
 
-	// 测试 Provider
+	// Test Provider
 	mgr, err := ProvideManager(injector)
 	assert.NoError(t, err)
 	require.NotNil(t, mgr)
@@ -84,11 +84,11 @@ swagger:
 }
 
 func TestProvideManager_NoConfig(t *testing.T) {
-	// 创建临时配置目录（没有 swagger 配置）
+	// Create a temporary configuration directory (without Swagger configuration)
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
 
-	// 写入空配置
+	// Write empty configuration
 	configContent := `
 app:
   name: "TestApp"
@@ -96,30 +96,30 @@ app:
 	err := os.WriteFile(configFile, []byte(configContent), 0644)
 	require.NoError(t, err)
 
-	// 创建 Config Loader
+	// Create Config Loader
 	loader, err := config.NewLoaderBuilder().
 		WithConfigPath(tmpDir).
 		WithAppType("http").
 		Build()
 	require.NoError(t, err)
 
-	// 创建 DI 容器
+	// Create DI container
 	injector := do.New()
 	do.ProvideValue(injector, loader)
 	do.ProvideValue(injector, logger.GetLogger("test"))
 
-	// 测试 Provider（无配置时使用默认值，默认禁用）
+	// Test Provider (uses default values when no configuration is provided, default is disabled)
 	mgr, err := ProvideManager(injector)
 	assert.NoError(t, err)
 	assert.Nil(t, mgr, "无配置时默认禁用，应返回 nil")
 }
 
 func TestProvideManager_InheritAppInfo(t *testing.T) {
-	// 创建临时配置目录
+	// Create temporary configuration directory
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
 
-	// 写入配置（Swagger 启用但 info 使用默认值，应从 app 继承）
+	// Write configuration ( Swagger enabled but info uses default values, should inherit from app)
 	configContent := `
 app:
   name: "MyApp"
@@ -130,24 +130,24 @@ swagger:
 	err := os.WriteFile(configFile, []byte(configContent), 0644)
 	require.NoError(t, err)
 
-	// 创建 Config Loader
+	// Create Config Loader
 	loader, err := config.NewLoaderBuilder().
 		WithConfigPath(tmpDir).
 		WithAppType("http").
 		Build()
 	require.NoError(t, err)
 
-	// 创建 DI 容器
+	// Create DI container
 	injector := do.New()
 	do.ProvideValue(injector, loader)
 	do.ProvideValue(injector, logger.GetLogger("test"))
 
-	// 测试 Provider
+	// Test Provider
 	mgr, err := ProvideManager(injector)
 	assert.NoError(t, err)
 	require.NotNil(t, mgr)
 
-	// 应从 app 配置继承标题和版本
+	// The title and version should be inherited from the app configuration
 	assert.Equal(t, "MyApp API", mgr.GetInfo().Title)
 	assert.Equal(t, "3.0.0", mgr.GetInfo().Version)
 }

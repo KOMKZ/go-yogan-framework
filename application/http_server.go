@@ -18,7 +18,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// HTTPServer HTTP Server 封装（支持 Gin）
+// HTTPServer wraps an HTTP server (supports Gin)
 type HTTPServer struct {
 	engine     *gin.Engine
 	httpServer *http.Server
@@ -26,38 +26,38 @@ type HTTPServer struct {
 	mode       string
 }
 
-// NewHTTPServer 创建 HTTP Server（完整日志统一方案）
+// NewHTTPServer creates an HTTP server (uniform logging solution)
 func NewHTTPServer(cfg ApiServerConfig, middlewareCfg *MiddlewareConfig, httpxCfg *httpx.ErrorLoggingConfig, limiterManager *limiter.Manager) *HTTPServer {
 	// ====================================
-	// 1. 接管 Gin 内核日志输出
+	// Take over Gin core log output
 	// ====================================
-	// 将 Gin 的路由注册日志重定向到自定义 Logger
+	// Redirect Gin's routing registration logs to a custom Logger
 	gin.DefaultWriter = logger.NewGinLogWriter("yogan")
-	// 将 Gin 的错误日志重定向到自定义 Logger
+	// Redirect Gin's error logs to a custom logger
 	gin.DefaultErrorWriter = logger.NewGinLogWriter("yogan")
 
 	// ====================================
-	// 2. 设置 Gin 模式
+	// 2. Set Gin mode
 	// ====================================
-	// debug: 输出详细的路由注册日志
-	// release: 关闭路由注册日志（生产环境推荐）
+	// debug: output detailed route registration logs
+	// release: disable route registration log (recommended for production environment)
 	gin.SetMode(cfg.Mode)
 
 	// ====================================
-	// 3. 创建 Gin 引擎
+	// 3. Create Gin engine
 	// ====================================
-	// 使用 gin.New() 而非 gin.Default()
-	// 避免自带的 Logger 和 Recovery 中间件，使用自定义版本
+	// Use gin.New() instead of gin.Default()
+	// Avoid using the built-in Logger and Recovery middleware, use a custom version
 	engine := gin.New()
 
-	// 启用 405 方法不允许响应（默认是 404）
+	// Enable 405 method not allowed response (default is 404)
 	engine.HandleMethodNotAllowed = true
 
 	// ====================================
-	// 4. 注册自定义中间件（根据配置，注意顺序）
+	// 4. Register custom middleware (based on configuration, note the order)
 	// ====================================
 
-	// CORS 中间件：处理跨域请求（必须在最前面，确保预检请求能正确响应）
+	// CORS middleware: Handle cross-origin requests (must be at the top to ensure pre-flight requests are correctly responded to)
 	if middlewareCfg != nil && middlewareCfg.CORS != nil && middlewareCfg.CORS.Enable {
 		corsCfg := middleware.CORSConfig{
 			AllowOrigins:     middlewareCfg.CORS.AllowOrigins,
@@ -70,7 +70,7 @@ func NewHTTPServer(cfg ApiServerConfig, middlewareCfg *MiddlewareConfig, httpxCf
 		engine.Use(middleware.CORSWithConfig(corsCfg))
 	}
 
-	// TraceID 中间件：为每个请求生成/提取 TraceID（必须在日志中间件之前）
+	// TraceID middleware: Generates/extracts TraceID for each request (must be before log middleware)
 	if middlewareCfg != nil && middlewareCfg.TraceID != nil && middlewareCfg.TraceID.Enable {
 		traceCfg := middleware.TraceConfig{
 			TraceIDKey:           middlewareCfg.TraceID.TraceIDKey,
@@ -80,17 +80,17 @@ func NewHTTPServer(cfg ApiServerConfig, middlewareCfg *MiddlewareConfig, httpxCf
 		engine.Use(middleware.TraceID(traceCfg))
 	}
 
-	// 限流中间件：全局应用限流（在日志中间件之前，这样限流事件也会被记录）
+	// Rate limiting middleware: globally applied rate limiting (applied before the logging middleware so that rate-limiting events are also recorded)
 	if limiterManager != nil && limiterManager.IsEnabled() {
 		limiterCfg := limiterManager.GetConfig()
 		rateLimiterCfg := middleware.DefaultRateLimiterConfig(limiterManager)
 
-		// 跳过限流的路径
+		// skip rate-limited paths
 		if len(limiterCfg.SkipPaths) > 0 {
 			rateLimiterCfg.SkipPaths = limiterCfg.SkipPaths
 		}
 
-		// 根据配置选择键函数
+		// Choose key function based on configuration
 		switch limiterCfg.KeyFunc {
 		case "ip":
 			rateLimiterCfg.KeyFunc = middleware.RateLimiterKeyByIP
@@ -101,7 +101,7 @@ func NewHTTPServer(cfg ApiServerConfig, middlewareCfg *MiddlewareConfig, httpxCf
 		case "api_key":
 			rateLimiterCfg.KeyFunc = middleware.RateLimiterKeyByAPIKey("X-API-Key")
 		case "path", "":
-			// 默认：METHOD:PATH（已在 DefaultRateLimiterConfig 中设置）
+			// Default: METHOD:PATH (already set in DefaultRateLimiterConfig)
 		default:
 			logger.Warn("yogan", "Unknown KeyFunc config, using default",
 				zap.String("key_func", limiterCfg.KeyFunc))
@@ -112,7 +112,7 @@ func NewHTTPServer(cfg ApiServerConfig, middlewareCfg *MiddlewareConfig, httpxCf
 			zap.String("key_func", limiterCfg.KeyFunc))
 	}
 
-	// HTTP 请求日志中间件：记录所有 HTTP 请求到 gin-http 模块（自动关联 TraceID）
+	// HTTP request logging middleware: log all HTTP requests to the gin-http module (automatically associate TraceID)
 	if middlewareCfg != nil && middlewareCfg.RequestLog != nil && middlewareCfg.RequestLog.Enable {
 		requestLogCfg := middleware.RequestLogConfig{
 			SkipPaths:   middlewareCfg.RequestLog.SkipPaths,
@@ -122,16 +122,16 @@ func NewHTTPServer(cfg ApiServerConfig, middlewareCfg *MiddlewareConfig, httpxCf
 		engine.Use(middleware.RequestLogWithConfig(requestLogCfg))
 	}
 
-	// HTTP 错误日志中间件：根据配置决定是否记录业务错误日志（默认不记录）
+	// HTTP error logging middleware: decides based on configuration whether to log business error logs (default is not to log)
 	if httpxCfg != nil && httpxCfg.Enable {
 		engine.Use(httpx.ErrorLoggingMiddleware(*httpxCfg))
 	}
 
-	// Panic 恢复中间件：捕获 panic 并记录到 gin-error 模块（总是启用）
+	// Panic recovery middleware: captures panics and logs to the gin-error module (always enabled)
 	engine.Use(middleware.Recovery())
 
 	// ====================================
-	// 5. 注册 404/405 统一响应处理
+	// Register unified response handling for 404/405 errors
 	// ====================================
 	engine.NoRoute(httpx.NoRouteHandler())
 	engine.NoMethod(httpx.NoMethodHandler())
@@ -143,16 +143,16 @@ func NewHTTPServer(cfg ApiServerConfig, middlewareCfg *MiddlewareConfig, httpxCf
 	}
 }
 
-// GetEngine 获取 Gin 引擎（供业务层注册路由）
+// GetEngine获取Gin引擎（用于业务层注册路由）
 func (s *HTTPServer) GetEngine() *gin.Engine {
 	return s.engine
 }
 
-// Start 启动 HTTP Server（非阻塞，但会等待确认启动成功）
+// Start non-blocking HTTP Server (will wait for confirmation of successful startup)
 func (s *HTTPServer) Start() error {
 	addr := fmt.Sprintf(":%d", s.port)
 
-	// 1. 预检测端口可用性
+	// 1. Pre-check port availability
 	if err := s.checkPortAvailable(); err != nil {
 		return fmt.Errorf("端口 %d 不可用: %w", s.port, err)
 	}
@@ -162,7 +162,7 @@ func (s *HTTPServer) Start() error {
 		Handler: s.engine,
 	}
 
-	// 2. 使用 channel 等待启动结果
+	// 2. Use channel to wait for startup result
 	errChan := make(chan error, 1)
 
 	go func() {
@@ -175,20 +175,20 @@ func (s *HTTPServer) Start() error {
 		}
 	}()
 
-	// 3. 短暂等待确认启动成功（50ms 足够检测端口绑定错误）
+	// 3. Briefly wait to confirm successful startup (50ms is sufficient to detect port binding errors)
 	select {
 	case err := <-errChan:
 		logger.Error("yogan", "❌ HTTP server start failed", zap.Error(err))
 		return fmt.Errorf("HTTP 服务启动失败: %w", err)
 	case <-time.After(50 * time.Millisecond):
-		// 启动成功
+		// startup successful
 		logger.Debug("yogan", "✅ HTTP server started successfully",
 			zap.Int("port", s.port))
 		return nil
 	}
 }
 
-// checkPortAvailable 检测端口是否可用
+// checkPortAvailable Check if the port is available
 func (s *HTTPServer) checkPortAvailable() error {
 	addr := fmt.Sprintf(":%d", s.port)
 	ln, err := net.Listen("tcp", addr)
@@ -199,7 +199,7 @@ func (s *HTTPServer) checkPortAvailable() error {
 	return nil
 }
 
-// Shutdown 优雅关闭 HTTP Server
+// Shut down HTTP Server gracefully
 func (s *HTTPServer) Shutdown(ctx context.Context) error {
 	if s.httpServer == nil {
 		return nil
@@ -215,31 +215,31 @@ func (s *HTTPServer) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-// ShutdownWithTimeout 带超时的优雅关闭
+// ShutdownWithTimeout graceful shutdown with timeout
 func (s *HTTPServer) ShutdownWithTimeout(timeout time.Duration) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	return s.Shutdown(ctx)
 }
 
-// NewHTTPServerWithTelemetryAndHealth 创建带 OpenTelemetry 和健康检查支持的 HTTP Server
+// Create an HTTP server with OpenTelemetry and health check support
 func NewHTTPServerWithTelemetryAndHealth(
 	cfg ApiServerConfig,
 	middlewareCfg *MiddlewareConfig,
 	httpxCfg *httpx.ErrorLoggingConfig,
 	limiterManager *limiter.Manager,
 	telemetryMgr *telemetry.Manager,
-	healthAgg *health.Aggregator, // 使用具体类型，避免 interface{}
+	healthAgg *health.Aggregator, // Use specific types, avoid interface{}
 ) *HTTPServer {
 	server := NewHTTPServerWithTelemetry(cfg, middlewareCfg, httpxCfg, limiterManager, telemetryMgr)
 
-	// 注册健康检查路由
+	// Register health check route
 	middleware.RegisterHealthRoutes(server.engine, healthAgg)
 
 	return server
 }
 
-// NewHTTPServerWithTelemetry 创建带 OpenTelemetry 支持的 HTTP Server
+// Create an HTTP server with OpenTelemetry support
 func NewHTTPServerWithTelemetry(
 	cfg ApiServerConfig,
 	middlewareCfg *MiddlewareConfig,
@@ -248,29 +248,29 @@ func NewHTTPServerWithTelemetry(
 	telemetryMgr *telemetry.Manager,
 ) *HTTPServer {
 	// ====================================
-	// 1. 接管 Gin 内核日志输出
+	// Take over Gin core log output
 	// ====================================
 	gin.DefaultWriter = logger.NewGinLogWriter("yogan")
 	gin.DefaultErrorWriter = logger.NewGinLogWriter("yogan")
 
 	// ====================================
-	// 2. 设置 Gin 模式
+	// 2. Set Gin mode
 	// ====================================
 	gin.SetMode(cfg.Mode)
 
 	// ====================================
-	// 3. 创建 Gin 引擎
+	// 3. Create Gin engine
 	// ====================================
 	engine := gin.New()
 
-	// 启用 405 方法不允许响应（默认是 404）
+	// Enable 405 method not allowed response (default is 404)
 	engine.HandleMethodNotAllowed = true
 
 	// ====================================
-	// 4. 注册自定义中间件（注意顺序）
+	// 4. Register custom middleware (note the order)
 	// ====================================
 
-	// CORS 中间件：处理跨域请求（必须在最前面）
+	// CORS middleware: Handle cross-domain requests (must be at the very top)
 	if middlewareCfg != nil && middlewareCfg.CORS != nil && middlewareCfg.CORS.Enable {
 		corsCfg := middleware.CORSConfig{
 			AllowOrigins:     middlewareCfg.CORS.AllowOrigins,
@@ -283,7 +283,7 @@ func NewHTTPServerWithTelemetry(
 		engine.Use(middleware.CORSWithConfig(corsCfg))
 	}
 
-	// 🎯 OpenTelemetry Trace 中间件：创建 Span（必须在 TraceID 之前）
+	// 🎯 OpenTelemetry Trace middleware: Create a Span (must be before TraceID)
 	if telemetryMgr != nil && telemetryMgr.IsEnabled() {
 		serviceName := telemetryMgr.GetConfig().ServiceName
 		if serviceName == "" {
@@ -294,16 +294,16 @@ func NewHTTPServerWithTelemetry(
 			zap.String("service_name", serviceName))
 	}
 
-	// 🎯 HTTP Metrics 中间件：收集 HTTP 请求指标（独立于 Trace）
+	// 🎯 HTTP Metrics middleware: collect HTTP request metrics (independent of Trace)
 	if telemetryMgr != nil {
 		metricsMgr := telemetryMgr.GetMetricsManager()
 		if metricsMgr != nil {
-			// Metrics 已在 Manager 中启动
+			// Metrics have been started in the Manager
 			logger.Info("yogan", "✅ HTTP Metrics middleware available via Telemetry Manager")
 		}
 	}
 
-	// TraceID 中间件：从 Span 或 Header 提取 TraceID（在 otelgin 之后）
+	// TraceID middleware: Extract TraceID from Span or Header (after otelgin)
 	if middlewareCfg != nil && middlewareCfg.TraceID != nil && middlewareCfg.TraceID.Enable {
 		traceCfg := middleware.TraceConfig{
 			TraceIDKey:           middlewareCfg.TraceID.TraceIDKey,
@@ -313,17 +313,17 @@ func NewHTTPServerWithTelemetry(
 		engine.Use(middleware.TraceID(traceCfg))
 	}
 
-	// 限流中间件：全局应用限流（在日志中间件之前，这样限流事件也会被记录）
+	// Rate limiting middleware: global rate limiting applied (before the logging middleware so that rate limiting events are also recorded)
 	if limiterManager != nil && limiterManager.IsEnabled() {
 		limiterCfg := limiterManager.GetConfig()
 		rateLimiterCfg := middleware.DefaultRateLimiterConfig(limiterManager)
 
-		// 跳过限流的路径
+		// Bypass rate-limited paths
 		if len(limiterCfg.SkipPaths) > 0 {
 			rateLimiterCfg.SkipPaths = limiterCfg.SkipPaths
 		}
 
-		// 根据配置选择键函数
+		// Choose key function based on configuration
 		switch limiterCfg.KeyFunc {
 		case "ip":
 			rateLimiterCfg.KeyFunc = middleware.RateLimiterKeyByIP
@@ -334,7 +334,7 @@ func NewHTTPServerWithTelemetry(
 		case "api_key":
 			rateLimiterCfg.KeyFunc = middleware.RateLimiterKeyByAPIKey("X-API-Key")
 		case "path", "":
-			// 默认：METHOD:PATH（已在 DefaultRateLimiterConfig 中设置）
+			// Default: METHOD:PATH (already set in DefaultRateLimiterConfig)
 		default:
 			logger.Warn("yogan", "Unknown KeyFunc config, using default",
 				zap.String("key_func", limiterCfg.KeyFunc))
@@ -345,7 +345,7 @@ func NewHTTPServerWithTelemetry(
 			zap.String("key_func", limiterCfg.KeyFunc))
 	}
 
-	// HTTP 请求日志中间件
+	// HTTP request logging middleware
 	if middlewareCfg != nil && middlewareCfg.RequestLog != nil && middlewareCfg.RequestLog.Enable {
 		requestLogCfg := middleware.RequestLogConfig{
 			SkipPaths:   middlewareCfg.RequestLog.SkipPaths,
@@ -355,16 +355,16 @@ func NewHTTPServerWithTelemetry(
 		engine.Use(middleware.RequestLogWithConfig(requestLogCfg))
 	}
 
-	// HTTP 错误日志中间件
+	// HTTP error logging middleware
 	if httpxCfg != nil && httpxCfg.Enable {
 		engine.Use(httpx.ErrorLoggingMiddleware(*httpxCfg))
 	}
 
-	// Panic 恢复中间件（总是启用）
+	// Enable middleware for panic recovery (always enabled)
 	engine.Use(middleware.Recovery())
 
 	// ====================================
-	// 5. 注册 404/405 统一响应处理
+	// Register uniform response handling for 404/405
 	// ====================================
 	engine.NoRoute(httpx.NoRouteHandler())
 	engine.NoMethod(httpx.NoMethodHandler())

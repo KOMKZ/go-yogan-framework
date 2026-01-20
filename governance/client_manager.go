@@ -7,7 +7,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// ClientManager 客户端治理管理器（服务发现 + 负载均衡 + 熔断）
+// ClientManager client governance manager (service discovery + load balancing + circuit breaking)
 type ClientManager struct {
 	discovery      ServiceDiscovery
 	loadBalancer   LoadBalancer
@@ -15,14 +15,14 @@ type ClientManager struct {
 	logger         *zap.Logger
 }
 
-// ClientConfig 客户端治理配置
+// ClientConfig client governance configuration
 type ClientConfig struct {
-	DiscoveryEnabled bool                 `mapstructure:"discovery_enabled"` // 是否启用服务发现
-	LoadBalance      string               `mapstructure:"load_balance"`      // 负载均衡策略
-	CircuitBreaker   CircuitBreakerConfig `mapstructure:"circuit_breaker"`   // 熔断器配置
+	DiscoveryEnabled bool                 `mapstructure:"discovery_enabled"` // Enable service discovery
+	LoadBalance      string               `mapstructure:"load_balance"`      // load balancing strategy
+	CircuitBreaker   CircuitBreakerConfig `mapstructure:"circuit_breaker"`   // Circuit breaker configuration
 }
 
-// NewClientManager 创建客户端治理管理器
+// Create client governance manager
 func NewClientManager(
 	discovery ServiceDiscovery,
 	loadBalancer LoadBalancer,
@@ -41,7 +41,7 @@ func NewClientManager(
 	}
 }
 
-// Discover 发现服务实例
+// Discover service instances
 func (m *ClientManager) Discover(ctx context.Context, serviceName string) ([]*ServiceInstance, error) {
 	if m.discovery == nil {
 		return nil, fmt.Errorf("service discovery not configured")
@@ -50,9 +50,9 @@ func (m *ClientManager) Discover(ctx context.Context, serviceName string) ([]*Se
 	return m.discovery.Discover(ctx, serviceName)
 }
 
-// SelectInstance 选择一个服务实例（发现 + 负载均衡）
+// SelectInstance selects a service instance (discovery + load balancing)
 func (m *ClientManager) SelectInstance(ctx context.Context, serviceName string) (*ServiceInstance, error) {
-	// 1. 服务发现
+	// Service discovery
 	instances, err := m.Discover(ctx, serviceName)
 	if err != nil {
 		return nil, fmt.Errorf("discover service failed: %w", err)
@@ -62,7 +62,7 @@ func (m *ClientManager) SelectInstance(ctx context.Context, serviceName string) 
 		return nil, fmt.Errorf("no available instances for service: %s", serviceName)
 	}
 
-	// 2. 过滤健康实例
+	// Filter healthy instances
 	healthyInstances := make([]*ServiceInstance, 0, len(instances))
 	for _, inst := range instances {
 		if inst.Healthy {
@@ -76,7 +76,7 @@ func (m *ClientManager) SelectInstance(ctx context.Context, serviceName string) 
 		healthyInstances = instances
 	}
 
-	// 3. 负载均衡选择
+	// Load balancing selection
 	if m.loadBalancer == nil {
 		return healthyInstances[0], nil
 	}
@@ -89,10 +89,10 @@ func (m *ClientManager) SelectInstance(ctx context.Context, serviceName string) 
 	return instance, nil
 }
 
-// CheckCircuit 检查熔断状态
+// CheckCircuit checks the circuit breaker status
 func (m *ClientManager) CheckCircuit(serviceName string) error {
 	if m.circuitBreaker == nil {
-		return nil // 未启用熔断器
+		return nil // Circuit breaker not enabled
 	}
 
 	state := m.circuitBreaker.GetState(serviceName)
@@ -103,21 +103,21 @@ func (m *ClientManager) CheckCircuit(serviceName string) error {
 	return nil
 }
 
-// RecordSuccess 记录调用成功
+// RecordSuccess record call success
 func (m *ClientManager) RecordSuccess(serviceName string) {
 	if m.circuitBreaker != nil {
 		m.circuitBreaker.RecordSuccess(serviceName)
 	}
 }
 
-// RecordFailure 记录调用失败
+// RecordFailure record call failure
 func (m *ClientManager) RecordFailure(serviceName string) {
 	if m.circuitBreaker != nil {
 		m.circuitBreaker.RecordFailure(serviceName)
 	}
 }
 
-// GetCircuitState 获取熔断状态
+// GetCircuitState 获取断路器状态
 func (m *ClientManager) GetCircuitState(serviceName string) CircuitState {
 	if m.circuitBreaker == nil {
 		return StateClosed
@@ -126,7 +126,7 @@ func (m *ClientManager) GetCircuitState(serviceName string) CircuitState {
 	return m.circuitBreaker.GetState(serviceName)
 }
 
-// Watch 监听服务变更
+// Watch for service changes
 func (m *ClientManager) Watch(ctx context.Context, serviceName string) (<-chan []*ServiceInstance, error) {
 	if m.discovery == nil {
 		return nil, fmt.Errorf("service discovery not configured")
@@ -135,7 +135,7 @@ func (m *ClientManager) Watch(ctx context.Context, serviceName string) (<-chan [
 	return m.discovery.Watch(ctx, serviceName)
 }
 
-// Stop 停止客户端治理
+// Stop client governance
 func (m *ClientManager) Stop() {
 	if m.discovery != nil {
 		m.discovery.Stop()

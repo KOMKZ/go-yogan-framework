@@ -10,12 +10,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestAppConfig_LoggerNil 测试 Logger 未配置时使用默认值
+// TestAppConfig_LoggerNil test uses default values when Logger is not configured
 func TestAppConfig_LoggerNil(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
 	
-	// 配置文件不包含 logger 段
+	// The configuration file does not contain a logger section
 	configContent := `
 api_server:
   port: 8080
@@ -27,7 +27,7 @@ api_server:
 	app := New(tmpDir, "TEST", nil)
 
 	app.OnReady(func(a *Application) error {
-		// 验证 logger 已被初始化（使用默认配置）
+		// Verify that the logger has been initialized (using default configuration)
 		a.MustGetLogger().Debug("Test log")
 		
 		go func() {
@@ -41,12 +41,12 @@ api_server:
 	assert.NoError(t, err)
 }
 
-// TestAppConfig_LoggerConfigured 测试 Logger 已配置时使用用户配置
+// TestAppConfig_LoggerConfigured test using user configuration when logger is configured
 func TestAppConfig_LoggerConfigured(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
 	
-	// 🎯 配置文件包含 logger 段，日志输出到临时目录（避免污染源码目录）
+	// 🎯 The configuration file includes a logger section, logging output to a temporary directory (to avoid polluting the source code directory)
 	configContent := `
 api_server:
   port: 8080
@@ -77,7 +77,7 @@ logger:
 	assert.NoError(t, err)
 }
 
-// TestAppConfig_DatabaseNil 测试 Database 未配置不报错
+// TestAppConfig_DatabaseNil test database not configured does not result in an error
 func TestAppConfig_DatabaseNil(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -93,11 +93,11 @@ api_server:
 	app := New(tmpDir, "TEST", nil)
 
 	app.OnSetup(func(a *Application) error {
-		// 加载配置
+		// Load configuration
 		appCfg, err := a.LoadAppConfig()
 		require.NoError(t, err)
 		
-		// 验证配置加载成功（Database/Redis 等业务配置不再属于 AppConfig）
+		// Verify configuration loading success (business configurations such as Database/Redis are no longer part of AppConfig)
 		assert.NotNil(t, appCfg)
 		
 		return nil
@@ -115,12 +115,12 @@ api_server:
 	assert.NoError(t, err)
 }
 
-// TestAppConfig_MiddlewareApplyDefaults 测试中间件默认值应用
+// TestAppConfig_MiddlewareApplyDefaults test middleware default value application
 func TestAppConfig_MiddlewareApplyDefaults(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
 	
-	// 配置包含中间件但不包含某些默认值
+	// Configuration includes middleware but does not include certain default values
 	configContent := `
 api_server:
   port: 8080
@@ -143,7 +143,7 @@ middleware:
 		appCfg, err := a.LoadAppConfig()
 		require.NoError(t, err)
 		
-		// 验证默认值已应用
+		// Verify default values are applied
 		assert.NotNil(t, appCfg.Middleware)
 		if appCfg.Middleware != nil && appCfg.Middleware.CORS != nil {
 			assert.NotEmpty(t, appCfg.Middleware.CORS.AllowOrigins)

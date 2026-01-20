@@ -8,14 +8,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// serializableEvent 测试用可序列化事件
-// 使用公开字段，便于 JSON 序列化/反序列化
+// serializableEvent test using serializable event
+// Use public fields for easy JSON serialization/deserialization
 type serializableEvent struct {
 	UserID   int    `json:"user_id"`
 	Username string `json:"username"`
 }
 
-// Name 返回固定的事件名称
+// Name returns a fixed event name
 func (e *serializableEvent) Name() string {
 	return "user.created"
 }
@@ -27,7 +27,7 @@ func newSerializableEvent(userID int, username string) *serializableEvent {
 	}
 }
 
-// TestSerializeEvent 测试事件序列化
+// TestSerializeEvent test event serialization
 func TestSerializeEvent(t *testing.T) {
 	event := newSerializableEvent(123, "john")
 	payload, err := SerializeEvent(event, "trace-123")
@@ -37,7 +37,7 @@ func TestSerializeEvent(t *testing.T) {
 	assert.Equal(t, "trace-123", payload.TraceID)
 	assert.NotZero(t, payload.OccurredAt)
 
-	// 验证 Payload 内容
+	// Validate Payload content
 	var data map[string]any
 	err = json.Unmarshal(payload.Payload, &data)
 	require.NoError(t, err)
@@ -45,7 +45,7 @@ func TestSerializeEvent(t *testing.T) {
 	assert.Equal(t, "john", data["username"])
 }
 
-// TestSerializeEvent_NoTraceID 测试无 TraceID
+// TestSerializeEvent_NoTraceID test without TraceID
 func TestSerializeEvent_NoTraceID(t *testing.T) {
 	event := newSerializableEvent(456, "jane")
 	payload, err := SerializeEvent(event, "")
@@ -54,28 +54,28 @@ func TestSerializeEvent_NoTraceID(t *testing.T) {
 	assert.Empty(t, payload.TraceID)
 }
 
-// TestDeserializeEvent_Registered 测试反序列化已注册事件
+// TestDeserializeEvent_Registered test deserialization of registered events
 func TestDeserializeEvent_Registered(t *testing.T) {
-	// 注册事件类型（使用指针类型）
+	// Register event type (using pointer type)
 	RegisterEventType[*serializableEvent]()
 
-	// 创建 payload
+	// Create payload
 	original := newSerializableEvent(789, "alice")
 	payload, err := SerializeEvent(original, "trace-456")
 	require.NoError(t, err)
 
-	// 反序列化
+	// deserialize
 	event, err := DeserializeEvent(payload)
 	require.NoError(t, err)
 
-	// 验证类型
+	// Validate type
 	userEvent, ok := event.(*serializableEvent)
 	require.True(t, ok)
 	assert.Equal(t, 789, userEvent.UserID)
 	assert.Equal(t, "alice", userEvent.Username)
 }
 
-// TestDeserializeEvent_Unregistered 测试反序列化未注册事件
+// TestDeserializeEvent_Unregistered test deserialization of unregistered event
 func TestDeserializeEvent_Unregistered(t *testing.T) {
 	payload := &KafkaEventPayload{
 		EventName: "unknown.event",
@@ -85,16 +85,16 @@ func TestDeserializeEvent_Unregistered(t *testing.T) {
 	event, err := DeserializeEvent(payload)
 	require.NoError(t, err)
 
-	// 应该返回 GenericEvent
+	// Should return GenericEvent
 	genericEvent, ok := event.(*GenericEvent)
 	require.True(t, ok)
 	assert.Equal(t, "unknown.event", genericEvent.Name())
 	assert.JSONEq(t, `{"foo":"bar"}`, string(genericEvent.Payload()))
 }
 
-// TestGetRegisteredEventNames 测试获取已注册事件名称
+// TestGetRegisteredEventNames tests obtaining registered event names
 func TestGetRegisteredEventNames(t *testing.T) {
-	// 确保至少有一个注册的事件
+	// Ensure there is at least one registered event
 	RegisterEventType[*serializableEvent]()
 
 	names := GetRegisteredEventNames()

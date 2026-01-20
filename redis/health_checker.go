@@ -5,30 +5,30 @@ import (
 	"fmt"
 )
 
-// HealthChecker Redis 健康检查器
+// HealthChecker for Redis
 type HealthChecker struct {
 	manager *Manager
 }
 
-// NewHealthChecker 创建 Redis 健康检查器
+// Create Redis health checker
 func NewHealthChecker(manager *Manager) *HealthChecker {
 	return &HealthChecker{
 		manager: manager,
 	}
 }
 
-// Name 检查项名称
+// Name Check item name
 func (h *HealthChecker) Name() string {
 	return "redis"
 }
 
-// Check 执行健康检查
+// Check execution health check
 func (h *HealthChecker) Check(ctx context.Context) error {
 	if h.manager == nil {
 		return fmt.Errorf("redis manager not initialized")
 	}
 
-	// 检查所有 Redis 实例
+	// Check all Redis instances
 	for _, name := range h.manager.GetInstanceNames() {
 		client := h.manager.Client(name)
 		if client == nil {
@@ -41,14 +41,14 @@ func (h *HealthChecker) Check(ctx context.Context) error {
 		}
 	}
 
-	// 检查所有集群实例
+	// Check all cluster instances
 	for _, name := range h.manager.GetClusterNames() {
 		cluster := h.manager.Cluster(name)
 		if cluster == nil {
 			return fmt.Errorf("redis cluster %s not found", name)
 		}
 
-		// Ping 集群
+		// Ping cluster
 		if err := cluster.Ping(ctx).Err(); err != nil {
 			return fmt.Errorf("redis cluster %s ping failed: %w", name, err)
 		}

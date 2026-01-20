@@ -4,58 +4,58 @@ import "time"
 
 import "github.com/KOMKZ/go-yogan-framework/breaker"
 
-// Config 治理组件配置
+// Configuration governance component configuration
 type Config struct {
-	Enabled      bool              `mapstructure:"enabled"`       // 是否启用
-	RegistryType string            `mapstructure:"registry_type"` // 注册中心类型: etcd | consul | nacos
-	ServiceName  string            `mapstructure:"service_name"`  // 服务名称
-	Protocol     string            `mapstructure:"protocol"`      // 协议类型（grpc/http）
-	Version      string            `mapstructure:"version"`       // 服务版本
-	TTL          int64             `mapstructure:"ttl"`           // 心跳间隔（秒）
-	Address      string            `mapstructure:"address"`       // 服务地址（可选，为空则自动获取本机IP）
-	Metadata     map[string]string `mapstructure:"metadata"`      // 元数据
+	Enabled      bool              `mapstructure:"enabled"`       // Whether to enable
+	RegistryType string            `mapstructure:"registry_type"` // Registry center type: etcd | consul | nacos
+	ServiceName  string            `mapstructure:"service_name"`  // service name
+	Protocol     string            `mapstructure:"protocol"`      // protocol type (grpc/http)
+	Version      string            `mapstructure:"version"`       // service version
+	TTL          int64             `mapstructure:"ttl"`           // Heartbeat interval (seconds)
+	Address      string            `mapstructure:"address"`       // Service address (optional, if left empty the local machine IP will be automatically obtained)
+	Metadata     map[string]string `mapstructure:"metadata"`      // metadata
 
-	// Etcd 配置
+	// Etcd configuration
 	Etcd EtcdRegistryConfig `mapstructure:"etcd"`
 
-	// Consul 配置（待实现）
+	// Consul configuration (to be implemented)
 	Consul ConsulRegistryConfig `mapstructure:"consul"`
 
-	// Nacos 配置（待实现）
+	// Nacos configuration (to be implemented)
 	Nacos NacosRegistryConfig `mapstructure:"nacos"`
 	
-	// Breaker 熔断器配置
+	// Circuit breaker configuration
 	Breaker breaker.Config `mapstructure:"breaker"`
 }
 
-// EtcdRegistryConfig Etcd 注册中心配置
+// EtcdRegistryConfig Etcd registry center configuration
 type EtcdRegistryConfig struct {
-	Endpoints   []string      `mapstructure:"endpoints"`    // etcd 节点地址
-	DialTimeout time.Duration `mapstructure:"dial_timeout"` // 连接超时
-	Username    string        `mapstructure:"username"`     // 用户名（可选）
-	Password    string        `mapstructure:"password"`     // 密码（可选）
+	Endpoints   []string      `mapstructure:"endpoints"`    // etcd node address
+	DialTimeout time.Duration `mapstructure:"dial_timeout"` // connection timeout
+	Username    string        `mapstructure:"username"`     // Username (optional)
+	Password    string        `mapstructure:"password"`     // password (optional)
 
-	// 重试策略
-	EnableRetry       bool          `mapstructure:"enable_retry"`        // 是否启用自动重试（默认 true）
-	MaxRetries        int           `mapstructure:"max_retries"`         // 最大重试次数（0=无限重试）
-	InitialRetryDelay time.Duration `mapstructure:"initial_retry_delay"` // 初始重试延迟（默认 1s）
-	MaxRetryDelay     time.Duration `mapstructure:"max_retry_delay"`     // 最大重试延迟（默认 30s）
-	RetryBackoff      float64       `mapstructure:"retry_backoff"`       // 退避系数（默认 2.0）
+	// Retry strategy
+	EnableRetry       bool          `mapstructure:"enable_retry"`        // Whether to enable auto retry (default true)
+	MaxRetries        int           `mapstructure:"max_retries"`         // Maximum number of retry attempts (0=infinite retries)
+	InitialRetryDelay time.Duration `mapstructure:"initial_retry_delay"` // Initial retry delay (default 1s)
+	MaxRetryDelay     time.Duration `mapstructure:"max_retry_delay"`     // Maximum retry delay (default 30s)
+	RetryBackoff      float64       `mapstructure:"retry_backoff"`       // backoff factor (default 2.0)
 
-	// 回调（运行时设置，不从配置文件读取）
-	OnRegisterFailed func(error) `mapstructure:"-"` // 注册最终失败回调
+	// Callback (runtime setting, not read from configuration file)
+	OnRegisterFailed func(error) `mapstructure:"-"` // Register final failure callback
 }
 
-// ConsulRegistryConfig Consul 注册中心配置（占位）
+// ConsulRegistryConfig Consul registry center configuration (placeholder)
 type ConsulRegistryConfig struct {
-	Address string `mapstructure:"address"` // Consul 地址
+	Address string `mapstructure:"address"` // Consul address
 	Token   string `mapstructure:"token"`   // ACL Token
 }
 
-// NacosRegistryConfig Nacos 注册中心配置（占位）
+// NacosRegistryConfig Nacos registry center configuration (placeholder)
 type NacosRegistryConfig struct {
-	ServerAddr string `mapstructure:"server_addr"` // Nacos 服务地址
-	Namespace  string `mapstructure:"namespace"`   // 命名空间
-	Group      string `mapstructure:"group"`       // 分组
+	ServerAddr string `mapstructure:"server_addr"` // Nacos service address
+	Namespace  string `mapstructure:"namespace"`   // namespace
+	Group      string `mapstructure:"group"`       // Grouping
 }
 

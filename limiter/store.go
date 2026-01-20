@@ -5,68 +5,68 @@ import (
 	"time"
 )
 
-// Store 存储接口（策略模式）
+// Store interface (Strategy Pattern)
 type Store interface {
-	// Get 获取值
+	// Get retrieve value
 	Get(ctx context.Context, key string) (string, error)
 
-	// Set 设置值（带过期时间）
+	// Set value (with expiration time)
 	Set(ctx context.Context, key string, value string, ttl time.Duration) error
 
-	// GetInt64 获取整数值
+	// GetInt64 get integer value
 	GetInt64(ctx context.Context, key string) (int64, error)
 
-	// SetInt64 设置整数值
+	// SetInt64 set integer value
 	SetInt64(ctx context.Context, key string, value int64, ttl time.Duration) error
 
-	// Incr 原子递增
+	// Atomic increment
 	Incr(ctx context.Context, key string) (int64, error)
 
-	// IncrBy 原子递增指定值
+	// IncrBy atomic increment by specified value
 	IncrBy(ctx context.Context, key string, delta int64) (int64, error)
 
-	// Decr 原子递减
+	// Atomic decrement
 	Decr(ctx context.Context, key string) (int64, error)
 
-	// DecrBy 原子递减指定值
+	// Atomically decrement by the specified value
 	DecrBy(ctx context.Context, key string, delta int64) (int64, error)
 
-	// Expire 设置过期时间
+	// Set expiration time
 	Expire(ctx context.Context, key string, ttl time.Duration) error
 
-	// TTL 获取剩余过期时间
+	// Get remaining TTL (Time To Live) duration
 	TTL(ctx context.Context, key string) (time.Duration, error)
 
-	// Del 删除键
+	// Delete delete key
 	Del(ctx context.Context, keys ...string) error
 
-	// Exists 检查键是否存在
+	// Exists Check if key exists
 	Exists(ctx context.Context, key string) (bool, error)
 
-	// ZAdd 添加到有序集合
+	// Add to sorted set
 	ZAdd(ctx context.Context, key string, score float64, member string) error
 
-	// ZRemRangeByScore 按分数范围删除
+	// Remove by score range
 	ZRemRangeByScore(ctx context.Context, key string, min, max float64) error
 
-	// ZCount 统计分数范围内的元素数量
+	// ZCount statistics the number of elements within a score range
 	ZCount(ctx context.Context, key string, min, max float64) (int64, error)
 
-	// Eval 执行Lua脚本（Redis专用，内存存储可返回不支持错误）
+	// Eval executes Lua scripts (specific to Redis, can return unsupported errors for in-memory storage)
 	Eval(ctx context.Context, script string, keys []string, args []interface{}) (interface{}, error)
 
-	// Close 关闭连接
+	// Close connection
 	Close() error
 }
 
-// StoreType 存储类型
+// StoreType storage type
 type StoreType string
 
 const (
-	// StoreTypeMemory 内存存储
+	// StoreTypeMemory Memory Storage
 	StoreTypeMemory StoreType = "memory"
 
-	// StoreTypeRedis Redis存储
+	// StoreTypeRedis Redis storage
 	StoreTypeRedis StoreType = "redis"
 )
 

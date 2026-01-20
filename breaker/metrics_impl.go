@@ -6,27 +6,27 @@ import (
 	"time"
 )
 
-// slidingWindowMetrics 滑动窗口指标采集器
+// sliding window metrics collector
 type slidingWindowMetrics struct {
 	resource      string
 	config        ResourceConfig
 	stateMgr      *stateManager
 	
-	// 时间窗口（环形桶）
+	// time window (circular bucket)
 	buckets       []*bucket
 	bucketCount   int
 	bucketSize    time.Duration
 	currentIdx    int
 	lastRotate    time.Time
 	
-	// 观察者
+	// Observer
 	observers     map[ObserverID]MetricsObserver
 	observerMu    sync.RWMutex
 	
 	mu            sync.RWMutex
 }
 
-// bucket 时间桶
+// bucket time bucket
 type bucket struct {
 	startTime     time.Time
 	successes     int64
@@ -38,7 +38,7 @@ type bucket struct {
 	mu            sync.RWMutex
 }
 
-// newBucket 创建新桶
+// create new bucket
 func newBucket(startTime time.Time) *bucket {
 	return &bucket{
 		startTime:  startTime,
@@ -47,7 +47,7 @@ func newBucket(startTime time.Time) *bucket {
 	}
 }
 
-// newSlidingWindowMetrics 创建滑动窗口指标采集器
+// create sliding window metrics collector
 func newSlidingWindowMetrics(resource string, config ResourceConfig, stateMgr *stateManager) *slidingWindowMetrics {
 	bucketCount := int(config.WindowSize / config.BucketSize)
 	buckets := make([]*bucket, bucketCount)
@@ -69,7 +69,7 @@ func newSlidingWindowMetrics(resource string, config ResourceConfig, stateMgr *s
 	}
 }
 
-// RecordSuccess 记录成功
+// RecordSuccess Recording successful
 func (m *slidingWindowMetrics) RecordSuccess(duration time.Duration) {
 	m.rotate()
 	
@@ -82,7 +82,7 @@ func (m *slidingWindowMetrics) RecordSuccess(duration time.Duration) {
 	m.notifyObservers()
 }
 
-// RecordFailure 记录失败
+// RecordFailure log failure
 func (m *slidingWindowMetrics) RecordFailure(duration time.Duration, err error) {
 	m.rotate()
 	
@@ -100,7 +100,7 @@ func (m *slidingWindowMetrics) RecordFailure(duration time.Duration, err error) 
 	m.notifyObservers()
 }
 
-// RecordTimeout 记录超时
+// RecordTimeout record timeout
 func (m *slidingWindowMetrics) RecordTimeout(duration time.Duration) {
 	m.rotate()
 	
@@ -113,7 +113,7 @@ func (m *slidingWindowMetrics) RecordTimeout(duration time.Duration) {
 	m.notifyObservers()
 }
 
-// RecordRejection 记录拒绝
+// RecordRejection record rejection
 func (m *slidingWindowMetrics) RecordRejection() {
 	m.rotate()
 	
@@ -125,7 +125,7 @@ func (m *slidingWindowMetrics) RecordRejection() {
 	m.notifyObservers()
 }
 
-// GetSnapshot 获取当前快照
+// GetSnapshot Get current snapshot
 func (m *slidingWindowMetrics) GetSnapshot() *MetricsSnapshot {
 	m.rotate()
 	m.mu.RLock()
@@ -141,7 +141,7 @@ func (m *slidingWindowMetrics) GetSnapshot() *MetricsSnapshot {
 		errorTypes    = make(map[string]int64)
 	)
 	
-	// 聚合所有桶的数据
+	// Aggregate data from all buckets
 	windowStart := time.Now().Add(-m.config.WindowSize)
 	windowEnd := time.Now()
 	
@@ -161,7 +161,7 @@ func (m *slidingWindowMetrics) GetSnapshot() *MetricsSnapshot {
 	
 	totalRequests = successes + failures + timeouts
 	
-	// 计算百分比
+	// Calculate percentage
 	var successRate, errorRate, timeoutRate float64
 	if totalRequests > 0 {
 		successRate = float64(successes) / float64(totalRequests)
@@ -169,7 +169,7 @@ func (m *slidingWindowMetrics) GetSnapshot() *MetricsSnapshot {
 		timeoutRate = float64(timeouts) / float64(totalRequests)
 	}
 	
-	// 计算延迟统计
+	// Calculate latency statistics
 	var avgLatency, p50, p95, p99, maxLatency time.Duration
 	var slowCalls int64
 	var slowCallRate float64
@@ -179,7 +179,7 @@ func (m *slidingWindowMetrics) GetSnapshot() *MetricsSnapshot {
 			return allLatencies[i] < allLatencies[j]
 		})
 		
-		// 平均延迟
+		// average latency
 		var total time.Duration
 		for _, lat := range allLatencies {
 			total += lat
@@ -189,13 +189,13 @@ func (m *slidingWindowMetrics) GetSnapshot() *MetricsSnapshot {
 		}
 		avgLatency = total / time.Duration(len(allLatencies))
 		
-		// 百分位
+		// percentile
 		p50 = allLatencies[len(allLatencies)*50/100]
 		p95 = allLatencies[len(allLatencies)*95/100]
 		p99 = allLatencies[len(allLatencies)*99/100]
 		maxLatency = allLatencies[len(allLatencies)-1]
 		
-		// 慢调用率
+		// low call rate
 		if totalRequests > 0 {
 			slowCallRate = float64(slowCalls) / float64(totalRequests)
 		}
@@ -225,7 +225,7 @@ func (m *slidingWindowMetrics) GetSnapshot() *MetricsSnapshot {
 	}
 }
 
-// Subscribe 订阅实时指标
+// Subscribe to real-time metrics
 func (m *slidingWindowMetrics) Subscribe(observer MetricsObserver) ObserverID {
 	m.observerMu.Lock()
 	defer m.observerMu.Unlock()
@@ -235,7 +235,7 @@ func (m *slidingWindowMetrics) Subscribe(observer MetricsObserver) ObserverID {
 	return id
 }
 
-// Unsubscribe 取消订阅
+// Unsubscribe from subscription
 func (m *slidingWindowMetrics) Unsubscribe(id ObserverID) {
 	m.observerMu.Lock()
 	defer m.observerMu.Unlock()
@@ -243,7 +243,7 @@ func (m *slidingWindowMetrics) Unsubscribe(id ObserverID) {
 	delete(m.observers, id)
 }
 
-// Reset 重置指标
+// Reset metrics
 func (m *slidingWindowMetrics) Reset() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -256,7 +256,7 @@ func (m *slidingWindowMetrics) Reset() {
 	m.currentIdx = 0
 }
 
-// rotate 旋转桶（如果需要）
+// rotate Rotate the bucket (if necessary)
 func (m *slidingWindowMetrics) rotate() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -264,18 +264,18 @@ func (m *slidingWindowMetrics) rotate() {
 	now := time.Now()
 	elapsed := now.Sub(m.lastRotate)
 	
-	// 计算需要旋转的桶数
+	// Calculate the number of buckets to rotate
 	rotations := int(elapsed / m.bucketSize)
 	if rotations == 0 {
 		return
 	}
 	
-	// 限制最大旋转数（避免超出桶数量）
+	// Limit the maximum number of rotations (to avoid exceeding the number of buckets)
 	if rotations > m.bucketCount {
 		rotations = m.bucketCount
 	}
 	
-	// 旋转桶
+	// rotate bucket
 	for i := 0; i < rotations; i++ {
 		m.currentIdx = (m.currentIdx + 1) % m.bucketCount
 		m.buckets[m.currentIdx] = newBucket(now)
@@ -284,14 +284,14 @@ func (m *slidingWindowMetrics) rotate() {
 	m.lastRotate = now
 }
 
-// getCurrentBucket 获取当前桶
+// Get current bucket
 func (m *slidingWindowMetrics) getCurrentBucket() *bucket {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.buckets[m.currentIdx]
 }
 
-// notifyObservers 通知所有观察者
+// notifyObservers notifies all observers
 func (m *slidingWindowMetrics) notifyObservers() {
 	m.observerMu.RLock()
 	observers := make([]MetricsObserver, 0, len(m.observers))

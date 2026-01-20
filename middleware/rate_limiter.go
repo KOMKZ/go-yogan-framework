@@ -9,28 +9,28 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// RateLimiterConfig 限流中间件配置
+// RateLimiterConfig rate limiting middleware configuration
 type RateLimiterConfig struct {
-	// Manager 限流器管理器（必需）
+	// Manager Rate Limiter Manager (required)
 	Manager *limiter.Manager
 
-	// KeyFunc 自定义资源键生成函数（默认：method:path）
+	// KeyFunc custom resource key generation function (default: method:path)
 	KeyFunc func(*gin.Context) string
 
-	// ErrorHandler 自定义错误处理函数（默认：记录错误但放行）
+	// ErrorHandler custom error handling function (default: log errors but proceed)
 	ErrorHandler func(*gin.Context, error)
 
-	// RateLimitHandler 自定义限流响应函数（默认：返回 429）
+	// RateLimitHandler custom rate limiting response function (default: return 429)
 	RateLimitHandler func(*gin.Context)
 
-	// SkipFunc 跳过限流的条件函数（可选）
+	// SkipFunc optional function to skip rate limiting conditions
 	SkipFunc func(*gin.Context) bool
 
-	// SkipPaths 跳过限流的路径列表（可选）
+	// SkipPaths list of paths to bypass rate limiting (optional)
 	SkipPaths []string
 }
 
-// DefaultRateLimiterConfig 默认限流配置
+// DefaultRateLimiterConfig default rate limiting configuration
 func DefaultRateLimiterConfig(manager *limiter.Manager) RateLimiterConfig {
 	return RateLimiterConfig{
 		Manager: manager,
@@ -38,7 +38,7 @@ func DefaultRateLimiterConfig(manager *limiter.Manager) RateLimiterConfig {
 			return fmt.Sprintf("%s:%s", strings.ToLower(c.Request.Method), c.Request.URL.Path)
 		},
 		ErrorHandler: func(c *gin.Context, err error) {
-			// 默认：限流器内部错误时放行请求（降级策略）
+			// Default: Allow requests through when the rate limiter encounters an internal error (degradation strategy)
 			c.Next()
 		},
 		RateLimitHandler: func(c *gin.Context) {
@@ -53,21 +53,21 @@ func DefaultRateLimiterConfig(manager *limiter.Manager) RateLimiterConfig {
 	}
 }
 
-// RateLimiter 创建限流中间件
+// Create rate limiting middleware
 //
-// 功能：
-//  1. 对请求进行限流控制
-//  2. 支持多种限流算法（Token Bucket、Sliding Window、Concurrency、Adaptive）
-//  3. 支持按路径、IP、用户等维度限流
-//  4. 限流器未启用时自动放行
-//  5. 限流器错误时降级放行
+// Function:
+// 1. Rate limiting for requests
+// Supports multiple rate limiting algorithms (Token Bucket, Sliding Window, Concurrency, Adaptive)
+// Supports rate limiting by dimensions such as path, IP, user etc.
+// English: Automatically allow when rate limiter is not enabled
+// English: Downgrade and proceed in case of rate limiter error
 //
-// 用法：
+// Usage:
 //
-//	// 基本用法
+// // Basic usage
 //	engine.Use(middleware.RateLimiter(limiterManager))
 //
-//	// 自定义配置
+// // Custom configuration
 //	cfg := middleware.DefaultRateLimiterConfig(limiterManager)
 //	cfg.KeyFunc = middleware.RateLimiterKeyByIP
 //	cfg.SkipPaths = []string{"/health", "/metrics"}
@@ -76,14 +76,14 @@ func RateLimiter(manager *limiter.Manager) gin.HandlerFunc {
 	return RateLimiterWithConfig(DefaultRateLimiterConfig(manager))
 }
 
-// RateLimiterWithConfig 创建自定义配置的限流中间件
+// Creates a rate limiter middleware with custom configuration
 func RateLimiterWithConfig(cfg RateLimiterConfig) gin.HandlerFunc {
-	// 验证必需参数
+	// Validate required parameters
 	if cfg.Manager == nil {
 		panic("RateLimiterConfig.Manager cannot be nil")
 	}
 
-	// 应用默认值
+	// Apply default values
 	if cfg.KeyFunc == nil {
 		cfg.KeyFunc = func(c *gin.Context) string {
 			return fmt.Sprintf("%s:%s", c.Request.Method, c.Request.URL.Path)
@@ -106,7 +106,7 @@ func RateLimiterWithConfig(cfg RateLimiterConfig) gin.HandlerFunc {
 		}
 	}
 
-	// 构建跳过路径的 map（提高查找性能）
+	// Build a map for skipping paths (improve lookup performance)
 	skipPathsMap := make(map[string]bool)
 	for _, path := range cfg.SkipPaths {
 		skipPathsMap[path] = true
@@ -114,7 +114,7 @@ func RateLimiterWithConfig(cfg RateLimiterConfig) gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 		// ===========================
-		// 1. 检查限流器是否启用
+		// Check if the rate limiter is enabled
 		// ===========================
 		if !cfg.Manager.IsEnabled() {
 			c.Next()
@@ -122,7 +122,7 @@ func RateLimiterWithConfig(cfg RateLimiterConfig) gin.HandlerFunc {
 		}
 
 		// ===========================
-		// 2. 检查是否跳过此路径
+		// Check if skipping this path
 		// ===========================
 		if skipPathsMap[c.Request.URL.Path] {
 			c.Next()
@@ -130,7 +130,7 @@ func RateLimiterWithConfig(cfg RateLimiterConfig) gin.HandlerFunc {
 		}
 
 		// ===========================
-		// 3. 检查自定义跳过条件
+		// 3. Check custom skip conditions
 		// ===========================
 		if cfg.SkipFunc != nil && cfg.SkipFunc(c) {
 			c.Next()
@@ -138,45 +138,45 @@ func RateLimiterWithConfig(cfg RateLimiterConfig) gin.HandlerFunc {
 		}
 
 		// ===========================
-		// 4. 生成资源键
+		// 4. Generate resource keys
 		// ===========================
 		resource := cfg.KeyFunc(c)
 
 		// ===========================
-		// 5. 执行限流检查
+		// 5. Perform rate limiting check
 		// ===========================
 		ctx := c.Request.Context()
 		allowed, err := cfg.Manager.Allow(ctx, resource)
 
 		if err != nil {
-			// 限流器内部错误，执行错误处理
+			// Rate limiter internal error, execute error handling
 			cfg.ErrorHandler(c, err)
 			return
 		}
 
 		if !allowed {
-			// 被限流，执行限流响应
+			// Throttling limit reached, execute throttling response
 			cfg.RateLimitHandler(c)
 			return
 		}
 
 		// ===========================
-		// 6. 允许通过
+		// 6. Allow passage
 		// ===========================
 		c.Next()
 	}
 }
 
-// RateLimiterKeyByIP 根据客户端IP生成资源键
-// 用于按IP限流
+// RateLimiterKeyByIP generates resource keys based on client IP
+// Used for IP rate limiting
 func RateLimiterKeyByIP(c *gin.Context) string {
 	return fmt.Sprintf("ip:%s", c.ClientIP())
 }
 
-// RateLimiterKeyByUser 根据用户ID生成资源键
-// 用于按用户限流（需要从上下文获取用户信息）
+// RateLimiterKeyByUser generates resource keys based on user ID
+// For rate limiting by user (requires obtaining user information from context)
 //
-// 用法：
+// Usage:
 //
 //	cfg.KeyFunc = middleware.RateLimiterKeyByUser("user_id")
 func RateLimiterKeyByUser(userIDKey string) func(*gin.Context) string {
@@ -189,16 +189,16 @@ func RateLimiterKeyByUser(userIDKey string) func(*gin.Context) string {
 	}
 }
 
-// RateLimiterKeyByPathAndIP 根据路径和IP生成资源键
-// 用于按路径+IP组合限流
+// RateLimiterKeyByPathAndIP generates a resource key based on path and IP
+// For rate limiting by path+IP combination
 func RateLimiterKeyByPathAndIP(c *gin.Context) string {
 	return fmt.Sprintf("%s:%s:%s", c.Request.Method, c.Request.URL.Path, c.ClientIP())
 }
 
-// RateLimiterKeyByAPIKey 根据API Key生成资源键
-// 用于按API Key限流（需要从Header或Query获取）
+// RateLimiterKeyByAPIKey generates resource keys based on API key
+// Used for rate limiting by API key (requires obtaining from Header or Query)
 //
-// 用法：
+// Usage:
 //
 //	cfg.KeyFunc = middleware.RateLimiterKeyByAPIKey("X-API-Key")
 func RateLimiterKeyByAPIKey(headerName string) func(*gin.Context) string {

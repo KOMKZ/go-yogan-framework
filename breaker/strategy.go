@@ -1,15 +1,15 @@
 package breaker
 
-// Strategy 熔断策略接口
+// Fusion strategy interface
 type Strategy interface {
-	// ShouldOpen 判断是否应该熔断
+	// ShouldOpen determines whether circuit breaking should be applied
 	ShouldOpen(snapshot *MetricsSnapshot, config ResourceConfig) bool
 	
-	// Name 策略名称
+	// Name Strategy Name
 	Name() string
 }
 
-// errorRateStrategy 错误率策略
+// error rate strategy
 type errorRateStrategy struct{}
 
 func (s *errorRateStrategy) Name() string {
@@ -17,16 +17,16 @@ func (s *errorRateStrategy) Name() string {
 }
 
 func (s *errorRateStrategy) ShouldOpen(snapshot *MetricsSnapshot, config ResourceConfig) bool {
-	// 最小请求数检查
+	// Minimum request count check
 	if snapshot.TotalRequests < int64(config.MinRequests) {
 		return false
 	}
 	
-	// 错误率检查
+	// Error rate check
 	return snapshot.ErrorRate >= config.ErrorRateThreshold
 }
 
-// slowCallRateStrategy 慢调用率策略
+// slowCallRateStrategy slow call rate strategy
 type slowCallRateStrategy struct{}
 
 func (s *slowCallRateStrategy) Name() string {
@@ -34,16 +34,16 @@ func (s *slowCallRateStrategy) Name() string {
 }
 
 func (s *slowCallRateStrategy) ShouldOpen(snapshot *MetricsSnapshot, config ResourceConfig) bool {
-	// 最小请求数检查
+	// Minimum request count check
 	if snapshot.TotalRequests < int64(config.MinRequests) {
 		return false
 	}
 	
-	// 慢调用率检查
+	// Slow call rate check
 	return snapshot.SlowCallRate >= config.SlowRateThreshold
 }
 
-// consecutiveFailuresStrategy 连续失败策略
+// consecutiveFailuresStrategy consecutive failure strategy
 type consecutiveFailuresStrategy struct {
 	failureCount int
 }
@@ -53,21 +53,21 @@ func (s *consecutiveFailuresStrategy) Name() string {
 }
 
 func (s *consecutiveFailuresStrategy) ShouldOpen(snapshot *MetricsSnapshot, config ResourceConfig) bool {
-	// 连续失败次数检查
+	// Consecutive failure count check
 	return s.failureCount >= config.ConsecutiveFailures
 }
 
-// RecordSuccess 记录成功（重置计数）
+// RecordSuccess (reset count)
 func (s *consecutiveFailuresStrategy) RecordSuccess() {
 	s.failureCount = 0
 }
 
-// RecordFailure 记录失败（增加计数）
+// RecordFailure record failure (increase count)
 func (s *consecutiveFailuresStrategy) RecordFailure() {
 	s.failureCount++
 }
 
-// GetStrategyByName 根据名称获取策略
+// Get strategy by name
 func GetStrategyByName(name string) Strategy {
 	switch name {
 	case "error_rate":
@@ -77,7 +77,7 @@ func GetStrategyByName(name string) Strategy {
 	case "consecutive_failures":
 		return &consecutiveFailuresStrategy{}
 	default:
-		return &errorRateStrategy{} // 默认使用错误率策略
+		return &errorRateStrategy{} // Use error rate strategy by default
 	}
 }
 

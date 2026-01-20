@@ -7,7 +7,7 @@ import (
 )
 
 // ============================================================
-// BudgetManager 基础测试
+// BudgetManager basic tests
 // ============================================================
 
 func TestNewBudgetManager(t *testing.T) {
@@ -71,38 +71,38 @@ func TestNewBudgetManager(t *testing.T) {
 }
 
 // ============================================================
-// Allow 测试
+// Allow Test
 // ============================================================
 
 func TestBudgetManager_Allow(t *testing.T) {
-	bm := NewBudgetManager(0.1, time.Minute) // 10% 预算
+	bm := NewBudgetManager(0.1, time.Minute) // 10% budget
 	
-	// 记录 100 个成功请求（原始请求）
+	// Log 100 successful requests (original requests)
 	for i := 0; i < 100; i++ {
 		bm.requests++
 	}
 	
-	// 现在应该有 10 次重试预算（100 * 0.1 = 10）
+	// Now there should be a retry budget of 10 times (100 * 0.1 = 10)
 	for i := 0; i < 10; i++ {
 		if !bm.Allow() {
 			t.Errorf("attempt %d: expected true, got false", i+1)
 		}
-		bm.retries++ // 直接增加重试计数
+		bm.retries++ // Directly increment the retry count
 	}
 	
-	// 预算耗尽，应该不允许重试
+	// Budget exhausted, retries should not be allowed
 	if bm.Allow() {
 		t.Error("expected false (budget exhausted), got true")
 	}
 }
 
 func TestBudgetManager_AllowWithMoreRequests(t *testing.T) {
-	bm := NewBudgetManager(0.2, time.Minute) // 20% 预算
+	bm := NewBudgetManager(0.2, time.Minute) // 20% budget
 	
-	// 记录 50 个原始请求
+	// Log 50 original requests
 	bm.requests = 50
 	
-	// 应该有 10 次重试预算（50 * 0.2 = 10）
+	// There should be a retry budget of 10 times (50 * 0.2 = 10)
 	for i := 0; i < 10; i++ {
 		if !bm.Allow() {
 			t.Errorf("attempt %d: expected true, got false", i+1)
@@ -110,15 +110,15 @@ func TestBudgetManager_AllowWithMoreRequests(t *testing.T) {
 		bm.retries++
 	}
 	
-	// 预算耗尽
+	// budget depleted
 	if bm.Allow() {
 		t.Error("expected false, got true")
 	}
 	
-	// 新增 50 个原始请求
+	// Add 50 original requests
 	bm.requests += 50
 	
-	// 现在总共 100 个请求，应该有 20 次重试预算，已用 10 次，剩余 10 次
+	// Currently there are a total of 100 requests, with 20 retry attempts budgeted, 10 have been used, leaving 10 remaining
 	for i := 0; i < 10; i++ {
 		if !bm.Allow() {
 			t.Errorf("attempt %d: expected true, got false", i+1)
@@ -126,20 +126,20 @@ func TestBudgetManager_AllowWithMoreRequests(t *testing.T) {
 		bm.retries++
 	}
 	
-	// 预算再次耗尽
+	// budget depleted again
 	if bm.Allow() {
 		t.Error("expected false, got true")
 	}
 }
 
 // ============================================================
-// Record 测试
+// Record test
 // ============================================================
 
 func TestBudgetManager_Record(t *testing.T) {
 	bm := NewBudgetManager(0.1, time.Minute)
 	
-	// 记录成功请求
+	// Log successful requests
 	bm.Record(true)
 	bm.Record(true)
 	bm.Record(true)
@@ -152,7 +152,7 @@ func TestBudgetManager_Record(t *testing.T) {
 		t.Errorf("expected 0 retries, got %d", stats.Retries)
 	}
 	
-	// 记录失败请求（重试）
+	// Log failed requests (for retry)
 	bm.Record(false)
 	bm.Record(false)
 	
@@ -166,25 +166,25 @@ func TestBudgetManager_Record(t *testing.T) {
 }
 
 // ============================================================
-// GetStats 测试
+// GetStats test
 // ============================================================
 
 func TestBudgetManager_GetStats(t *testing.T) {
 	bm := NewBudgetManager(0.1, time.Minute)
 	
-	// 记录 100 个成功请求
+	// Log 100 successful requests
 	for i := 0; i < 100; i++ {
 		bm.Record(true)
 	}
 	
-	// 记录 5 次重试
+	// Record 5 retry attempts
 	for i := 0; i < 5; i++ {
 		bm.Record(false)
 	}
 	
 	stats := bm.GetStats()
 	
-	// 验证统计信息
+	// Validate statistics
 	if stats.Requests != 105 {
 		t.Errorf("expected 105 requests, got %d", stats.Requests)
 	}
@@ -201,8 +201,8 @@ func TestBudgetManager_GetStats(t *testing.T) {
 		t.Errorf("expected 0.1 ratio, got %v", stats.Ratio)
 	}
 	
-	// 验证使用率（考虑 Record 增加了 requests 计数）
-	// Record调用: 100次true + 5次false = 105 requests, 5 retries
+	// Verify usage rate (considering that the Record has increased the requests count)
+	// Record call: 100 times true + 5 times false = 105 requests, 5 retries
 	// maxRetries: 105 * 0.1 = 10
 	// usage ratio = 5 / 10 = 0.5
 	if diff := stats.UsageRatio - 0.5; diff > 0.01 || diff < -0.01 {
@@ -232,13 +232,13 @@ func TestBudgetStats_IsExhausted(t *testing.T) {
 }
 
 // ============================================================
-// Reset 测试
+// Reset Test
 // ============================================================
 
 func TestBudgetManager_Reset(t *testing.T) {
 	bm := NewBudgetManager(0.1, time.Minute)
 	
-	// 记录一些请求
+	// Log some requests
 	for i := 0; i < 50; i++ {
 		bm.Record(true)
 	}
@@ -251,7 +251,7 @@ func TestBudgetManager_Reset(t *testing.T) {
 		t.Fatal("expected non-zero stats before reset")
 	}
 	
-	// 重置
+	// Reset
 	bm.Reset()
 	
 	stats = bm.GetStats()
@@ -264,14 +264,14 @@ func TestBudgetManager_Reset(t *testing.T) {
 }
 
 // ============================================================
-// 窗口重置测试
+// Window reset test
 // ============================================================
 
 func TestBudgetManager_WindowReset(t *testing.T) {
-	// 使用很短的窗口
+	// Use a very short window
 	bm := NewBudgetManager(0.1, 100*time.Millisecond)
 	
-	// 记录一些请求
+	// Log some requests
 	for i := 0; i < 50; i++ {
 		bm.Record(true)
 	}
@@ -281,10 +281,10 @@ func TestBudgetManager_WindowReset(t *testing.T) {
 		t.Fatalf("expected 50 requests, got %d", stats.Requests)
 	}
 	
-	// 等待窗口过期
+	// wait for the window to expire
 	time.Sleep(150 * time.Millisecond)
 	
-	// 获取统计（应该触发窗口重置）
+	// Get statistics (should trigger window reset)
 	stats = bm.GetStats()
 	if stats.Requests != 0 {
 		t.Errorf("expected 0 requests after window reset, got %d", stats.Requests)
@@ -295,7 +295,7 @@ func TestBudgetManager_WindowReset(t *testing.T) {
 }
 
 // ============================================================
-// 并发测试
+// concurrent testing
 // ============================================================
 
 func TestBudgetManager_Concurrent(t *testing.T) {
@@ -303,7 +303,7 @@ func TestBudgetManager_Concurrent(t *testing.T) {
 	
 	var wg sync.WaitGroup
 	
-	// 并发记录 1000 个成功请求
+	// Concurrently log 1000 successful requests
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
 		go func() {
@@ -323,16 +323,16 @@ func TestBudgetManager_Concurrent(t *testing.T) {
 }
 
 func TestBudgetManager_ConcurrentAllowAndRecord(t *testing.T) {
-	bm := NewBudgetManager(0.2, time.Minute) // 20% 预算
+	bm := NewBudgetManager(0.2, time.Minute) // 20% budget
 	
 	var wg sync.WaitGroup
 	
-	// 先记录 1000 个成功请求
+	// First record 1000 successful requests
 	for i := 0; i < 1000; i++ {
 		bm.Record(true)
 	}
 	
-	// 并发检查和记录（应该有 200 次重试预算）
+	// Concurrent check and logging (should have a retry budget of 200)
 	allowed := 0
 	denied := 0
 	var mu sync.Mutex
@@ -366,8 +366,8 @@ func TestBudgetManager_ConcurrentAllowAndRecord(t *testing.T) {
 		t.Errorf("expected 500 total attempts, got %d", totalAttempts)
 	}
 	
-	// 应该大约有 200 次允许，300 次拒绝
-	// 由于并发，精确值可能有些偏差
+	// There should be about 200 approvals and 300 rejections
+	// Due to concurrency, the exact value may have some deviation
 	if allowed < 190 || allowed > 210 {
 		t.Logf("warning: allowed %d, expected around 200", allowed)
 	}
@@ -380,7 +380,7 @@ func TestBudgetManager_ConcurrentAllowAndRecord(t *testing.T) {
 func BenchmarkBudgetManager_Allow(b *testing.B) {
 	bm := NewBudgetManager(0.1, time.Minute)
 	
-	// 预热：记录一些请求
+	// Warm-up: log some requests
 	for i := 0; i < 1000; i++ {
 		bm.Record(true)
 	}
@@ -403,7 +403,7 @@ func BenchmarkBudgetManager_Record(b *testing.B) {
 func BenchmarkBudgetManager_GetStats(b *testing.B) {
 	bm := NewBudgetManager(0.1, time.Minute)
 	
-	// 预热
+	// warm-up
 	for i := 0; i < 1000; i++ {
 		bm.Record(true)
 	}

@@ -12,27 +12,27 @@ import (
 	"go.uber.org/zap"
 )
 
-// EtcdRegistry etcd 服务注册实现
+// EtcdRegistry implementation for service registration
 type EtcdRegistry struct {
-	// etcd 客户端
+	// etcd client
 	client *clientv3.Client
 
-	// 服务信息
+	// service information
 	serviceInfo *ServiceInfo
 
-	// 租约管理
+	// lease management
 	leaseID     clientv3.LeaseID
 	keepAliveCh <-chan *clientv3.LeaseKeepAliveResponse
 
-	// 生命周期管理
+	// Lifecycle Management
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	// 状态管理
+	// state management
 	mu         sync.RWMutex
 	registered bool
 
-	// 重试控制
+	// Retry control
 	retryEnabled      bool
 	maxRetries        int
 	initialRetryDelay time.Duration
@@ -40,26 +40,26 @@ type EtcdRegistry struct {
 	retryBackoff      float64
 	onRegisterFailed  func(error)
 
-	// 日志
+	// Log
 	logger *logger.CtxZapLogger
 }
 
-// EtcdConfig etcd 注册配置（已废弃，使用 EtcdRegistryConfig）
+// EtcdConfig etcd registration configuration (deprecated, use EtcdRegistryConfig)
 type EtcdConfig = EtcdRegistryConfig
 
-// NewEtcdRegistry 创建 etcd 注册器
+// NewEtcdRegistry creates an etcd registry
 func NewEtcdRegistry(cfg EtcdRegistryConfig, log *logger.CtxZapLogger) (*EtcdRegistry, error) {
 	if log == nil {
 		log = logger.GetLogger("yogan")
 	}
 
-	// 创建 etcd 客户端
+	// Create etcd client
 	client, err := clientv3.New(clientv3.Config{
 		Endpoints:   cfg.Endpoints,
 		DialTimeout: cfg.DialTimeout,
 		Username:    cfg.Username,
 		Password:    cfg.Password,
-		Logger:      log.GetZapLogger(), // 🎯 注入我们的 logger
+		Logger:      log.GetZapLogger(), // 🎯 Inject our logger
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create etcd client: %w", err)
@@ -67,7 +67,7 @@ func NewEtcdRegistry(cfg EtcdRegistryConfig, log *logger.CtxZapLogger) (*EtcdReg
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// 设置默认值
+	// Set default values
 	retryEnabled := cfg.EnableRetry
 	initialRetryDelay := cfg.InitialRetryDelay
 	if initialRetryDelay == 0 {
@@ -96,22 +96,22 @@ func NewEtcdRegistry(cfg EtcdRegistryConfig, log *logger.CtxZapLogger) (*EtcdReg
 	}, nil
 }
 
-// Register 注册服务
+// Register service registration
 func (r *EtcdRegistry) Register(ctx context.Context, info *ServiceInfo) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	// 支持幂等重新注册：如果已注册，先清理旧状态
+	// Supports idempotent re-registration: if already registered, clean up old status first
 	if r.registered {
 		r.logger.WarnCtx(ctx, "Service already registered, will re-register")
-		r.cancel() // 停止旧的心跳监控
+		r.cancel() // Stop old heartbeat monitoring
 		r.ctx, r.cancel = context.WithCancel(context.Background())
 	}
 
-	// 保存服务信息
+	// Save service information
 	r.serviceInfo = info
 
-	// 创建租约
+	// Create lease
 	lease := clientv3.NewLease(r.client)
 	leaseResp, err := lease.Grant(ctx, info.TTL)
 	if err != nil {
@@ -120,25 +120,25 @@ func (r *EtcdRegistry) Register(ctx context.Context, info *ServiceInfo) error {
 
 	r.leaseID = leaseResp.ID
 
-	// 构造服务key和value
+	// Construct service key and value
 	serviceKey := r.buildServiceKey(info)
 	serviceValue, err := r.marshalServiceInfo(info)
 	if err != nil {
 		return fmt.Errorf("marshal service info: %w", err)
 	}
 
-	// 注册服务（绑定租约）
+	// Register service (bind lease)
 	_, err = r.client.Put(ctx, serviceKey, serviceValue, clientv3.WithLease(r.leaseID))
 	if err != nil {
-		// 撤销租约
+		// Revoke lease
 		lease.Revoke(context.Background(), r.leaseID)
 		return fmt.Errorf("put service: %w", err)
 	}
 
-	// 启动心跳保活
+	// Start heartbeat keepalive
 	keepAliveCh, err := lease.KeepAlive(r.ctx, r.leaseID)
 	if err != nil {
-		// 删除服务并撤销租约
+		// Delete service and revoke lease
 		r.client.Delete(context.Background(), serviceKey)
 		lease.Revoke(context.Background(), r.leaseID)
 		return fmt.Errorf("start keepalive: %w", err)
@@ -147,7 +147,7 @@ func (r *EtcdRegistry) Register(ctx context.Context, info *ServiceInfo) error {
 	r.keepAliveCh = keepAliveCh
 	r.registered = true
 
-	// 启动心跳监控
+	// Start heartbeat monitoring
 	go r.monitorKeepAlive()
 
 	r.logger.DebugCtx(ctx, "✅ Service registered to etcd",
@@ -161,7 +161,7 @@ func (r *EtcdRegistry) Register(ctx context.Context, info *ServiceInfo) error {
 	return nil
 }
 
-// Deregister 注销服务
+// Unregister service
 func (r *EtcdRegistry) Deregister(ctx context.Context) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -170,17 +170,17 @@ func (r *EtcdRegistry) Deregister(ctx context.Context) error {
 		return ErrNotRegistered
 	}
 
-	// 停止心跳
+	// Stop heartbeat
 	r.cancel()
 
-	// 删除服务
+	// Delete service
 	serviceKey := r.buildServiceKey(r.serviceInfo)
 	_, err := r.client.Delete(ctx, serviceKey)
 	if err != nil {
 		r.logger.ErrorCtx(ctx, "Failed to delete service", zap.Error(err))
 	}
 
-	// 撤销租约
+	// Revoke lease
 	if r.leaseID > 0 {
 		_, err = r.client.Revoke(ctx, r.leaseID)
 		if err != nil {
@@ -198,7 +198,7 @@ func (r *EtcdRegistry) Deregister(ctx context.Context) error {
 	return nil
 }
 
-// UpdateMetadata 更新服务元数据
+// UpdateMetadata Update service metadata
 func (r *EtcdRegistry) UpdateMetadata(ctx context.Context, metadata map[string]string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -207,7 +207,7 @@ func (r *EtcdRegistry) UpdateMetadata(ctx context.Context, metadata map[string]s
 		return ErrNotRegistered
 	}
 
-	// 更新本地元数据
+	// Update local metadata
 	if r.serviceInfo.Metadata == nil {
 		r.serviceInfo.Metadata = make(map[string]string)
 	}
@@ -215,7 +215,7 @@ func (r *EtcdRegistry) UpdateMetadata(ctx context.Context, metadata map[string]s
 		r.serviceInfo.Metadata[k] = v
 	}
 
-	// 重新序列化并更新到 etcd
+	// Re serialize and update to etcd
 	serviceKey := r.buildServiceKey(r.serviceInfo)
 	serviceValue, err := r.marshalServiceInfo(r.serviceInfo)
 	if err != nil {
@@ -232,26 +232,26 @@ func (r *EtcdRegistry) UpdateMetadata(ctx context.Context, metadata map[string]s
 	return nil
 }
 
-// IsRegistered 检查服务是否已注册
+// Checks if the service is registered
 func (r *EtcdRegistry) IsRegistered() bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.registered
 }
 
-// Close 关闭注册器
+// Close the registry
 func (r *EtcdRegistry) Close() error {
 	r.cancel()
 	return r.client.Close()
 }
 
-// monitorKeepAlive 监控心跳续约
+// monitorKeepAlive Monitor heartbeat renewal
 func (r *EtcdRegistry) monitorKeepAlive() {
 	ticker := time.NewTicker(3 * time.Second)
 	defer ticker.Stop()
 
 	lastHeartbeat := time.Now()
-	ctx := context.Background() // 创建后台 context
+	ctx := context.Background() // Create background context
 
 	for {
 		select {
@@ -276,7 +276,7 @@ func (r *EtcdRegistry) monitorKeepAlive() {
 			}
 
 		case <-ticker.C:
-			// 🎯 超时检测：超过 10 秒未收到心跳响应
+			// 🎯 Timeout detection: No heartbeat response received within 10 seconds
 			if time.Since(lastHeartbeat) > 10*time.Second {
 				r.logger.WarnCtx(ctx, "⚠️  Heartbeat timeout, possible network issue",
 					zap.String("service", r.serviceInfo.ServiceName),
@@ -287,7 +287,7 @@ func (r *EtcdRegistry) monitorKeepAlive() {
 	}
 }
 
-// handleKeepAliveFailure 处理心跳失败
+// handleHeartbeatFailure
 func (r *EtcdRegistry) handleKeepAliveFailure() {
 	ctx := context.Background()
 	r.mu.Lock()
@@ -298,16 +298,16 @@ func (r *EtcdRegistry) handleKeepAliveFailure() {
 		zap.String("service", r.serviceInfo.ServiceName))
 
 	if r.retryEnabled {
-		go r.retryRegister() // 启动重试流程
+		go r.retryRegister() // Initiate retry process
 	} else {
-		// 不启用重试，触发失败回调
+		// Do not enable retries, trigger failure callback
 		if r.onRegisterFailed != nil {
 			r.onRegisterFailed(ErrKeepAliveFailed)
 		}
 	}
 }
 
-// retryRegister 重试注册（带指数退避）
+// retryRegister with exponential backoff
 func (r *EtcdRegistry) retryRegister() {
 	ctx := context.Background()
 
@@ -315,7 +315,7 @@ func (r *EtcdRegistry) retryRegister() {
 	retryCount := 0
 
 	for {
-		// 检查是否被取消
+		// Check if cancelled
 		select {
 		case <-r.ctx.Done():
 			r.logger.DebugCtx(ctx, "Retry cancelled")
@@ -323,7 +323,7 @@ func (r *EtcdRegistry) retryRegister() {
 		default:
 		}
 
-		// 检查重试次数限制
+		// Check retry count limit
 		if r.maxRetries > 0 && retryCount >= r.maxRetries {
 			r.logger.ErrorCtx(ctx, "❌ Max retry attempts reached, giving up",
 				zap.Int("retries", retryCount))
@@ -340,14 +340,14 @@ func (r *EtcdRegistry) retryRegister() {
 
 		time.Sleep(retryDelay)
 
-		// 🎯 关键步骤1：健康检查前置
+		// 🎯 Key Step 1: Pre-health check setup
 		if !r.checkEtcdHealth(ctx) {
 			r.logger.WarnCtx(ctx, "⚠️  etcd health check failed, waiting for next retry")
 			retryDelay = r.calculateBackoff(retryDelay)
 			continue
 		}
 
-		// 🎯 关键步骤2：尝试重新注册
+		// 🎯 Step 2: Attempt re-registration
 		err := r.reRegister(ctx)
 		if err == nil {
 			r.logger.DebugCtx(ctx, "✅ Re-registration succeeded",
@@ -359,18 +359,18 @@ func (r *EtcdRegistry) retryRegister() {
 			zap.Error(err),
 			zap.Int("attempt", retryCount))
 
-		// 🎯 关键步骤3：指数退避
+		// 🎯 Key Step 3: Exponential Backoff
 		retryDelay = r.calculateBackoff(retryDelay)
 	}
 }
 
-// buildServiceKey 构造服务key
-// 格式: /services/{serviceName}/{instanceID}
+// build service key
+// Format: /services/{serviceName}/{instanceID}
 func (r *EtcdRegistry) buildServiceKey(info *ServiceInfo) string {
 	return fmt.Sprintf("/services/%s/%s", info.ServiceName, info.InstanceID)
 }
 
-// marshalServiceInfo 序列化服务信息
+// marshalServiceInfo serialize service information
 func (r *EtcdRegistry) marshalServiceInfo(info *ServiceInfo) (string, error) {
 	data, err := json.Marshal(info)
 	if err != nil {
@@ -379,18 +379,18 @@ func (r *EtcdRegistry) marshalServiceInfo(info *ServiceInfo) (string, error) {
 	return string(data), nil
 }
 
-// checkEtcdHealth 检查 etcd 健康状态
+// checkEtcdHealth Check etcd health status
 func (r *EtcdRegistry) checkEtcdHealth(ctx context.Context) bool {
 	checkCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
-	// 尝试读取一个 key（不存在也算健康）
+	// Try to read a key (considered healthy even if it does not exist)
 	_, err := r.client.Get(checkCtx, "/health-check")
 	if err == nil {
 		return true
 	}
 
-	// key 不存在说明 etcd 可访问
+	// key does not exist indicates etcd is accessible
 	if err.Error() == "etcdserver: key not found" {
 		return true
 	}
@@ -399,19 +399,19 @@ func (r *EtcdRegistry) checkEtcdHealth(ctx context.Context) bool {
 	return false
 }
 
-// reRegister 重新执行注册流程
+// reRegister Re-execute registration process
 func (r *EtcdRegistry) reRegister(ctx context.Context) error {
-	// 清理旧租约（如果存在）
+	// Clear old leases (if any)
 	if r.leaseID > 0 {
 		r.client.Revoke(context.Background(), r.leaseID)
 		r.leaseID = 0
 	}
 
-	// 调用 Register 重新走一遍完整流程
+	// Call Register to go through the entire process again
 	return r.Register(ctx, r.serviceInfo)
 }
 
-// calculateBackoff 计算指数退避延迟（带上限）
+// calculateBackoff Calculate exponential backoff delay (with upper limit)
 func (r *EtcdRegistry) calculateBackoff(current time.Duration) time.Duration {
 	next := time.Duration(float64(current) * r.retryBackoff)
 	if next > r.maxRetryDelay {

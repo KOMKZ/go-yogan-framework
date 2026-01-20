@@ -1,5 +1,5 @@
-// Package errcode 提供分层错误码的基础类型和功能
-// 错误码格式：MMBBBB（MM=模块码2位，BBBB=业务码4位）
+// Package errcode provides the basic types and functionalities for hierarchical error codes
+// Error code format: MMBBBB (MM = module code 2 digits, B BBBB = business code 4 digits)
 package errcode
 
 import (
@@ -7,25 +7,25 @@ import (
 	"net/http"
 )
 
-// LayeredError 分层错误码
-// 支持：错误链、动态消息、上下文数据、HTTP状态码映射、国际化（消息键）
+// LayeredError hierarchical error code
+// Supports: error chaining, dynamic messages, context data, HTTP status code mapping, internationalization (message keys)
 type LayeredError struct {
-	module     string                 // 模块名（user, order, payment）
-	code       int                    // 完整错误码（MMBBBB，如 100001）
-	msgKey     string                 // 消息键（用于国际化，如 "error.user.not_found"）
-	msg        string                 // 默认消息（中文）
-	httpStatus int                    // HTTP 状态码
-	data       map[string]interface{} // 上下文数据
-	cause      error                  // 原始错误（错误链）
+	module     string                 // Module name (user, order, payment)
+	code       int                    // Complete error code (MMBBBB, e.g., 100001)
+	msgKey     string                 // Message key (for internationalization, e.g., "error.user.not_found")
+	msg        string                 // Default message (Chinese)
+	httpStatus int                    // HTTP status code
+	data       map[string]interface{} // context data
+	cause      error                  // Original error (error chain)
 }
 
-// New 创建分层错误码
-// moduleCode: 模块码（10-99）
-// businessCode: 业务码（0001-9999）
-// module: 模块名（user, order, payment）
-// msgKey: 消息键（用于国际化）
-// msg: 默认消息
-// httpStatus: HTTP 状态码（可选，默认 200）
+// New Create hierarchical error codes
+// moduleCode: Module code (10-99)
+// businessCode: Business Code (0001-9999)
+// module: module name (user, order, payment)
+// msgKey: message key (for internationalization)
+// msg: Default message
+// httpStatus: HTTP status code (optional, default is 200)
 func New(moduleCode, businessCode int, module, msgKey, msg string, httpStatus ...int) *LayeredError {
 	code := moduleCode*10000 + businessCode
 	status := http.StatusOK
@@ -42,7 +42,7 @@ func New(moduleCode, businessCode int, module, msgKey, msg string, httpStatus ..
 	}
 }
 
-// Error 实现 error 接口
+// Implement error interface
 func (e *LayeredError) Error() string {
 	if e.cause != nil {
 		return fmt.Sprintf("%s: %v", e.msg, e.cause)
@@ -50,61 +50,61 @@ func (e *LayeredError) Error() string {
 	return e.msg
 }
 
-// Code 获取错误码
+// Code gets error code
 func (e *LayeredError) Code() int {
 	return e.code
 }
 
-// Module 获取模块名
+// Module Get module name
 func (e *LayeredError) Module() string {
 	return e.module
 }
 
-// MsgKey 获取消息键（用于国际化）
+// MsgKey获取消息键（用于国际化）
 func (e *LayeredError) MsgKey() string {
 	return e.msgKey
 }
 
-// Message 获取错误消息
+// Get error message
 func (e *LayeredError) Message() string {
 	return e.msg
 }
 
-// HTTPStatus 获取 HTTP 状态码
+// Get HTTP status code
 func (e *LayeredError) HTTPStatus() int {
 	return e.httpStatus
 }
 
-// Data 获取上下文数据
+// Retrieve context data
 func (e *LayeredError) Data() map[string]interface{} {
 	return e.data
 }
 
-// Cause 获取原始错误
+// Cause get original error
 func (e *LayeredError) Cause() error {
 	return e.cause
 }
 
-// Unwrap 支持 Go 1.13+ 错误链
+// Unwrap supports Go 1.13+ error chains
 func (e *LayeredError) Unwrap() error {
 	return e.cause
 }
 
-// WithMsg 替换错误消息（返回新实例，不修改原实例）
+// WithMsg replace error message (return new instance, do not modify original instance)
 func (e *LayeredError) WithMsg(msg string) *LayeredError {
 	clone := *e
 	clone.msg = msg
 	return &clone
 }
 
-// WithMsgf 格式化替换错误消息（返回新实例）
+// WithMsgf format replacement error message (return new instance)
 func (e *LayeredError) WithMsgf(format string, args ...interface{}) *LayeredError {
 	clone := *e
 	clone.msg = fmt.Sprintf(format, args...)
 	return &clone
 }
 
-// WithData 添加单个上下文数据（返回新实例）
+// WithData add single context data (return new instance)
 func (e *LayeredError) WithData(key string, value interface{}) *LayeredError {
 	clone := *e
 	clone.data = e.cloneData()
@@ -112,7 +112,7 @@ func (e *LayeredError) WithData(key string, value interface{}) *LayeredError {
 	return &clone
 }
 
-// WithFields 批量添加上下文数据（返回新实例）
+// WithFields batch add context data (return new instance)
 func (e *LayeredError) WithFields(fields map[string]interface{}) *LayeredError {
 	clone := *e
 	clone.data = e.cloneData()
@@ -122,7 +122,7 @@ func (e *LayeredError) WithFields(fields map[string]interface{}) *LayeredError {
 	return &clone
 }
 
-// Wrap 包装原始错误（返回新实例）
+// Wrap Wraps the original error (returns a new instance)
 func (e *LayeredError) Wrap(cause error) *LayeredError {
 	if cause == nil {
 		return e
@@ -132,7 +132,7 @@ func (e *LayeredError) Wrap(cause error) *LayeredError {
 	return &clone
 }
 
-// Wrapf 包装原始错误并格式化消息（返回新实例）
+// Wrap the original error and format the message (return a new instance)
 func (e *LayeredError) Wrapf(cause error, format string, args ...interface{}) *LayeredError {
 	if cause == nil {
 		return e.WithMsgf(format, args...)
@@ -143,7 +143,7 @@ func (e *LayeredError) Wrapf(cause error, format string, args ...interface{}) *L
 	return &clone
 }
 
-// Is 实现 errors.Is() 支持（通过 code 判断相等）
+// Implements support for errors.Is() (by checking equality through code)
 func (e *LayeredError) Is(target error) bool {
 	t, ok := target.(*LayeredError)
 	if !ok {
@@ -152,7 +152,7 @@ func (e *LayeredError) Is(target error) bool {
 	return e.code == t.code
 }
 
-// cloneData 克隆上下文数据（深拷贝）
+// cloneData Clone context data (deep copy)
 func (e *LayeredError) cloneData() map[string]interface{} {
 	data := make(map[string]interface{}, len(e.data))
 	for k, v := range e.data {
@@ -161,14 +161,14 @@ func (e *LayeredError) cloneData() map[string]interface{} {
 	return data
 }
 
-// WithHTTPStatus 设置 HTTP 状态码（返回新实例）
+// Set HTTP status code (return new instance)
 func (e *LayeredError) WithHTTPStatus(status int) *LayeredError {
 	clone := *e
 	clone.httpStatus = status
 	return &clone
 }
 
-// String 返回错误的字符串表示（用于调试）
+// String returns an erroneous string representation (for debugging)
 func (e *LayeredError) String() string {
 	if e.cause != nil {
 		return fmt.Sprintf("LayeredError{code:%d, module:%s, msg:%s, cause:%v}",

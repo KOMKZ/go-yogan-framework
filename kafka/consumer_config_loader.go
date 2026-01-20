@@ -7,40 +7,40 @@ import (
 	"github.com/spf13/viper"
 )
 
-// ConsumerConfigEntry 单个消费者配置项
+// ConsumerConfigEntry individual consumer configuration item
 type ConsumerConfigEntry struct {
-	// Topics 订阅的 Topic 列表
+	// Topics subscription list for Topic names
 	Topics []string `mapstructure:"topics"`
 
-	// GroupID 消费者组 ID
+	// GroupID consumer group ID
 	GroupID string `mapstructure:"group_id"`
 
-	// Workers 并发消费者数量
+	// Number of concurrent consumer workers
 	Workers int `mapstructure:"workers"`
 
-	// OffsetInitial 初始 Offset：-1=Newest, -2=Oldest
+	// OffsetInitial Initial Offset: -1=Newest, -2=Oldest
 	OffsetInitial int64 `mapstructure:"offset_initial"`
 
-	// AutoCommit 是否自动提交
+	// Whether auto-commit is enabled
 	AutoCommit bool `mapstructure:"auto_commit"`
 
-	// AutoCommitInterval 自动提交间隔
+	// AutoCommitInterval automatic commit interval
 	AutoCommitInterval time.Duration `mapstructure:"auto_commit_interval"`
 
-	// MaxProcessingTime 单条消息最大处理时间
+	// Maximum processing time for individual messages
 	MaxProcessingTime time.Duration `mapstructure:"max_processing_time"`
 
-	// SessionTimeout 会话超时
+	// Session timeout
 	SessionTimeout time.Duration `mapstructure:"session_timeout"`
 
-	// HeartbeatInterval 心跳间隔
+	// HeartbeatInterval heartbeat interval
 	HeartbeatInterval time.Duration `mapstructure:"heartbeat_interval"`
 }
 
-// ConsumersConfig 消费者配置映射
+// ConsumersConfig consumer configuration mapping
 type ConsumersConfig map[string]ConsumerConfigEntry
 
-// ConfigLoader 配置加载器接口
+// ConfigLoader configuration loader interface
 type ConfigLoader interface {
 	GetStringSlice(key string) []string
 	GetString(key string) string
@@ -52,8 +52,8 @@ type ConfigLoader interface {
 	Sub(key string) *viper.Viper
 }
 
-// LoadConsumerRunnerConfig 从配置加载器读取消费者运行配置
-// 配置路径: kafka.consumers.<name>
+// Load consumer runner configuration from the config loader
+// Configuration path: kafka consumers.<name>
 func LoadConsumerRunnerConfig(loader ConfigLoader, name string) ConsumerRunnerConfig {
 	prefix := "kafka.consumers." + name
 
@@ -74,7 +74,7 @@ func LoadConsumerRunnerConfig(loader ConfigLoader, name string) ConsumerRunnerCo
 	if loader.IsSet(prefix + ".auto_commit") {
 		cfg.AutoCommit = loader.GetBool(prefix + ".auto_commit")
 	} else {
-		cfg.AutoCommit = true // 默认开启
+		cfg.AutoCommit = true // Default enabled
 	}
 
 	if loader.IsSet(prefix + ".auto_commit_interval") {
@@ -96,9 +96,9 @@ func LoadConsumerRunnerConfig(loader ConfigLoader, name string) ConsumerRunnerCo
 	return cfg
 }
 
-// LoadConsumerTopics 从配置加载消费者订阅的 Topics
-// 如果配置中定义了 topics，则使用配置中的值
-// 否则使用 handler 中定义的值
+// LoadConsumerTopics loads the Topics subscribed by consumers from the configuration
+// If topics are defined in the configuration, use the values from the configuration
+// Otherwise use the value defined in the handler
 func LoadConsumerTopics(loader ConfigLoader, name string) []string {
 	prefix := "kafka.consumers." + name + ".topics"
 	if loader.IsSet(prefix) {
@@ -107,15 +107,15 @@ func LoadConsumerTopics(loader ConfigLoader, name string) []string {
 	return nil
 }
 
-// MergeConfigWithHandler 合并配置和 Handler 定义
-// Handler 中的 Topics 可被配置覆盖
+// MergeConfigWithHandler merges configuration with Handler definition
+// The Topics in the Handler can be configuration-overridden
 func MergeConfigWithHandler(handler ConsumerHandler, loader ConfigLoader) ([]string, ConsumerRunnerConfig) {
 	name := handler.Name()
 
-	// 加载配置
+	// Load configuration
 	cfg := LoadConsumerRunnerConfig(loader, name)
 
-	// Topics：配置优先，Handler 兜底
+	// Topics: Configuration priority, Handler as fallback
 	topics := LoadConsumerTopics(loader, name)
 	if len(topics) == 0 {
 		topics = handler.Topics()
@@ -124,14 +124,14 @@ func MergeConfigWithHandler(handler ConsumerHandler, loader ConfigLoader) ([]str
 	return topics, cfg
 }
 
-// ConsumerConfigOverride 消费者配置覆盖器
-// 用于在运行时覆盖 Handler 的 Topics
+// ConsumerConfigOverride Consumer configuration override
+// For runtime override of Handler's Topics
 type ConsumerConfigOverride struct {
 	handler ConsumerHandler
 	topics  []string
 }
 
-// NewConsumerConfigOverride 创建配置覆盖器
+// Create configuration override for new consumer config
 func NewConsumerConfigOverride(handler ConsumerHandler, topics []string) *ConsumerConfigOverride {
 	return &ConsumerConfigOverride{
 		handler: handler,
@@ -139,12 +139,12 @@ func NewConsumerConfigOverride(handler ConsumerHandler, topics []string) *Consum
 	}
 }
 
-// Name 返回消费者名称
+// Returns the consumer name
 func (o *ConsumerConfigOverride) Name() string {
 	return o.handler.Name()
 }
 
-// Topics 返回覆盖后的 Topics
+// Topics return the updated Topics
 func (o *ConsumerConfigOverride) Topics() []string {
 	if len(o.topics) > 0 {
 		return o.topics
@@ -152,7 +152,7 @@ func (o *ConsumerConfigOverride) Topics() []string {
 	return o.handler.Topics()
 }
 
-// Handle 代理调用原始 Handler
+// Handle proxy call to original Handler
 func (o *ConsumerConfigOverride) Handle(ctx context.Context, msg *ConsumedMessage) error {
 	return o.handler.Handle(ctx, msg)
 }

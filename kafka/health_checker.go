@@ -6,13 +6,13 @@ import (
 	"time"
 )
 
-// HealthChecker Kafka 健康检查器
+// HealthChecker for Kafka
 type HealthChecker struct {
 	manager *Manager
 	timeout time.Duration
 }
 
-// NewHealthChecker 创建健康检查器
+// Create health checker
 func NewHealthChecker(manager *Manager) *HealthChecker {
 	return &HealthChecker{
 		manager: manager,
@@ -20,25 +20,25 @@ func NewHealthChecker(manager *Manager) *HealthChecker {
 	}
 }
 
-// Name 返回检查项名称
+// Name Returns the inspection item name
 func (h *HealthChecker) Name() string {
 	return "kafka"
 }
 
-// Check 执行健康检查
+// Check execution health check
 func (h *HealthChecker) Check(ctx context.Context) error {
 	if h.manager == nil {
 		return fmt.Errorf("kafka manager is nil")
 	}
 
-	// 创建带超时的 context
+	// Create a context with timeout
 	checkCtx, cancel := context.WithTimeout(ctx, h.timeout)
 	defer cancel()
 
 	return h.manager.Ping(checkCtx)
 }
 
-// SetTimeout 设置超时时间
+// Set timeout duration
 func (h *HealthChecker) SetTimeout(timeout time.Duration) {
 	h.timeout = timeout
 }

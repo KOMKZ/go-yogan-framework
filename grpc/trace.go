@@ -9,25 +9,25 @@ import (
 )
 
 const (
-	// TraceIDKey Context 中的 TraceID Key（与 middleware 保持一致）
+	// TraceIDKey in Context (consistent with middleware)
 	TraceIDKey = "trace_id"
 
-	// TraceIDMetadataKey gRPC Metadata 中的 TraceID Key
+	// TraceIDMetadataKey gRPC Metadata中的Trace ID键
 	TraceIDMetadataKey = "x-trace-id"
 )
 
-// UnaryClientTraceInterceptor 客户端 TraceID 拦截器（用于向后兼容）
+// UnaryClientTraceInterceptor client TraceID interceptor (for backward compatibility)
 //
-// 功能：
-//  1. 从 Context 提取自定义 TraceID（向后兼容）
-//  2. 注入到 outgoing metadata（用于日志关联）
+// Function:
+// 1. Extract custom TraceID from Context (backward compatible)
+// Inject into outgoing metadata (for log correlation)
 //
-// 注意：
-//   - OpenTelemetry trace 传播已由 StatsHandler 自动处理（traceparent header）
-//   - 此拦截器仅用于向后兼容和日志关联（x-trace-id header）
-//   - Logger 会自动从 OTel Span Context 提取 TraceID，无需手动注入
+// Note:
+// - OpenTelemetry trace propagation is automatically handled by StatsHandler (traceparent header)
+// - This interceptor is for backward compatibility and log correlation (x-trace-id header)
+// - The Logger will automatically extract the TraceID from the OTel Span Context, no manual injection is required
 //
-// 用法：
+// Usage:
 //
 //	grpc.WithUnaryInterceptor(grpc.ChainUnaryInterceptor(
 //	    UnaryClientTraceInterceptor(),
@@ -37,31 +37,31 @@ func UnaryClientTraceInterceptor() grpc.UnaryClientInterceptor {
 	return func(ctx context.Context, method string, req, reply interface{},
 		cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 
-		// 从自定义 Context 提取 TraceID（向后兼容）
+		// Extract TraceID from custom Context (backward compatible)
 		traceID := extractTraceIDFromContext(ctx)
 
-		// 如果有 TraceID，注入到 metadata（仅用于日志关联）
+		// If there is a TraceID, inject it into the metadata (for log correlation only)
 		if traceID != "" {
 			ctx = injectTraceIDToMetadata(ctx, traceID)
 		}
 
-		// 调用下游
+		// Call downstream
 		return invoker(ctx, method, req, reply, cc, opts...)
 	}
 }
 
-// UnaryServerTraceInterceptor 服务端 TraceID 拦截器（用于向后兼容）
+// UnaryServerTraceInterceptor server-side TraceID interceptor (for backward compatibility)
 //
-// 功能：
-//  1. 从 incoming metadata 提取自定义 TraceID（向后兼容）
-//  2. 注入到 Context（供日志使用）
+// Function:
+// 1. Extract custom TraceID from incoming metadata (backward compatible)
+// Inject into Context (for logging purposes)
 //
-// 注意：
-//   - OpenTelemetry trace 传播已由 StatsHandler 自动处理
-//   - 此拦截器仅用于向后兼容
-//   - Logger 会优先使用 OTel Span Context 的 TraceID
+// Note:
+// - OpenTelemetry trace propagation is automatically handled by StatsHandler
+// - This interceptor is for backward compatibility only
+// - The Logger will prioritize using the OTel Span Context's TraceID
 //
-// 用法：
+// Usage:
 //
 //	grpc.UnaryInterceptor(grpc.ChainUnaryInterceptor(
 //	    UnaryServerTraceInterceptor(),
@@ -71,48 +71,48 @@ func UnaryServerTraceInterceptor() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler) (interface{}, error) {
 
-		// 从 metadata 提取自定义 TraceID（向后兼容）
+		// Extract custom TraceID from metadata (backward compatible)
 		traceID := extractTraceIDFromMetadata(ctx)
 
-		// 如果有 TraceID，注入到 Context
+		// If there is a TraceID, inject it into the Context
 		if traceID != "" {
 			ctx = context.WithValue(ctx, TraceIDKey, traceID)
 		}
 
-		// 调用业务逻辑
+		// Call business logic
 		return handler(ctx, req)
 	}
 }
 
-// UnaryClientTraceLoggerInterceptor 客户端 TraceID + 日志拦截器（组合版本）
+// UnaryClientTraceLoggerInterceptor client trace ID and log interceptor (combined version)
 //
-// 功能：
-//  1. 从 Context 提取 TraceID 并注入到 metadata
-//  2. 记录带 TraceID 的日志
+// Function:
+// 1. Extract TraceID from Context and inject into metadata
+// Record logs with TraceID
 //
-// 用法：
+// Usage:
 //
 //	grpc.WithUnaryInterceptor(UnaryClientTraceLoggerInterceptor(logger))
 func UnaryClientTraceLoggerInterceptor(logger *zap.Logger) grpc.UnaryClientInterceptor {
 	return func(ctx context.Context, method string, req, reply interface{},
 		cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 
-		// 1. 从 Context 提取 TraceID
+		// Extract TraceID from Context
 		traceID := extractTraceIDFromContext(ctx)
 
-		// 2. 如果有 TraceID，注入到 metadata
+		// If there is a TraceID, inject it into the metadata
 		if traceID != "" {
 			ctx = injectTraceIDToMetadata(ctx, traceID)
 		}
 
-		// 3. 调用下游并记录日志（带 TraceID）
+		// Call downstream and log (with TraceID)
 		start := logger.Sugar().Desugar().WithOptions(zap.AddCallerSkip(1))
 		fields := []zap.Field{
 			zap.String("method", method),
 			zap.String("target", cc.Target()),
 		}
 
-		// 添加 TraceID 到日志字段
+		// Add TraceID to log field
 		if traceID != "" {
 			fields = append([]zap.Field{zap.String(TraceIDKey, traceID)}, fields...)
 		}
@@ -129,39 +129,39 @@ func UnaryClientTraceLoggerInterceptor(logger *zap.Logger) grpc.UnaryClientInter
 	}
 }
 
-// UnaryServerTraceLoggerInterceptor 服务端 TraceID + 日志拦截器（组合版本）
+// UnaryServerTraceLoggerInterceptor server-side TraceID and logging interceptor (combined version)
 //
-// 功能：
-//  1. 从 metadata 提取 TraceID 并注入到 Context
-//  2. 记录带 TraceID 的日志
+// Function:
+// Extract TraceID from metadata and inject into Context
+// Record logs with TraceID
 //
-// 用法：
+// Usage:
 //
 //	grpc.UnaryInterceptor(UnaryServerTraceLoggerInterceptor(logger))
 func UnaryServerTraceLoggerInterceptor(logger *zap.Logger) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler) (interface{}, error) {
 
-		// 1. 从 metadata 提取 TraceID
+		// Extract TraceID from metadata
 		traceID := extractTraceIDFromMetadata(ctx)
 
-		// 2. 如果有 TraceID，注入到 Context
+		// If there is a TraceID, inject it into the Context
 		if traceID != "" {
 			ctx = context.WithValue(ctx, TraceIDKey, traceID)
 		}
 
-		// 3. 记录日志（带 TraceID）
+		// 3. Log with TraceID
 		start := logger.Sugar().Desugar().WithOptions(zap.AddCallerSkip(1))
 		fields := []zap.Field{
 			zap.String("method", info.FullMethod),
 		}
 
-		// 添加 TraceID 到日志字段
+		// Add TraceID to log field
 		if traceID != "" {
 			fields = append([]zap.Field{zap.String(TraceIDKey, traceID)}, fields...)
 		}
 
-		// 4. 调用业务逻辑
+		// 4. Call business logic
 		resp, err := handler(ctx, req)
 
 		if err != nil {
@@ -175,10 +175,10 @@ func UnaryServerTraceLoggerInterceptor(logger *zap.Logger) grpc.UnaryServerInter
 }
 
 // ============================================
-// 内部辅助函数
+// Internal auxiliary function
 // ============================================
 
-// extractTraceIDFromContext 从 Context 提取自定义 TraceID（向后兼容）
+// extractTraceIDFromContext extracts a custom TraceID from Context (backward compatible)
 func extractTraceIDFromContext(ctx context.Context) string {
 	if val := ctx.Value(TraceIDKey); val != nil {
 		if traceID, ok := val.(string); ok {
@@ -188,14 +188,14 @@ func extractTraceIDFromContext(ctx context.Context) string {
 	return ""
 }
 
-// extractTraceIDFromMetadata 从 gRPC incoming metadata 提取 TraceID
+// extractTraceIDFromMetadata extracts TraceID from gRPC incoming metadata
 func extractTraceIDFromMetadata(ctx context.Context) string {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		return ""
 	}
 
-	// 从 metadata 中获取 TraceID（key 不区分大小写）
+	// Get TraceID from metadata (key case insensitive)
 	if values := md.Get(TraceIDMetadataKey); len(values) > 0 {
 		return values[0]
 	}
@@ -203,17 +203,17 @@ func extractTraceIDFromMetadata(ctx context.Context) string {
 	return ""
 }
 
-// injectTraceIDToMetadata 将 TraceID 注入到 gRPC outgoing metadata
+// InjectTraceIDToMetadata injects TraceID into gRPC outgoing metadata
 func injectTraceIDToMetadata(ctx context.Context, traceID string) context.Context {
-	// 获取现有的 outgoing metadata（如果有）
+	// Get existing outgoing metadata (if any)
 	md, ok := metadata.FromOutgoingContext(ctx)
 	if !ok {
 		md = metadata.New(nil)
 	}
 
-	// 添加 TraceID
+	// Add TraceID
 	md.Set(TraceIDMetadataKey, traceID)
 
-	// 返回新的 Context
+	// Return new context
 	return metadata.NewOutgoingContext(ctx, md)
 }

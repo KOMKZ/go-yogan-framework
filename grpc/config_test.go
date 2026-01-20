@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestClientConfig_GetTimeout 测试超时配置默认值
+// TestClientConfig_GetTimeout test default timeout configuration
 func TestClientConfig_GetTimeout(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -58,7 +58,7 @@ func TestClientConfig_GetTimeout(t *testing.T) {
 	}
 }
 
-// TestClientConfig_GetMode 测试连接模式判断
+// TestClientConfig_GetMode test connection mode determination
 func TestClientConfig_GetMode(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -110,7 +110,7 @@ func TestClientConfig_GetMode(t *testing.T) {
 	}
 }
 
-// TestClientConfig_Validate 测试配置验证
+// TestClientConfig_Validate test configuration validation
 func TestClientConfig_Validate(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -160,7 +160,7 @@ func TestClientConfig_Validate(t *testing.T) {
 	}
 }
 
-// TestClientConfig_IsLogEnabled 测试日志配置
+// TestClientConfig_IsLogEnabled test log configuration
 func TestClientConfig_IsLogEnabled(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -196,7 +196,7 @@ func TestClientConfig_IsLogEnabled(t *testing.T) {
 	}
 }
 
-// boolPtr 辅助函数：返回 bool 指针
+// boolPtr helper function: returns a bool pointer
 func boolPtr(b bool) *bool {
 	return &b
 }

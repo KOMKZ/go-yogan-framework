@@ -12,16 +12,16 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// RenderStyle 日志渲染样式
+// RenderStyle logging rendering style
 type RenderStyle string
 
 const (
-	// RenderStyleSingleLine 单行渲染（默认）
-	// 格式: [🔵INFO]  |  2025-12-23T01:10:01.165+0800  |  message  |  [module]  |  file:line  |  trace-id  |  {"key":"value"}
+	// Render single line (default)
+	// Format: [🔵INFO] | 2025-12-23T01:10:01.165+0800 | message | [module] | file:line | trace-id | {"key":"value"}
 	RenderStyleSingleLine RenderStyle = "single_line"
 
-	// RenderStyleKeyValue 键值对渲染（多行，适合小屏幕）
-	// 格式:
+	// RenderStyleKeyValue Key-value pair rendering (multi-line, suitable for small screens)
+	// Format:
 	//   🟢 DEBU | 2025-12-23 01:10:01.165
 	//     trace: -
 	//     module: gin-route
@@ -29,13 +29,13 @@ const (
 	//     message: [GIN-debug] GET / --> ...
 	RenderStyleKeyValue RenderStyle = "key_value"
 
-	// RenderStyleModernCompact 现代紧凑风格
-	// 格式: 14:30:45 │ INFO  │ HTTP server started                          │ yogan       {"key":"value"}
-	// 特点：时间精简、Box Drawing 分隔符、固定列宽、清晰层次
+	// RenderStyleModernCompact Modern compact style
+	// Format: 14:30:45 │ INFO  │ HTTP server started                          │ yogan      {"key":"value"}
+	// Features: time-saving, Box Drawing separators, fixed column width, clear hierarchy
 	RenderStyleModernCompact RenderStyle = "modern_compact"
 )
 
-// ParseRenderStyle 解析渲染样式字符串
+// ParseRenderStyle parse rendering style string
 func ParseRenderStyle(s string) RenderStyle {
 	switch s {
 	case "key_value":
@@ -45,7 +45,7 @@ func ParseRenderStyle(s string) RenderStyle {
 	case "single_line", "":
 		return RenderStyleSingleLine
 	default:
-		return RenderStyleSingleLine // 默认单行
+		return RenderStyleSingleLine // Default single line
 	}
 }
 
@@ -65,25 +65,25 @@ func putPrettyEncoder(enc *PrettyConsoleEncoder) {
 	_prettyEncoderPool.Put(enc)
 }
 
-// PrettyConsoleEncoder 美化的控制台编码器
-// 支持多种渲染样式：单行、键值对等
+// PrettyConsoleEncoder美化后的控制台编码器
+// Supports multiple rendering styles: single line, key-value pairs, etc.
 type PrettyConsoleEncoder struct {
 	*zapcore.EncoderConfig
 	buf         *buffer.Buffer
-	moduleName  string      // 捕获的模块名
-	traceID     string      // 捕获的 traceID
-	renderStyle RenderStyle // 渲染样式
+	moduleName  string      // captured module name
+	traceID     string      // captured traceID
+	renderStyle RenderStyle // Render style
 }
 
-// NewPrettyConsoleEncoder 创建美化控制台编码器（默认单行样式）
+// Create a pretty console encoder (default single-line style)
 func NewPrettyConsoleEncoder(cfg zapcore.EncoderConfig) zapcore.Encoder {
 	return &PrettyConsoleEncoder{
 		EncoderConfig: &cfg,
-		renderStyle:   RenderStyleSingleLine, // 默认单行
+		renderStyle:   RenderStyleSingleLine, // Default single line
 	}
 }
 
-// NewPrettyConsoleEncoderWithStyle 创建指定样式的美化控制台编码器
+// Create a pretty console encoder with specified style
 func NewPrettyConsoleEncoderWithStyle(cfg zapcore.EncoderConfig, style RenderStyle) zapcore.Encoder {
 	return &PrettyConsoleEncoder{
 		EncoderConfig: &cfg,
@@ -91,18 +91,18 @@ func NewPrettyConsoleEncoderWithStyle(cfg zapcore.EncoderConfig, style RenderSty
 	}
 }
 
-// Clone 克隆编码器
+// Clone the encoder
 func (enc *PrettyConsoleEncoder) Clone() zapcore.Encoder {
 	clone := getPrettyEncoder()
 	clone.EncoderConfig = enc.EncoderConfig
 	clone.buf = buffer.NewPool().Get()
-	clone.moduleName = enc.moduleName   // 继承 module
-	clone.traceID = enc.traceID         // 继承 traceID
-	clone.renderStyle = enc.renderStyle // 继承渲染样式
+	clone.moduleName = enc.moduleName   // inherit module
+	clone.traceID = enc.traceID         // Inherit traceID
+	clone.renderStyle = enc.renderStyle // Inherit rendering style
 	return clone
 }
 
-// EncodeEntry 编码日志条目（根据渲染样式分发）
+// EncodeEntry encode log entry (distribute based on rendering style)
 func (enc *PrettyConsoleEncoder) EncodeEntry(entry zapcore.Entry, fields []zapcore.Field) (*buffer.Buffer, error) {
 	switch enc.renderStyle {
 	case RenderStyleKeyValue:
@@ -116,32 +116,32 @@ func (enc *PrettyConsoleEncoder) EncodeEntry(entry zapcore.Entry, fields []zapco
 	}
 }
 
-// encodeSingleLine 单行渲染
-// 格式: [🔵INFO]  |  2025-12-20T09:14:58.575+0800  |  message  |  [module]  |  file:line  |  trace-id  |  {"key":"value"}
+// encodeSingleLine Single-line rendering
+// Format: [🔵INFO] | 2025-12-20T09:14:58.575+0800 | message | [module] | file:line | trace-id | {"key":"value"}
 func (enc *PrettyConsoleEncoder) encodeSingleLine(entry zapcore.Entry, fields []zapcore.Field) (*buffer.Buffer, error) {
 	final := buffer.NewPool().Get()
 
-	// 1. 级别 [🔵INFO] (固定10字符，包含emoji)
+	// Level [🔵INFO] (fixed 10 characters, including emoji)
 	final.AppendString("[")
 	final.AppendString(enc.levelWithEmoji(entry.Level))
 	final.AppendString("]")
 
-	// 2. 分隔符
+	// 2. delimiter
 	final.AppendString("  |  ")
 
-	// 3. 完整时间戳 2025-12-20T09:14:58.575+0800 (固定29字符)
+	// 3. Full timestamp 2025-12-20T09:14:58.575+0800 (fixed 29 characters)
 	final.AppendString(entry.Time.Format("2006-01-02T15:04:05.000-0700"))
 
-	// 4. 分隔符
+	// 4. delimiter
 	final.AppendString("  |  ")
 
-	// 5. 消息 (不限制长度)
+	// 5. Message (unlimited length)
 	final.AppendString(entry.Message)
 
-	// 6. 分隔符
+	// English: 6. Delimiter
 	final.AppendString("  |  ")
 
-	// 7. 模块名 [order] (固定25字符，包含方括号)
+	// Module name [order] (fixed 25 characters, including brackets)
 	moduleName := enc.extractModule(fields)
 	if moduleName == "unknown" {
 		moduleName = enc.moduleName
@@ -151,31 +151,31 @@ func (enc *PrettyConsoleEncoder) encodeSingleLine(entry zapcore.Entry, fields []
 	}
 	enc.appendPaddedModule(final, moduleName, 25)
 
-	// 8. 分隔符
+	// 8. delimiter
 	final.AppendString("  |  ")
 
-	// 9. 文件位置 order/manager.go:123 (固定50字符)
+	// File position order/manager.go:123 (fixed at 50 characters)
 	if entry.Caller.Defined {
 		enc.appendPadded(final, entry.Caller.TrimmedPath(), 50, false)
 	} else {
 		enc.appendPadded(final, "", 50, false)
 	}
 
-	// 10. 分隔符
+	// 10. Delimiter
 	final.AppendString("  |  ")
 
-	// 11. TraceID (固定16字符，右对齐或"-")
+	// 11. TraceID (fixed 16 characters, right-aligned or "-")
 	traceID := enc.extractTraceID(fields)
 	if traceID == "" {
 		traceID = enc.traceID
 	}
 	if traceID != "" {
-		enc.appendPadded(final, traceID, 16, false) // 左对齐
+		enc.appendPadded(final, traceID, 16, false) // left align
 	} else {
-		enc.appendPadded(final, "-", 16, true) // 居中
+		enc.appendPadded(final, "-", 16, true) // centered
 	}
 
-	// 12. 分隔符 + 字段（JSON格式）
+	// delimiter + field (JSON format)
 	if len(fields) > 0 {
 		final.AppendString("  |  ")
 		enc.appendFieldsAsJSON(final, fields)
@@ -183,7 +183,7 @@ func (enc *PrettyConsoleEncoder) encodeSingleLine(entry zapcore.Entry, fields []
 
 	final.AppendString("\n")
 
-	// 堆栈信息（从 entry.Stack 或 fields 中提取）
+	// Stack information (extracted from entry.Stack or fields)
 	stackTrace := entry.Stack
 	if stackTrace == "" {
 		stackTrace = enc.extractStack(fields)
@@ -196,8 +196,8 @@ func (enc *PrettyConsoleEncoder) encodeSingleLine(entry zapcore.Entry, fields []
 	return final, nil
 }
 
-// encodeKeyValue 键值对渲染（多行）
-// 格式:
+// encodeKeyValue Render key-value pairs (multi-line)
+// Format:
 //
 //	🟢 DEBU | 2025-12-23 01:10:01.165
 //	  trace: -
@@ -208,7 +208,7 @@ func (enc *PrettyConsoleEncoder) encodeSingleLine(entry zapcore.Entry, fields []
 func (enc *PrettyConsoleEncoder) encodeKeyValue(entry zapcore.Entry, fields []zapcore.Field) (*buffer.Buffer, error) {
 	final := buffer.NewPool().Get()
 
-	// 第1行：级别 + 简化时间
+	// English: Line 1: Level + Simplified Time
 	final.AppendString(enc.levelWithEmojiShort(entry.Level))
 	final.AppendString(" ")
 	final.AppendString(enc.levelNameShort(entry.Level))
@@ -216,7 +216,7 @@ func (enc *PrettyConsoleEncoder) encodeKeyValue(entry zapcore.Entry, fields []za
 	final.AppendString(entry.Time.Format("2006-01-02 15:04:05.000"))
 	final.AppendString("\n")
 
-	// 第2行：trace
+	// Line 2: trace
 	traceID := enc.extractTraceID(fields)
 	if traceID == "" {
 		traceID = enc.traceID
@@ -228,7 +228,7 @@ func (enc *PrettyConsoleEncoder) encodeKeyValue(entry zapcore.Entry, fields []za
 	final.AppendString(traceID)
 	final.AppendString("\n")
 
-	// 第3行：module
+	// English: Line 3: module
 	moduleName := enc.extractModule(fields)
 	if moduleName == "unknown" {
 		moduleName = enc.moduleName
@@ -240,7 +240,7 @@ func (enc *PrettyConsoleEncoder) encodeKeyValue(entry zapcore.Entry, fields []za
 	final.AppendString(moduleName)
 	final.AppendString("\n")
 
-	// 第4行：caller
+	// English: Line 4: caller
 	final.AppendString("  caller: ")
 	if entry.Caller.Defined {
 		final.AppendString(entry.Caller.TrimmedPath())
@@ -249,57 +249,57 @@ func (enc *PrettyConsoleEncoder) encodeKeyValue(entry zapcore.Entry, fields []za
 	}
 	final.AppendString("\n")
 
-	// 第5行：message
+	// Line 5: message
 	final.AppendString("  message: ")
 	final.AppendString(entry.Message)
 	final.AppendString("\n")
 
-	// 第6行（可选）：fields
+	// English: (Optional) line 6: fields
 	if len(fields) > 0 && enc.hasNonMetaFields(fields) {
 		final.AppendString("  fields: ")
 		enc.appendFieldsAsJSON(final, fields)
 		final.AppendString("\n")
 	}
 
-	// 栈追踪（从 entry.Stack 或 fields 中提取）
+	// stack trace (extracted from entry.Stack or fields)
 	stackTrace := entry.Stack
 	if stackTrace == "" {
 		stackTrace = enc.extractStack(fields)
 	}
 	if stackTrace != "" {
 		final.AppendString("  stack:\n")
-		// 给每行添加缩进
+		// Add indentation to each line
 		enc.appendIndentedStack(final, stackTrace, "    ")
 	}
 
 	return final, nil
 }
 
-// encodeModernCompact 现代紧凑风格渲染
-// 格式: 14:30:45 │ INFO  │ HTTP server started                          │ yogan       {"key":"value"}
-// 特点：时间精简、Box Drawing 分隔符、固定列宽、清晰层次
+// encodeModernCompact Modern compact style rendering
+// Format: 14:30:45 │ INFO  │ HTTP server started                          │ yogan       {"key":"value"}
+// Features: time-saving, Box Drawing separators, fixed column width, clear hierarchy
 func (enc *PrettyConsoleEncoder) encodeModernCompact(entry zapcore.Entry, fields []zapcore.Field) (*buffer.Buffer, error) {
 	final := buffer.NewPool().Get()
 
-	// 1. 时间戳 HH:MM:SS（8字符）
+	// Timestamp HH:MM:SS (8 characters)
 	final.AppendString(entry.Time.Format("15:04:05"))
 
-	// 2. 分隔符（使用 Box Drawing 字符）
+	// 2. Separator (using Box Drawing characters)
 	final.AppendString(" │ ")
 
-	// 3. 级别（5字符固定宽度，左对齐）
+	// Level (5 character fixed width, left aligned)
 	enc.appendPadded(final, enc.levelNameCompact(entry.Level), 5, false)
 
-	// 4. 分隔符
+	// 4. delimiter
 	final.AppendString(" │ ")
 
-	// 5. 消息（固定45字符宽度）
+	// 5. Message (fixed 45 character width)
 	enc.appendPaddedMessage(final, entry.Message, 45)
 
-	// 6. 分隔符
+	// 6. delimiter
 	final.AppendString(" │ ")
 
-	// 7. 模块名（12字符固定宽度）
+	// Module name (fixed width of 12 characters)
 	moduleName := enc.extractModule(fields)
 	if moduleName == "unknown" {
 		moduleName = enc.moduleName
@@ -309,7 +309,7 @@ func (enc *PrettyConsoleEncoder) encodeModernCompact(entry zapcore.Entry, fields
 	}
 	enc.appendPadded(final, moduleName, 12, false)
 
-	// 8. 字段（JSON格式，可选）
+	// 8. Fields (JSON format, optional)
 	if len(fields) > 0 && enc.hasNonMetaFields(fields) {
 		final.AppendString(" ")
 		enc.appendFieldsAsJSON(final, fields)
@@ -317,7 +317,7 @@ func (enc *PrettyConsoleEncoder) encodeModernCompact(entry zapcore.Entry, fields
 
 	final.AppendString("\n")
 
-	// 堆栈信息（从 entry.Stack 或 fields 中提取）
+	// stack information (extracted from entry.Stack or fields)
 	stackTrace := entry.Stack
 	if stackTrace == "" {
 		stackTrace = enc.extractStack(fields)
@@ -330,7 +330,7 @@ func (enc *PrettyConsoleEncoder) encodeModernCompact(entry zapcore.Entry, fields
 	return final, nil
 }
 
-// levelNameCompact 级别名称（5字符，用于 Modern Compact）
+// levelNameCompact Level name (5 characters, for Modern Compact)
 func (enc *PrettyConsoleEncoder) levelNameCompact(level zapcore.Level) string {
 	switch level {
 	case zapcore.DebugLevel:
@@ -352,8 +352,8 @@ func (enc *PrettyConsoleEncoder) levelNameCompact(level zapcore.Level) string {
 	}
 }
 
-// stringDisplayWidth 计算字符串的终端显示宽度
-// 中文、日文、韩文等全角字符占用2个字符宽度
+// calculate the terminal display width of a string
+// Chinese, Japanese, Korean characters and full-width characters take up 2 character widths
 func stringDisplayWidth(s string) int {
 	width := 0
 	for _, r := range s {
@@ -366,49 +366,49 @@ func stringDisplayWidth(s string) int {
 	return width
 }
 
-// isWideChar 判断是否为宽字符（全角字符）
-// 包括：CJK 字符、全角标点、表情符号等
+// determines whether it is a wide character (full-width character)
+// Includes: CJK characters, full-width punctuation, emojis etc.
 func isWideChar(r rune) bool {
-	// CJK 统一汉字
+	// Unified CJK Han Characters
 	if r >= 0x4E00 && r <= 0x9FFF {
 		return true
 	}
-	// CJK 扩展 A
+	// CJK Extended A
 	if r >= 0x3400 && r <= 0x4DBF {
 		return true
 	}
-	// CJK 扩展 B-F
+	// CJK Extended-B Range F
 	if r >= 0x20000 && r <= 0x2CEAF {
 		return true
 	}
-	// 全角 ASCII 和标点
+	// Full-width ASCII and punctuation
 	if r >= 0xFF01 && r <= 0xFF60 {
 		return true
 	}
-	// 日文平假名和片假名
+	// Japanese hiragana and katakana
 	if r >= 0x3040 && r <= 0x30FF {
 		return true
 	}
-	// 韩文音节
+	// Korean syllable
 	if r >= 0xAC00 && r <= 0xD7AF {
 		return true
 	}
-	// 中文标点符号
+	// Chinese punctuation symbols
 	if r >= 0x3000 && r <= 0x303F {
 		return true
 	}
-	// 表情符号（部分）
+	// Emoji (part)
 	if r >= 0x1F300 && r <= 0x1F9FF {
 		return true
 	}
-	// 使用 unicode 包判断东亚宽字符
+	// Use the unicode package to detect East Asian wide characters
 	if unicode.Is(unicode.Han, r) {
 		return true
 	}
 	return false
 }
 
-// truncateToDisplayWidth 截断字符串到指定显示宽度
+// truncate string to specified display width
 func truncateToDisplayWidth(s string, maxWidth int) (result string, actualWidth int) {
 	width := 0
 	for i, r := range s {
@@ -424,17 +424,17 @@ func truncateToDisplayWidth(s string, maxWidth int) (result string, actualWidth 
 	return s, width
 }
 
-// appendPaddedMessage 追加固定宽度的消息（截断或填充，支持中文）
+// Append fixed-width message (truncate or pad, supports Chinese)
 func (enc *PrettyConsoleEncoder) appendPaddedMessage(buf *buffer.Buffer, msg string, width int) {
 	displayWidth := stringDisplayWidth(msg)
 
 	if displayWidth >= width {
-		// 截断并添加省略号
+		// truncate and add ellipsis
 		if width > 3 {
 			truncated, actualWidth := truncateToDisplayWidth(msg, width-3)
 			buf.AppendString(truncated)
 			buf.AppendString("...")
-			// 填充剩余空格（如果有）
+			// Fill remaining spaces (if any)
 			padding := width - actualWidth - 3
 			for i := 0; i < padding; i++ {
 				buf.AppendByte(' ')
@@ -446,18 +446,18 @@ func (enc *PrettyConsoleEncoder) appendPaddedMessage(buf *buffer.Buffer, msg str
 		return
 	}
 
-	// 左对齐，填充空格
+	// left align, pad with spaces
 	buf.AppendString(msg)
 	for i := 0; i < width-displayWidth; i++ {
 		buf.AppendByte(' ')
 	}
 }
 
-// appendPadded 追加固定宽度的字符串（左对齐或居中）
+// appendPadded appends fixed-width strings (left-aligned or centered)
 func (enc *PrettyConsoleEncoder) appendPadded(buf *buffer.Buffer, s string, width int, center bool) {
 	displayWidth := stringDisplayWidth(s)
 	if displayWidth >= width {
-		// 截断到指定宽度
+		// Truncate to specified width
 		truncated, _ := truncateToDisplayWidth(s, width)
 		buf.AppendString(truncated)
 		return
@@ -475,7 +475,7 @@ func (enc *PrettyConsoleEncoder) appendPadded(buf *buffer.Buffer, s string, widt
 			buf.AppendByte(' ')
 		}
 	} else {
-		// 左对齐
+		// left align
 		buf.AppendString(s)
 		for i := 0; i < padding; i++ {
 			buf.AppendByte(' ')
@@ -483,14 +483,14 @@ func (enc *PrettyConsoleEncoder) appendPadded(buf *buffer.Buffer, s string, widt
 	}
 }
 
-// appendPaddedModule 追加固定宽度的模块名（包含方括号）
+// Append padded module name (including brackets)
 func (enc *PrettyConsoleEncoder) appendPaddedModule(buf *buffer.Buffer, moduleName string, totalWidth int) {
-	// [moduleName] 总长度 = len(moduleName) + 2
+	// [module name] total length = len(module_name) + 2
 	moduleStr := "[" + moduleName + "]"
 	enc.appendPadded(buf, moduleStr, totalWidth, false)
 }
 
-// levelWithEmoji 带 Emoji 的级别（完整版，用于单行）
+// levelWithEmoji Level with Emoji (full version, for single line)
 func (enc *PrettyConsoleEncoder) levelWithEmoji(level zapcore.Level) string {
 	switch level {
 	case zapcore.DebugLevel:
@@ -512,7 +512,7 @@ func (enc *PrettyConsoleEncoder) levelWithEmoji(level zapcore.Level) string {
 	}
 }
 
-// levelWithEmojiShort 只返回 Emoji（用于键值对渲染）
+// levelWithEmojiShort only returns Emoji (for key-value pair rendering)
 func (enc *PrettyConsoleEncoder) levelWithEmojiShort(level zapcore.Level) string {
 	switch level {
 	case zapcore.DebugLevel:
@@ -534,7 +534,7 @@ func (enc *PrettyConsoleEncoder) levelWithEmojiShort(level zapcore.Level) string
 	}
 }
 
-// levelNameShort 级别名称（4字符）
+// levelNameShort Level name (4 characters)
 func (enc *PrettyConsoleEncoder) levelNameShort(level zapcore.Level) string {
 	switch level {
 	case zapcore.DebugLevel:
@@ -556,7 +556,7 @@ func (enc *PrettyConsoleEncoder) levelNameShort(level zapcore.Level) string {
 	}
 }
 
-// hasNonMetaFields 检查是否有非元数据字段
+// checks if there are non-metadata fields
 func (enc *PrettyConsoleEncoder) hasNonMetaFields(fields []zapcore.Field) bool {
 	for _, field := range fields {
 		if field.Key != "trace_id" && field.Key != "module" && field.Key != "stack" {
@@ -566,7 +566,7 @@ func (enc *PrettyConsoleEncoder) hasNonMetaFields(fields []zapcore.Field) bool {
 	return false
 }
 
-// extractTraceID 从字段中提取 trace_id
+// extract trace_id from fields
 func (enc *PrettyConsoleEncoder) extractTraceID(fields []zapcore.Field) string {
 	for _, field := range fields {
 		if field.Key == "trace_id" {
@@ -578,7 +578,7 @@ func (enc *PrettyConsoleEncoder) extractTraceID(fields []zapcore.Field) string {
 	return ""
 }
 
-// extractModule 从字段中提取 module
+// extractModule extracts module from fields
 func (enc *PrettyConsoleEncoder) extractModule(fields []zapcore.Field) string {
 	for _, field := range fields {
 		if field.Key == "module" {
@@ -590,7 +590,7 @@ func (enc *PrettyConsoleEncoder) extractModule(fields []zapcore.Field) string {
 	return "unknown"
 }
 
-// extractStack 从字段中提取 stack
+// extractStack extract stack from fields
 func (enc *PrettyConsoleEncoder) extractStack(fields []zapcore.Field) string {
 	for _, field := range fields {
 		if field.Key == "stack" {
@@ -602,7 +602,7 @@ func (enc *PrettyConsoleEncoder) extractStack(fields []zapcore.Field) string {
 	return ""
 }
 
-// appendIndentedStack 追加带缩进的堆栈信息
+// appendIndentedStack Append indented stack information
 func (enc *PrettyConsoleEncoder) appendIndentedStack(buf *buffer.Buffer, stack string, indent string) {
 	lines := 0
 	for i := 0; i < len(stack); i++ {
@@ -614,18 +614,18 @@ func (enc *PrettyConsoleEncoder) appendIndentedStack(buf *buffer.Buffer, stack s
 			lines++
 		}
 	}
-	// 确保以换行结尾
+	// Ensure line ending with a newline
 	if len(stack) > 0 && stack[len(stack)-1] != '\n' {
 		buf.AppendString("\n")
 	}
 }
 
-// appendFieldsAsJSON 将字段编码为 JSON
+// appendFieldsAsJSON encodes fields as JSON
 func (enc *PrettyConsoleEncoder) appendFieldsAsJSON(buf *buffer.Buffer, fields []zapcore.Field) {
 	buf.AppendByte('{')
 	first := true
 	for _, field := range fields {
-		// 跳过内部字段（trace_id, module, stack）
+		// Skip internal fields (trace_id, module, stack)
 		if field.Key == "trace_id" || field.Key == "module" || field.Key == "stack" {
 			continue
 		}
@@ -635,18 +635,18 @@ func (enc *PrettyConsoleEncoder) appendFieldsAsJSON(buf *buffer.Buffer, fields [
 		}
 		first = false
 
-		// 字段名
+		// field name
 		buf.AppendByte('"')
 		buf.AppendString(field.Key)
 		buf.AppendString(`":`)
 
-		// 字段值
+		// field value
 		enc.appendFieldValue(buf, field)
 	}
 	buf.AppendByte('}')
 }
 
-// appendFieldValue 追加字段值
+// Append field value
 func (enc *PrettyConsoleEncoder) appendFieldValue(buf *buffer.Buffer, field zapcore.Field) {
 	switch field.Type {
 	case zapcore.StringType:
@@ -687,7 +687,7 @@ func (enc *PrettyConsoleEncoder) appendFieldValue(buf *buffer.Buffer, field zapc
 		buf.AppendByte('"')
 
 	case zapcore.ErrorType:
-		// 处理 error 类型
+		// Handle error types
 		if field.Interface != nil {
 			buf.AppendByte('"')
 			if err, ok := field.Interface.(error); ok {
@@ -708,7 +708,7 @@ func (enc *PrettyConsoleEncoder) appendFieldValue(buf *buffer.Buffer, field zapc
 	}
 }
 
-// safeAddString 安全地添加字符串（转义特殊字符）
+// safelyAddString (escape special characters)
 func (enc *PrettyConsoleEncoder) safeAddString(buf *buffer.Buffer, s string) {
 	for i := 0; i < len(s); {
 		if b := s[i]; b < utf8.RuneSelf {
@@ -742,8 +742,8 @@ func (enc *PrettyConsoleEncoder) safeAddString(buf *buffer.Buffer, s string) {
 	}
 }
 
-// 以下方法实现 zapcore.ObjectEncoder 接口（AddString、AddInt 等）
-// 这些方法用于字段编码时被调用
+// The following method implements the zapcore.ObjectEncoder interface (AddString, AddInt, etc.)
+// These methods are called when field encoding is performed
 
 func (enc *PrettyConsoleEncoder) AddArray(key string, arr zapcore.ArrayMarshaler) error {
 	return nil
@@ -793,7 +793,7 @@ func (enc *PrettyConsoleEncoder) AddInt8(key string, value int8) {
 }
 
 func (enc *PrettyConsoleEncoder) AddString(key, value string) {
-	// 捕获 module 和 trace_id 字段
+	// Capture the module and trace_id fields
 	if key == "module" {
 		enc.moduleName = value
 	} else if key == "trace_id" {

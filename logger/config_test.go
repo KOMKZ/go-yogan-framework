@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// TestManagerConfig_ApplyDefaults 测试默认值填充
+// TestManagerConfig_ApplyDefaults test default value population
 func TestManagerConfig_ApplyDefaults(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -21,7 +21,7 @@ func TestManagerConfig_ApplyDefaults(t *testing.T) {
 				Level:                    "info",
 				Encoding:                 "json",
 				ConsoleEncoding:          "",
-				EnableConsole:            false, // 布尔类型保持原值
+				EnableConsole:            false, // Boolean type retains original value
 				EnableLevelInFilename:    false,
 				EnableSequenceInFilename: false,
 				EnableDateInFilename:     false,
@@ -45,17 +45,17 @@ func TestManagerConfig_ApplyDefaults(t *testing.T) {
 				MaxSize: 200,
 			},
 			expected: ManagerConfig{
-				BaseLogDir:       "logs",      // 填充默认值
-				LoggerName:       "logger",    // 填充默认值
-				Level:            "debug",     // 保留用户值
-				Encoding:         "json",      // 填充默认值
-				DateFormat:       "2006-01-02", // 填充默认值
-				MaxSize:          200,         // 保留用户值
-				MaxBackups:       3,           // 填充默认值
-				MaxAge:           28,          // 填充默认值
-				StacktraceLevel:  "error",     // 填充默认值
-				TraceIDKey:       "trace_id",  // 填充默认值
-				TraceIDFieldName: "trace_id",  // 填充默认值
+				BaseLogDir:       "logs",      // Fill with default values
+				LoggerName:       "logger",    // Fill with default values
+				Level:            "debug",     // preserve user values
+				Encoding:         "json",      // Fill with default values
+				DateFormat:       "2006-01-02", // Set default values
+				MaxSize:          200,         // preserve user values
+				MaxBackups:       3,           // Set default values
+				MaxAge:           28,          // Fill with default values
+				StacktraceLevel:  "error",     // Fill with default values
+				TraceIDKey:       "trace_id",  // Fill with default values
+				TraceIDFieldName: "trace_id",  // Fill with default values
 			},
 		},
 		{
@@ -75,18 +75,18 @@ func TestManagerConfig_ApplyDefaults(t *testing.T) {
 				TraceIDFieldName: "req_id",
 			},
 			expected: ManagerConfig{
-				BaseLogDir:       "custom/logs",     // 保留用户值
-				LoggerName:       "custom",          // 保留用户值
-				Level:            "warn",            // 保留用户值
-				Encoding:         "console",         // 保留用户值
-				ConsoleEncoding:  "console_pretty",  // 保留用户值
-				DateFormat:       "2006-01-02-15",   // 保留用户值
-				MaxSize:          500,               // 保留用户值
-				MaxBackups:       10,                // 保留用户值
-				MaxAge:           90,                // 保留用户值
-				StacktraceLevel:  "fatal",           // 保留用户值
-				TraceIDKey:       "request_id",      // 保留用户值
-				TraceIDFieldName: "req_id",          // 保留用户值
+				BaseLogDir:       "custom/logs",     // preserve user values
+				LoggerName:       "custom",          // preserve user values
+				Level:            "warn",            // preserve user values
+				Encoding:         "console",         // preserve user values
+				ConsoleEncoding:  "console_pretty",  // preserve user values
+				DateFormat:       "2006-01-02-15",   // preserve user values
+				MaxSize:          500,               // preserve user values
+				MaxBackups:       10,                // preserve user values
+				MaxAge:           90,                // preserve user values
+				StacktraceLevel:  "fatal",           // preserve user values
+				TraceIDKey:       "request_id",      // preserve user values
+				TraceIDFieldName: "req_id",          // retain user values
 			},
 		},
 	}
@@ -96,7 +96,7 @@ func TestManagerConfig_ApplyDefaults(t *testing.T) {
 			cfg := tt.input
 			cfg.ApplyDefaults()
 
-			// 验证字符串字段
+			// Validate string field
 			if cfg.BaseLogDir != tt.expected.BaseLogDir {
 				t.Errorf("BaseLogDir: got %s, want %s", cfg.BaseLogDir, tt.expected.BaseLogDir)
 			}
@@ -122,7 +122,7 @@ func TestManagerConfig_ApplyDefaults(t *testing.T) {
 				t.Errorf("TraceIDFieldName: got %s, want %s", cfg.TraceIDFieldName, tt.expected.TraceIDFieldName)
 			}
 
-			// 验证数值字段
+			// Validate numeric fields
 			if cfg.MaxSize != tt.expected.MaxSize {
 				t.Errorf("MaxSize: got %d, want %d", cfg.MaxSize, tt.expected.MaxSize)
 			}
@@ -133,7 +133,7 @@ func TestManagerConfig_ApplyDefaults(t *testing.T) {
 				t.Errorf("MaxAge: got %d, want %d", cfg.MaxAge, tt.expected.MaxAge)
 			}
 
-			// 验证布尔字段（保持原值，不填充）
+			// Validate boolean fields (retain original values, do not fill)
 			if cfg.EnableConsole != tt.expected.EnableConsole {
 				t.Errorf("EnableConsole: got %v, want %v", cfg.EnableConsole, tt.expected.EnableConsole)
 			}
@@ -141,9 +141,9 @@ func TestManagerConfig_ApplyDefaults(t *testing.T) {
 	}
 }
 
-// TestNewManager_ApplyDefaults 测试 NewManager 自动填充默认值
+// TestNewManager_ApplyDefaults test NewManager auto-fill default values
 func TestNewManager_ApplyDefaults(t *testing.T) {
-	// 1. 空配置应填充默认值
+	// 1. Empty configuration should be filled with default values
 	m1 := NewManager(ManagerConfig{})
 	if m1.baseConfig.Level != "info" {
 		t.Errorf("空配置应填充默认 Level=info，实际: %s", m1.baseConfig.Level)
@@ -152,7 +152,7 @@ func TestNewManager_ApplyDefaults(t *testing.T) {
 		t.Errorf("空配置应填充默认 MaxSize=100，实际: %d", m1.baseConfig.MaxSize)
 	}
 
-	// 2. 部分配置应保留用户值
+	// 2. Some configurations should retain user values
 	m2 := NewManager(ManagerConfig{
 		Level:   "debug",
 		MaxSize: 200,
@@ -167,13 +167,13 @@ func TestNewManager_ApplyDefaults(t *testing.T) {
 		t.Errorf("未配置字段应填充默认 MaxBackups=3，实际: %d", m2.baseConfig.MaxBackups)
 	}
 
-	// 3. 验证 loggers map 已初始化
+	// 3. Verify that the loggers map has been initialized
 	if m1.loggers == nil {
 		t.Error("NewManager 应初始化 loggers map")
 	}
 }
 
-// TestManagerConfig_Validate 测试配置验证
+// TestManagerConfig_Validate test configuration validation
 func TestManagerConfig_Validate(t *testing.T) {
 	tests := []struct {
 		name      string

@@ -12,31 +12,31 @@ import (
 	"go.uber.org/zap"
 )
 
-// UnsubscribeFunc 取消订阅函数
+// Unsubscribe function
 type UnsubscribeFunc func()
 
-// Dispatcher 事件分发器接口
+// Dispatcher event dispatcher interface
 type Dispatcher interface {
-	// Subscribe 订阅事件，返回取消订阅函数
+	// Subscribe to event, return unsubscribe function
 	Subscribe(eventName string, listener Listener, opts ...SubscribeOption) UnsubscribeFunc
 
-	// Dispatch 分发事件
-	// 支持 DispatchOption 控制分发行为：
-	// - 默认：内存同步分发
-	// - WithDispatchAsync()：内存异步分发
-	// - WithKafka(topic)：发送到 Kafka
-	// - WithKafka(topic) + WithDispatchAsync()：异步发送到 Kafka
+	// Dispatch event distribution
+	// Supports DispatchOption to control distribution behavior:
+	// - Default: memory synchronization distribution
+	// - WithDispatchAsync(): Memory asynchronous distribution
+	// - WithKafka(topic): send to Kafka
+	// - WithKafka(topic) + WithDispatchAsync(): Asynchronously send to Kafka
 	Dispatch(ctx context.Context, event Event, opts ...DispatchOption) error
 
-	// DispatchAsync 异步分发事件（兼容旧 API）
-	// 等价于 Dispatch(ctx, event, WithDispatchAsync())
+	// DispatchAsync asynchronously dispatches events (compatible with old API)
+	// Equivalent to Dispatch(ctx, event, WithDispatchAsync())
 	DispatchAsync(ctx context.Context, event Event)
 
-	// Use 注册全局拦截器
+	// Use register global interceptors
 	Use(interceptor Interceptor)
 }
 
-// dispatcher 事件分发器实现
+// dispatcher event dispatcher implementation
 type dispatcher struct {
 	mu             sync.RWMutex
 	listeners      map[string][]listenerEntry
@@ -46,12 +46,12 @@ type dispatcher struct {
 	poolSize       int
 	logger         *logger.CtxZapLogger
 	closed         int32
-	kafkaPublisher KafkaPublisher // Kafka 发布者（可选）
-	router         *Router        // 事件路由器（可选）
+	kafkaPublisher KafkaPublisher // Kafka publisher (optional)
+	router         *Router        // Event router (optional)
 	setAllSync     bool
 }
 
-// NewDispatcher 创建事件分发器
+// Create event dispatcher
 func NewDispatcher(opts ...DispatcherOption) *dispatcher {
 	d := &dispatcher{
 		listeners: make(map[string][]listenerEntry),
@@ -63,7 +63,7 @@ func NewDispatcher(opts ...DispatcherOption) *dispatcher {
 		opt(d)
 	}
 
-	// 创建协程池
+	// Create coroutine pool
 	var err error
 	d.pool, err = ants.NewPool(d.poolSize)
 	if err != nil {
@@ -74,7 +74,7 @@ func NewDispatcher(opts ...DispatcherOption) *dispatcher {
 	return d
 }
 
-// Subscribe 订阅事件
+// Subscribe to event
 func (d *dispatcher) Subscribe(eventName string, listener Listener, opts ...SubscribeOption) UnsubscribeFunc {
 	if eventName == "" || listener == nil {
 		return func() {}
@@ -94,19 +94,19 @@ func (d *dispatcher) Subscribe(eventName string, listener Listener, opts ...Subs
 
 	d.mu.Lock()
 	d.listeners[eventName] = append(d.listeners[eventName], entry)
-	// 按优先级排序
+	// Sort by priority
 	sort.SliceStable(d.listeners[eventName], func(i, j int) bool {
 		return d.listeners[eventName][i].priority < d.listeners[eventName][j].priority
 	})
 	d.mu.Unlock()
 
-	// 返回取消订阅函数
+	// Return the unsubscribe function
 	return func() {
 		d.unsubscribe(eventName, entry.id)
 	}
 }
 
-// unsubscribe 取消订阅
+// unsubscribe cancel subscription
 func (d *dispatcher) unsubscribe(eventName string, id uint64) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -120,27 +120,27 @@ func (d *dispatcher) unsubscribe(eventName string, id uint64) {
 	}
 }
 
-// Use 注册全局拦截器
+// Use register global interceptors
 func (d *dispatcher) Use(interceptor Interceptor) {
 	d.mu.Lock()
 	d.interceptors = append(d.interceptors, interceptor)
 	d.mu.Unlock()
 }
 
-// Dispatch 分发事件
-// 优先级：代码选项 > 配置路由 > 默认(内存)
+// Dispatch event distribution
+// Priority: Code option > Configured route > Default (memory)
 func (d *dispatcher) Dispatch(ctx context.Context, event Event, opts ...DispatchOption) error {
 	if event == nil {
 		return nil
 	}
 
-	// 解析选项
+	// Parse options
 	options := &dispatchOptions{}
 	for _, opt := range opts {
 		opt(options)
 	}
 
-	// 如果代码没有明确指定驱动器，尝试从路由配置获取
+	// If the code does not explicitly specify the driver, try to obtain it from the route configuration
 	if !options.driverExplicit && d.router != nil {
 		if route := d.router.Match(event.Name()); route != nil {
 			d.logger.DebugCtx(ctx, "🎯 事件路由匹配成功",
@@ -154,15 +154,15 @@ func (d *dispatcher) Dispatch(ctx context.Context, event Event, opts ...Dispatch
 		}
 	}
 
-	// 应用默认值
+	// Apply default values
 	options.applyDefaults()
 
-	// 根据驱动器选择分发方式
+	// Distribute based on drive selection
 	switch options.driver {
 	case DriverKafka:
 		return d.dispatchToKafka(ctx, event, options)
 	default:
-		// setAllSync 强制同步分发（忽略 options.async）
+		// setAllSync force synchronization distribution (ignore options.async)
 		if options.async && !d.setAllSync {
 			d.dispatchAsyncMemory(ctx, event)
 			return nil
@@ -171,9 +171,9 @@ func (d *dispatcher) Dispatch(ctx context.Context, event Event, opts ...Dispatch
 	}
 }
 
-// dispatchMemory 内存同步分发
+// dispatch memory synchronization distribution
 func (d *dispatcher) dispatchMemory(ctx context.Context, event Event) error {
-	// 获取拦截器和监听器的副本
+	// Get a copy of the interceptors and listeners
 	d.mu.RLock()
 	interceptors := make([]Interceptor, len(d.interceptors))
 	copy(interceptors, d.interceptors)
@@ -181,15 +181,15 @@ func (d *dispatcher) dispatchMemory(ctx context.Context, event Event) error {
 	copy(entries, d.listeners[event.Name()])
 	d.mu.RUnlock()
 
-	// 构建执行链：拦截器 -> 监听器
+	// Build execution chain: interceptor -> listener
 	handler := d.buildHandlerChain(ctx, entries, interceptors)
 
 	err := handler(ctx, event)
 
-	// 清理一次性监听器
+	// Clean up one-time listeners
 	d.cleanupOnceListeners(event.Name(), entries)
 
-	// ErrStopPropagation 不视为错误
+	// ErrStopPropagation is not considered an error
 	if errors.Is(err, ErrStopPropagation) {
 		return nil
 	}
@@ -197,13 +197,13 @@ func (d *dispatcher) dispatchMemory(ctx context.Context, event Event) error {
 	return err
 }
 
-// dispatchAsyncMemory 内存异步分发
+// dispatchAsyncMemory asynchronous memory distribution
 func (d *dispatcher) dispatchAsyncMemory(ctx context.Context, event Event) {
 	if atomic.LoadInt32(&d.closed) == 1 {
 		return
 	}
 
-	// 复制 context 中的关键信息（避免 context 被取消）
+	// Copy key information from the context (to avoid losing the context)
 	asyncCtx := context.Background()
 	if traceID := ctx.Value("trace_id"); traceID != nil {
 		asyncCtx = context.WithValue(asyncCtx, "trace_id", traceID)
@@ -226,7 +226,7 @@ func (d *dispatcher) dispatchAsyncMemory(ctx context.Context, event Event) {
 	}
 }
 
-// dispatchToKafka 发送到 Kafka
+// dispatchToKafka Dispatch to Kafka
 func (d *dispatcher) dispatchToKafka(ctx context.Context, event Event, opts *dispatchOptions) error {
 	if d.kafkaPublisher == nil {
 		return ErrKafkaNotAvailable
@@ -236,7 +236,7 @@ func (d *dispatcher) dispatchToKafka(ctx context.Context, event Event, opts *dis
 		return ErrKafkaTopicRequired
 	}
 
-	// 获取 traceID
+	// Get traceID
 	traceID := ""
 	if v := ctx.Value("trace_id"); v != nil {
 		if s, ok := v.(string); ok {
@@ -244,19 +244,19 @@ func (d *dispatcher) dispatchToKafka(ctx context.Context, event Event, opts *dis
 		}
 	}
 
-	// 序列化事件
+	// serialize event
 	payload, err := SerializeEvent(event, traceID)
 	if err != nil {
 		return err
 	}
 
-	// 确定消息 Key
+	// Determine message key
 	key := opts.key
 	if key == "" {
 		key = event.Name()
 	}
 
-	// 异步发送
+	// Asynchronous send
 	if opts.async {
 		go func() {
 			if err := d.kafkaPublisher.PublishJSON(ctx, opts.topic, key, payload); err != nil {
@@ -269,24 +269,24 @@ func (d *dispatcher) dispatchToKafka(ctx context.Context, event Event, opts *dis
 		return nil
 	}
 
-	// 同步发送
+	// Synchronous send
 	return d.kafkaPublisher.PublishJSON(ctx, opts.topic, key, payload)
 }
 
-// DispatchAsync 异步分发事件（兼容旧 API）
-// 等价于 Dispatch(ctx, event, WithDispatchAsync())
+// DispatchAsync asynchronously dispatches events (compatible with old API)
+// Equivalent to Dispatch(ctx, event, WithDispatchAsync())
 func (d *dispatcher) DispatchAsync(ctx context.Context, event Event) {
 	_ = d.Dispatch(ctx, event, WithDispatchAsync())
 }
 
-// buildHandlerChain 构建执行链
+// buildHandlerChain Build the execution chain
 func (d *dispatcher) buildHandlerChain(ctx context.Context, entries []listenerEntry, interceptors []Interceptor) Next {
-	// 最内层：执行监听器
+	// Innermost layer: execute listener
 	handler := func(ctx context.Context, event Event) error {
 		return d.executeListeners(ctx, event, entries)
 	}
 
-	// 从后向前包装拦截器
+	// Wrap interceptors backward
 	for i := len(interceptors) - 1; i >= 0; i-- {
 		interceptor := interceptors[i]
 		next := handler
@@ -298,11 +298,11 @@ func (d *dispatcher) buildHandlerChain(ctx context.Context, entries []listenerEn
 	return handler
 }
 
-// executeListeners 执行监听器
+// execute listeners
 func (d *dispatcher) executeListeners(ctx context.Context, event Event, entries []listenerEntry) error {
 	for _, entry := range entries {
 		if entry.async {
-			// 异步监听器提交到协程池
+			// Asynchronous listener submitted to coroutine pool
 			listener := entry.listener
 			eventName := event.Name()
 			_ = d.pool.Submit(func() {
@@ -315,7 +315,7 @@ func (d *dispatcher) executeListeners(ctx context.Context, event Event, entries 
 			continue
 		}
 
-		// 同步执行
+		// Synchronous execution
 		if err := entry.listener.Handle(ctx, event); err != nil {
 			return err
 		}
@@ -324,7 +324,7 @@ func (d *dispatcher) executeListeners(ctx context.Context, event Event, entries 
 	return nil
 }
 
-// cleanupOnceListeners 清理一次性监听器
+// cleanupOneTimeListeners
 func (d *dispatcher) cleanupOnceListeners(eventName string, executed []listenerEntry) {
 	var onceIDs []uint64
 	for _, e := range executed {
@@ -357,7 +357,7 @@ func (d *dispatcher) cleanupOnceListeners(eventName string, executed []listenerE
 	d.listeners[eventName] = filtered
 }
 
-// Close 关闭分发器
+// Close Disconnector
 func (d *dispatcher) Close() {
 	atomic.StoreInt32(&d.closed, 1)
 	if d.pool != nil {
@@ -365,7 +365,7 @@ func (d *dispatcher) Close() {
 	}
 }
 
-// ListenerCount 获取指定事件的监听器数量（用于测试）
+// Get the number of listeners for a specified event (for testing)
 func (d *dispatcher) ListenerCount(eventName string) int {
 	d.mu.RLock()
 	defer d.mu.RUnlock()

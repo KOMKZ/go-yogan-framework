@@ -56,7 +56,7 @@ func TestManager_RegisterRoutes_Disabled(t *testing.T) {
 	engine := gin.New()
 	mgr.RegisterRoutes(engine)
 
-	// 禁用时不应注册路由
+	// Do not register routes when disabled
 	routes := engine.Routes()
 	assert.Empty(t, routes)
 }
@@ -72,11 +72,11 @@ func TestManager_RegisterRoutes_Enabled(t *testing.T) {
 	engine := gin.New()
 	mgr.RegisterRoutes(engine)
 
-	// 启用时应注册路由
+	// Enable routing registration when enabled
 	routes := engine.Routes()
 	assert.Len(t, routes, 2) // UI + Spec
 
-	// 验证路由路径
+	// Validate route path
 	paths := make([]string, len(routes))
 	for i, r := range routes {
 		paths[i] = r.Path
@@ -99,7 +99,7 @@ func TestManager_ServeSpec_NoDoc(t *testing.T) {
 	w := httptest.NewRecorder()
 	engine.ServeHTTP(w, req)
 
-	// 未初始化 swag 时应返回错误
+	// Return an error when swag is not initialized
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
 

@@ -5,9 +5,9 @@ import (
 	"testing"
 )
 
-// TestEnvSource_AddBinding 测试添加 key 映射
+// TestEnvSource_AddBinding test adding key mapping
 func TestEnvSource_AddBinding(t *testing.T) {
-	// 设置环境变量
+	// Set environment variables
 	os.Setenv("MY_PREFIX_CUSTOM_KEY", "custom_value")
 	defer os.Unsetenv("MY_PREFIX_CUSTOM_KEY")
 
@@ -24,14 +24,14 @@ func TestEnvSource_AddBinding(t *testing.T) {
 	}
 }
 
-// TestEnvSource_AddBinding_WithPrefix 测试带前缀的 binding
+// TestEnvSource_AddBinding_WithPrefix_test_binding_with_prefix
 func TestEnvSource_AddBinding_WithPrefix(t *testing.T) {
-	// 设置环境变量
+	// Set environment variables
 	os.Setenv("TEST_DB_HOST", "localhost")
 	defer os.Unsetenv("TEST_DB_HOST")
 
 	source := NewEnvSource("TEST", 50)
-	source.AddBinding("database.host", "TEST_DB_HOST") // 已经有前缀
+	source.AddBinding("database.host", "TEST_DB_HOST") // Prefix already exists
 
 	data, err := source.Load()
 	if err != nil {
@@ -43,7 +43,7 @@ func TestEnvSource_AddBinding_WithPrefix(t *testing.T) {
 	}
 }
 
-// TestEnvSource_NoPrefix 测试无前缀
+// TestEnvSource_NoPrefix test without prefix
 func TestEnvSource_NoPrefix(t *testing.T) {
 	source := NewEnvSource("", 50)
 
@@ -52,15 +52,15 @@ func TestEnvSource_NoPrefix(t *testing.T) {
 		t.Fatalf("Load() error: %v", err)
 	}
 
-	// 无前缀时应该返回空 map
+	// return an empty map when there is no prefix
 	if len(data) != 0 {
 		t.Errorf("expected empty map for no prefix, got %d items", len(data))
 	}
 }
 
-// TestEnvSource_EmptyBinding 测试空的 binding 值
+// TestEnvSource_EmptyBinding test empty binding value
 func TestEnvSource_EmptyBinding(t *testing.T) {
-	// 不设置环境变量
+	// Do not set environment variables
 	source := NewEnvSource("EMPTY", 50)
 	source.AddBinding("app.missing", "MISSING_KEY")
 
@@ -69,13 +69,13 @@ func TestEnvSource_EmptyBinding(t *testing.T) {
 		t.Fatalf("Load() error: %v", err)
 	}
 
-	// 空值不应该被添加
+	// Null values should not be added
 	if _, ok := data["app.missing"]; ok {
 		t.Error("empty env value should not be added")
 	}
 }
 
-// TestEnvSource_MultipleBindings 测试多个 bindings
+// TestEnvSource_MultipleBindings test multiple bindings
 func TestEnvSource_MultipleBindings(t *testing.T) {
 	os.Setenv("APP_DB_HOST", "db.example.com")
 	os.Setenv("APP_DB_PORT", "5432")

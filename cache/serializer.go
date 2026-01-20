@@ -4,25 +4,25 @@ import (
 	"encoding/json"
 )
 
-// JSONSerializer JSON 序列化器
+// JSONSerializer JSON serializer
 type JSONSerializer struct{}
 
-// NewJSONSerializer 创建 JSON 序列化器
+// Create JSON serializer
 func NewJSONSerializer() *JSONSerializer {
 	return &JSONSerializer{}
 }
 
-// Serialize 序列化对象为 JSON
+// Serialize object to JSON
 func (s *JSONSerializer) Serialize(v any) ([]byte, error) {
 	return json.Marshal(v)
 }
 
-// Deserialize 反序列化 JSON 为对象
+// Deserialize JSON to object
 func (s *JSONSerializer) Deserialize(data []byte, v any) error {
 	return json.Unmarshal(data, v)
 }
 
-// Name 返回序列化器名称
+// Name Returns the serializer name
 func (s *JSONSerializer) Name() string {
 	return "json"
 }

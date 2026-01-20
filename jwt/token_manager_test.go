@@ -66,7 +66,7 @@ func TestNewTokenManager_InvalidConfig(t *testing.T) {
 	config := &Config{
 		Enabled:   true,
 		Algorithm: "HS256",
-		Secret:    "", // 空密钥
+		Secret:    "", // empty key
 		AccessToken: AccessTokenConfig{
 			TTL: 2 * time.Hour,
 		},
@@ -97,7 +97,7 @@ func TestTokenManager_GenerateAccessToken(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEmpty(t, token)
 
-	// 验证生成的 Token
+	// Validate the generated Token
 	claims, err := manager.VerifyToken(ctx, token)
 	assert.NoError(t, err)
 	assert.Equal(t, subject, claims.Subject)
@@ -134,7 +134,7 @@ func TestTokenManager_GenerateRefreshToken(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEmpty(t, token)
 
-	// 验证生成的 Refresh Token
+	// Validate the generated Refresh Token
 	claims, err := manager.VerifyToken(ctx, token)
 	assert.NoError(t, err)
 	assert.Equal(t, subject, claims.Subject)
@@ -168,14 +168,14 @@ func TestTokenManager_VerifyToken_Success(t *testing.T) {
 
 func TestTokenManager_VerifyToken_ExpiredToken(t *testing.T) {
 	config := newTestConfig()
-	config.AccessToken.TTL = 10 * time.Millisecond // 极短 TTL
+	config.AccessToken.TTL = 10 * time.Millisecond // Very short TTL
 	manager := newTestTokenManager(t, config)
 
 	ctx := context.Background()
 	token, err := manager.GenerateAccessToken(ctx, "user123", nil)
 	require.NoError(t, err)
 
-	// 等待 Token 过期
+	// waiting for token to expire
 	time.Sleep(20 * time.Millisecond)
 
 	claims, err := manager.VerifyToken(ctx, token)
@@ -204,11 +204,11 @@ func TestTokenManager_VerifyToken_BlacklistedToken(t *testing.T) {
 	token, err := manager.GenerateAccessToken(ctx, "user123", nil)
 	require.NoError(t, err)
 
-	// 撤销 Token
+	// Revoke token
 	err = manager.RevokeToken(ctx, token)
 	require.NoError(t, err)
 
-	// 验证被撤销的 Token
+	// Verify revoked token
 	claims, err := manager.VerifyToken(ctx, token)
 	assert.ErrorIs(t, err, ErrTokenBlacklisted)
 	assert.Nil(t, claims)
@@ -227,17 +227,17 @@ func TestTokenManager_RefreshToken_Success(t *testing.T) {
 		"roles":    []string{"admin"},
 	}
 
-	// 生成 Refresh Token
+	// Generate Refresh Token
 	_, err := manager.GenerateRefreshToken(ctx, subject)
 	require.NoError(t, err)
 
-	// 使用 Refresh Token 获取新的 Access Token
-	// 注意：需要先生成带自定义 Claims 的 Access Token，然后生成 Refresh Token
-	// 这里简化测试，直接测试 RefreshToken 方法
+	// Use Refresh Token to obtain new Access Token
+	// Note: An Access Token with custom Claims must be generated first, then a Refresh Token should be generated.
+	// Here we simplify the test by directly testing the RefreshToken method
 	accessToken, err := manager.GenerateAccessToken(ctx, subject, customClaims)
 	require.NoError(t, err)
 
-	// 验证 Access Token
+	// Validate Access Token
 	claims, err := manager.VerifyToken(ctx, accessToken)
 	assert.NoError(t, err)
 	assert.Equal(t, subject, claims.Subject)
@@ -263,11 +263,11 @@ func TestTokenManager_RefreshToken_NotRefreshToken(t *testing.T) {
 
 	ctx := context.Background()
 
-	// 生成 Access Token（不是 Refresh Token）
+	// Generate Access Token (not Refresh Token)
 	accessToken, err := manager.GenerateAccessToken(ctx, "user123", nil)
 	require.NoError(t, err)
 
-	// 尝试用 Access Token 刷新
+	// Try to refresh with Access Token
 	newToken, err := manager.RefreshToken(ctx, accessToken)
 	assert.Error(t, err)
 	assert.Empty(t, newToken)
@@ -282,11 +282,11 @@ func TestTokenManager_RevokeToken_Success(t *testing.T) {
 	token, err := manager.GenerateAccessToken(ctx, "user123", nil)
 	require.NoError(t, err)
 
-	// 撤销 Token
+	// Revoke token
 	err = manager.RevokeToken(ctx, token)
 	assert.NoError(t, err)
 
-	// 验证被撤销的 Token
+	// Verify revoked token
 	claims, err := manager.VerifyToken(ctx, token)
 	assert.ErrorIs(t, err, ErrTokenBlacklisted)
 	assert.Nil(t, claims)
@@ -302,10 +302,10 @@ func TestTokenManager_RevokeToken_ExpiredToken(t *testing.T) {
 	token, err := manager.GenerateAccessToken(ctx, "user123", nil)
 	require.NoError(t, err)
 
-	// 等待过期
+	// wait for expiration
 	time.Sleep(20 * time.Millisecond)
 
-	// 撤销已过期的 Token（应该直接返回 nil）
+	// Revoke expired tokens (should return nil directly)
 	err = manager.RevokeToken(ctx, token)
 	assert.NoError(t, err)
 }
@@ -318,7 +318,7 @@ func TestTokenManager_RevokeUserTokens_Success(t *testing.T) {
 	ctx := context.Background()
 	subject := "user123"
 
-	// 生成两个旧 Token
+	// Generate two old tokens
 	token1, err := manager.GenerateAccessToken(ctx, subject, nil)
 	require.NoError(t, err)
 
@@ -329,11 +329,11 @@ func TestTokenManager_RevokeUserTokens_Success(t *testing.T) {
 
 	time.Sleep(500 * time.Millisecond)
 
-	// 撤销用户所有 Token
+	// Revoke all user tokens
 	err = manager.RevokeUserTokens(ctx, subject)
 	assert.NoError(t, err)
 
-	// 验证旧 Token（应该被撤销）
+	// Validate old token (should be revoked)
 	claims, err := manager.VerifyToken(ctx, token1)
 	assert.ErrorIs(t, err, ErrTokenBlacklisted)
 	assert.Nil(t, claims)
@@ -342,12 +342,12 @@ func TestTokenManager_RevokeUserTokens_Success(t *testing.T) {
 	assert.ErrorIs(t, err, ErrTokenBlacklisted)
 	assert.Nil(t, claims)
 
-	// 等待足够长的时间，确保新 Token 在拉黑之后生成（使用秒级延迟）
+	// Wait long enough to ensure that a new token is generated after being blacklisted (using second-level delay)
 	time.Sleep(1100 * time.Millisecond)
 	newToken, err := manager.GenerateAccessToken(ctx, subject, nil)
 	require.NoError(t, err)
 
-	// 新 Token 应该有效（因为在拉黑之后生成）
+	// The new token should be valid (as it was generated after being blacklisted)
 	claims, err = manager.VerifyToken(ctx, newToken)
 	assert.NoError(t, err)
 	assert.NotNil(t, claims)
@@ -362,7 +362,7 @@ func TestTokenManager_RevokeToken_BlacklistDisabled(t *testing.T) {
 	token, err := manager.GenerateAccessToken(ctx, "user123", nil)
 	require.NoError(t, err)
 
-	// 撤销 Token（黑名单未启用）
+	// Revoke token (blacklist not enabled)
 	err = manager.RevokeToken(ctx, token)
 	assert.Error(t, err)
 }
@@ -374,7 +374,7 @@ func TestTokenManager_RevokeUserTokens_BlacklistDisabled(t *testing.T) {
 
 	ctx := context.Background()
 
-	// 撤销用户 Token（黑名单未启用）
+	// Revoke user token (blacklist not enabled)
 	err := manager.RevokeUserTokens(ctx, "user123")
 	assert.Error(t, err)
 }

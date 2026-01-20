@@ -10,7 +10,7 @@ import (
 )
 
 // ============================================================
-// Response 基础测试
+// Basic response test
 // ============================================================
 
 func TestResponse_IsSuccess(t *testing.T) {
@@ -75,7 +75,7 @@ func TestResponse_IsServerError(t *testing.T) {
 }
 
 // ============================================================
-// Response JSON 测试
+// Response JSON test
 // ============================================================
 
 func TestResponse_JSON(t *testing.T) {
@@ -123,7 +123,7 @@ func TestResponse_JSON_Nil(t *testing.T) {
 }
 
 // ============================================================
-// Response String/Bytes 测试
+// Response String/Bytes Test
 // ============================================================
 
 func TestResponse_String(t *testing.T) {
@@ -147,11 +147,11 @@ func TestResponse_Bytes(t *testing.T) {
 }
 
 // ============================================================
-// Response Close 测试
+// Response Close test
 // ============================================================
 
 func TestResponse_Close_WithRawResponse(t *testing.T) {
-	// 创建一个 mock http.Response
+	// Create a mock http.Response
 	httpResp := &http.Response{
 		Body: io.NopCloser(strings.NewReader("test")),
 	}
@@ -176,11 +176,11 @@ func TestResponse_Close_NoRawResponse(t *testing.T) {
 }
 
 // ============================================================
-// newResponse 测试
+// newResponse test
 // ============================================================
 
 func TestNewResponse(t *testing.T) {
-	// 创建一个 mock http.Response
+	// Create a mock http.Response
 	bodyStr := "test response body"
 	httpResp := &http.Response{
 		StatusCode: 200,
@@ -238,7 +238,7 @@ func TestNewResponse_Nil(t *testing.T) {
 }
 
 func TestNewResponse_ReadBodyError(t *testing.T) {
-	// 创建一个会失败的 Reader
+	// Create a reader that will fail
 	httpResp := &http.Response{
 		StatusCode: 200,
 		Body:       io.NopCloser(&errorReader{}),

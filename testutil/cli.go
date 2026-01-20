@@ -9,62 +9,62 @@ import (
 	"gorm.io/gorm"
 )
 
-// CLITestContext CLI 测试上下文
-// 封装 CLI 测试所需的基础组件
+// CLI Test Context
+// Encapsulate basic components required for CLI tests
 type CLITestContext struct {
 	Logger    *zap.Logger
 	DBManager *database.Manager
 	DBHelper  *DBHelper
 }
 
-// CLITestOptions CLI 测试选项
+// CLITestOptions CLI test options
 type CLITestOptions struct {
-	// AutoMigrate 自动迁移的模型列表
+	// AutoMigrate list of models for automatic migration
 	AutoMigrate []interface{}
 
-	// DBConfig 自定义数据库配置（可选，默认使用 SQLite 内存数据库）
+	// DBConfig custom database configuration (optional, defaults to an in-memory SQLite database)
 	DBConfig map[string]database.Config
 
-	// Logger 自定义 Logger（可选，默认使用 Development Logger）
+	// Logger custom logger (optional, default uses Development Logger)
 	Logger *zap.Logger
 
-	// SetupFunc 自定义初始化函数（可选，在基础初始化完成后调用）
-	// 用于创建业务层的 Service、Handler 等
+	// SetupFunc custom initialization function (optional, called after basic initialization)
+	// For creating services, handlers, etc. in the business layer
 	SetupFunc func(*CLITestContext) error
 }
 
-// NewCLITestContext 创建 CLI 测试上下文（一站式初始化）
+// NewCLITestContext creates a CLI test context (one-stop initialization)
 //
-// 使用方式：
+// Usage:
 //
 //	func TestMain(m *testing.M) {
-//	    // 1. 创建测试上下文（自动完成所有初始化）
+// // 1. Create test context (auto-complete all initialization)
 //	    ctx, cleanup := testutil.NewCLITestContext(t, testutil.CLITestOptions{
 //	        AutoMigrate: []interface{}{&model.User{}},
 //	    })
 //	    defer cleanup()
 //
-//	    // 2. 使用 DBManager 创建 Service
+// // 2. Use DBManager to create Service
 //	    userRepo := user.NewRepositoryImpl(ctx.DBManager.DB("master"))
 //	    userService := user.NewService(userRepo)
 //
-//	    // 3. 运行测试
+// // 3. Run tests
 //	    code := m.Run()
 //	    os.Exit(code)
 //	}
 //
-// 优势：
-//   - 自动创建 Logger、DBManager、AutoMigrate
-//   - 默认使用 SQLite 内存数据库（快速、隔离）
-//   - 提供 cleanup 函数自动清理资源
+// Advantages:
+// - Automatically create Logger, DBManager, AutoMigrate
+// - Default use of SQLite in-memory database (fast, isolated)
+// - Provide a cleanup function to automatically clean up resources
 func NewCLITestContext(t *testing.T, opts CLITestOptions) (*CLITestContext, func()) {
-	// 1. 创建 Logger（如果未提供）
+	// 1. Create Logger (if not provided)
 	zapLogger := opts.Logger
 	if zapLogger == nil {
 		zapLogger, _ = zap.NewDevelopment()
 	}
 
-	// 2. 创建数据库配置（如果未提供，使用默认 SQLite 内存数据库）
+	// 2. Create database configuration (if not provided, use default SQLite in-memory database)
 	dbConfig := opts.DBConfig
 	if dbConfig == nil {
 		dbConfig = map[string]database.Config{
@@ -77,14 +77,14 @@ func NewCLITestContext(t *testing.T, opts CLITestOptions) (*CLITestContext, func
 		}
 	}
 
-	// 3. 创建数据库管理器（使用 CtxZapLogger）
+	// 3. Create database manager (using CtxZapLogger)
 	ctxLogger := logger.NewCtxZapLogger("test")
 	dbManager, err := database.NewManager(dbConfig, nil, ctxLogger)
 	if err != nil {
 		t.Fatalf("创建数据库失败: %v", err)
 	}
 
-	// 4. 自动迁移表结构
+	// 4. Automatic table structure migration
 	if len(opts.AutoMigrate) > 0 {
 		db := dbManager.DB("master")
 		if err := db.AutoMigrate(opts.AutoMigrate...); err != nil {
@@ -93,17 +93,17 @@ func NewCLITestContext(t *testing.T, opts CLITestOptions) (*CLITestContext, func
 		}
 	}
 
-	// 5. 创建数据库辅助工具
+	// 5. Create database utility
 	dbHelper := NewDBHelper(dbManager.DB("master"))
 
-	// 6. 创建上下文
+	// 6. Create context
 	ctx := &CLITestContext{
 		Logger:    zapLogger,
 		DBManager: dbManager,
 		DBHelper:  dbHelper,
 	}
 
-	// 7. 执行自定义初始化函数
+	// 7. Execute custom initialization function
 	if opts.SetupFunc != nil {
 		if err := opts.SetupFunc(ctx); err != nil {
 			dbManager.Close()
@@ -111,7 +111,7 @@ func NewCLITestContext(t *testing.T, opts CLITestOptions) (*CLITestContext, func
 		}
 	}
 
-	// 8. 返回 cleanup 函数
+	// 8. Return the cleanup function
 	cleanup := func() {
 		if dbManager != nil {
 			dbManager.Close()
@@ -124,22 +124,22 @@ func NewCLITestContext(t *testing.T, opts CLITestOptions) (*CLITestContext, func
 	return ctx, cleanup
 }
 
-// MustNewCLITestContext 创建 CLI 测试上下文（失败时 fatal）
+// MustNewCLITestContext Create CLI test context (fatal on failure)
 func MustNewCLITestContext(t *testing.T, opts CLITestOptions) (*CLITestContext, func()) {
 	ctx, cleanup := NewCLITestContext(t, opts)
 	return ctx, cleanup
 }
 
-// SetupTestDB 快速创建测试数据库（极简版）
+// SetupTestDB Quickly Creates a Minimal Test Database
 //
-// 适用场景：只需要数据库，不需要其他组件
+// Applicable scenario: Only the database is required, other components are not needed.
 //
-// 使用方式：
+// Usage:
 //
 //	db, cleanup := testutil.SetupTestDB(t, &model.User{})
 //	defer cleanup()
 func SetupTestDB(t *testing.T, models ...interface{}) (*gorm.DB, func()) {
-	// 创建 SQLite 内存数据库
+	// Create an SQLite in-memory database
 	dbConfig := map[string]database.Config{
 		"master": {
 			Driver:       "sqlite",
@@ -155,7 +155,7 @@ func SetupTestDB(t *testing.T, models ...interface{}) (*gorm.DB, func()) {
 		t.Fatalf("创建数据库失败: %v", err)
 	}
 
-	// 自动迁移
+	// Automatic migration
 	db := dbManager.DB("master")
 	if len(models) > 0 {
 		if err := db.AutoMigrate(models...); err != nil {
@@ -166,7 +166,7 @@ func SetupTestDB(t *testing.T, models ...interface{}) (*gorm.DB, func()) {
 
 	cleanup := func() {
 		dbManager.Close()
-		// CtxZapLogger 的 Sync 通过底层 zap.Logger 实现，无需显式调用
+		// CtxtZapLogger's Sync is implemented through the underlying zap.Logger, no need to call explicitly
 	}
 
 	return db, cleanup

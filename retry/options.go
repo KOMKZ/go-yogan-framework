@@ -4,17 +4,17 @@ import (
 	"time"
 )
 
-// Config 重试配置
+// Retry configuration
 type Config struct {
-	maxAttempts int              // 最大尝试次数（默认 3）
-	backoff     BackoffStrategy  // 退避策略（默认指数退避）
-	condition   RetryCondition   // 重试条件（默认所有错误都重试）
-	onRetry     func(attempt int, err error) // 重试回调
-	timeout     time.Duration    // 单次操作超时（0 表示无限制）
-	budget      *BudgetManager   // 重试预算（可选）
+	maxAttempts int              // Maximum number of attempts (default 3)
+	backoff     BackoffStrategy  // backoff strategy (default exponential backoff)
+	condition   RetryCondition   // Retry conditions (by default, all errors are retried)
+	onRetry     func(attempt int, err error) // retry callback
+	timeout     time.Duration    // Timeout for single operation (0 indicates no limit)
+	budget      *BudgetManager   // Retry budget (optional)
 }
 
-// defaultConfig 默认配置
+// default configuration
 func defaultConfig() *Config {
 	return &Config{
 		maxAttempts: 3,
@@ -26,10 +26,10 @@ func defaultConfig() *Config {
 	}
 }
 
-// Option 配置选项函数
+// Option configuration function
 type Option func(*Config)
 
-// MaxAttempts 设置最大尝试次数
+// Set the maximum number of retry attempts
 func MaxAttempts(n int) Option {
 	return func(c *Config) {
 		if n > 0 {
@@ -38,7 +38,7 @@ func MaxAttempts(n int) Option {
 	}
 }
 
-// Backoff 设置退避策略
+// Set backoff strategy
 func Backoff(b BackoffStrategy) Option {
 	return func(c *Config) {
 		if b != nil {
@@ -47,7 +47,7 @@ func Backoff(b BackoffStrategy) Option {
 	}
 }
 
-// Condition 设置重试条件
+// Set retry conditions
 func Condition(cond RetryCondition) Option {
 	return func(c *Config) {
 		if cond != nil {
@@ -56,14 +56,14 @@ func Condition(cond RetryCondition) Option {
 	}
 }
 
-// OnRetry 设置重试回调
+// Sets the retry callback
 func OnRetry(f func(attempt int, err error)) Option {
 	return func(c *Config) {
 		c.onRetry = f
 	}
 }
 
-// Timeout 设置单次操作超时
+// Set timeout for individual operation
 func Timeout(d time.Duration) Option {
 	return func(c *Config) {
 		if d > 0 {
@@ -72,7 +72,7 @@ func Timeout(d time.Duration) Option {
 	}
 }
 
-// Budget 设置重试预算
+// Budget sets retry budget
 func Budget(b *BudgetManager) Option {
 	return func(c *Config) {
 		c.budget = b

@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// mockUserRepository 模拟用户仓库
+// mockUserRepository simulated user repository
 type mockUserRepository struct {
 	users       map[string]*User
 	findByUsername func(ctx context.Context, username string) (*User, error)
@@ -46,7 +46,7 @@ func (r *mockUserRepository) AddUser(user *User) {
 	r.users[user.Username] = user
 }
 
-// mockLoginAttemptStore 模拟登录尝试存储
+// mockLoginAttemptStore simulated login attempt storage
 type mockLoginAttemptStore struct {
 	attempts   map[string]int
 	isLocked   bool

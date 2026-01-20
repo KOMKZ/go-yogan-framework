@@ -11,55 +11,55 @@ import (
 	"github.com/KOMKZ/go-yogan-framework/retry"
 )
 
-// config 内部配置结构
+// internal configuration structure
 type config struct {
-	// Client 配置
+	// Client configuration
 	baseURL    string
 	timeout    time.Duration
 	transport  *http.Transport
 	cookieJar  http.CookieJar
 	headers    map[string]string
 	
-	// Request 配置
+	// Request configuration
 	ctx        context.Context
 	queries    url.Values
 	body       io.Reader
 	retryOpts  []retry.Option
 	retryEnabled bool
 	
-	// Breaker 配置
+	// Breaker configuration
 	breakerManager  BreakerManager
 	breakerResource string
 	breakerFallback func(ctx context.Context, err error) (*Response, error)
 	breakerDisabled bool
 	
-	// 高级配置
+	// Advanced configuration
 	beforeRequest func(*http.Request) error
 	afterResponse func(*Response) error
 }
 
-// Option 配置选项类型
+// Option configuration option type
 type Option func(*config)
 
 // ============================================================
-// Client 级别选项
+// Client level options
 // ============================================================
 
-// WithBaseURL 设置基础 URL
+// SetBaseURL sets the base URL
 func WithBaseURL(baseURL string) Option {
 	return func(c *config) {
 		c.baseURL = baseURL
 	}
 }
 
-// WithTimeout 设置超时时间
+// Set timeout duration
 func WithTimeout(duration time.Duration) Option {
 	return func(c *config) {
 		c.timeout = duration
 	}
 }
 
-// WithHeader 设置单个 Header
+// WithHeader sets a single header
 func WithHeader(key, value string) Option {
 	return func(c *config) {
 		if c.headers == nil {
@@ -69,7 +69,7 @@ func WithHeader(key, value string) Option {
 	}
 }
 
-// WithHeaders 设置多个 Headers
+// WithHeaders set multiple headers
 func WithHeaders(headers map[string]string) Option {
 	return func(c *config) {
 		if c.headers == nil {
@@ -81,14 +81,14 @@ func WithHeaders(headers map[string]string) Option {
 	}
 }
 
-// WithTransport 设置自定义 Transport
+// WithTransport set custom Transport
 func WithTransport(transport *http.Transport) Option {
 	return func(c *config) {
 		c.transport = transport
 	}
 }
 
-// WithInsecureSkipVerify 跳过 TLS 验证（不安全，仅用于开发环境）
+// WithInsecureSkipVerify skip TLS verification (insecure, for development environment only)
 func WithInsecureSkipVerify() Option {
 	return func(c *config) {
 		if c.transport == nil {
@@ -101,7 +101,7 @@ func WithInsecureSkipVerify() Option {
 	}
 }
 
-// WithCookieJar 设置 Cookie Jar
+// Set Cookie Jar
 func WithCookieJar(jar http.CookieJar) Option {
 	return func(c *config) {
 		c.cookieJar = jar
@@ -109,17 +109,17 @@ func WithCookieJar(jar http.CookieJar) Option {
 }
 
 // ============================================================
-// Request 级别选项
+// Request level options
 // ============================================================
 
-// WithContext 设置 Context
+// Set Context with WithContext
 func WithContext(ctx context.Context) Option {
 	return func(c *config) {
 		c.ctx = ctx
 	}
 }
 
-// WithQuery 设置单个 Query 参数
+// WithQuery sets a single query parameter
 func WithQuery(key, value string) Option {
 	return func(c *config) {
 		if c.queries == nil {
@@ -129,7 +129,7 @@ func WithQuery(key, value string) Option {
 	}
 }
 
-// WithQueries 设置多个 Query 参数
+// WithQueries set multiple Query parameters
 func WithQueries(queries url.Values) Option {
 	return func(c *config) {
 		if c.queries == nil {
@@ -143,40 +143,40 @@ func WithQueries(queries url.Values) Option {
 	}
 }
 
-// WithJSON 设置 JSON Body（会自动设置 Content-Type）
+// WithJSON sets the JSON Body (automatically sets Content-Type)
 func WithJSON(data interface{}) Option {
 	return func(c *config) {
-		// JSON 序列化会在 Client.Do() 中处理
-		// 这里只是标记，实际序列化在执行时进行
+		// JSON serialization is handled in Client.Do()
+		// This is just a marker; actual serialization is performed during execution.
 	}
 }
 
-// WithForm 设置 Form Body（会自动设置 Content-Type）
+// WithForm sets the Form Body (automatically sets Content-Type)
 func WithForm(data map[string]string) Option {
 	return func(c *config) {
-		// Form 编码会在 Client.Do() 中处理
+		// Form encoding will be handled in Client.Do()
 	}
 }
 
-// WithBody 设置原始 Body
+// WithBody sets the original Body
 func WithBody(reader io.Reader) Option {
 	return func(c *config) {
 		c.body = reader
 	}
 }
 
-// WithBodyString 设置字符串 Body
+// WithBodyString sets the string Body
 func WithBodyString(s string) Option {
 	return func(c *config) {
-		// 字符串转 Reader 会在 Client.Do() 中处理
+		// Converting the string to a Reader is handled in Client.Do()
 	}
 }
 
 // ============================================================
-// Retry 选项
+// Retry option
 // ============================================================
 
-// WithRetry 设置重试选项
+// Set retry options_withRetry
 func WithRetry(opts ...retry.Option) Option {
 	return func(c *config) {
 		c.retryEnabled = true
@@ -184,7 +184,7 @@ func WithRetry(opts ...retry.Option) Option {
 	}
 }
 
-// WithRetryDefaults 使用默认重试策略
+// Use default retry strategy
 func WithRetryDefaults() Option {
 	return func(c *config) {
 		c.retryEnabled = true
@@ -192,7 +192,7 @@ func WithRetryDefaults() Option {
 	}
 }
 
-// DisableRetry 禁用重试
+// DisableRetry Disable retry
 func DisableRetry() Option {
 	return func(c *config) {
 		c.retryEnabled = false
@@ -201,17 +201,17 @@ func DisableRetry() Option {
 }
 
 // ============================================================
-// 高级选项
+// Advanced options
 // ============================================================
 
-// WithBeforeRequest 设置请求前钩子
+// WithBeforeRequest set request pre-hook
 func WithBeforeRequest(fn func(*http.Request) error) Option {
 	return func(c *config) {
 		c.beforeRequest = fn
 	}
 }
 
-// WithAfterResponse 设置响应后钩子
+// Sets the post-response hook
 func WithAfterResponse(fn func(*Response) error) Option {
 	return func(c *config) {
 		c.afterResponse = fn
@@ -219,20 +219,20 @@ func WithAfterResponse(fn func(*Response) error) Option {
 }
 
 // ============================================================
-// 内部辅助函数
+// Internal auxiliary function
 // ============================================================
 
-// newConfig 创建默认配置
+// Create default configuration
 func newConfig() *config {
 	return &config{
-		timeout:      30 * time.Second, // 默认 30 秒超时
+		timeout:      30 * time.Second, // Default 30-second timeout
 		headers:      make(map[string]string),
 		queries:      make(url.Values),
 		retryEnabled: false,
 	}
 }
 
-// applyOptions 应用选项
+// Apply options
 func applyOptions(cfg *config, opts []Option) {
 	for _, opt := range opts {
 		if opt != nil {
@@ -241,7 +241,7 @@ func applyOptions(cfg *config, opts []Option) {
 	}
 }
 
-// merge 合并配置（Request 级配置覆盖 Client 级配置）
+// merge Merge configuration (Request level configuration overrides Client level configuration)
 func (c *config) merge(other *config) *config {
 	merged := &config{
 		baseURL:         c.baseURL,
@@ -260,7 +260,7 @@ func (c *config) merge(other *config) *config {
 		afterResponse:   c.afterResponse,
 	}
 	
-	// 合并 Headers
+	// Merge Headers
 	for k, v := range c.headers {
 		merged.headers[k] = v
 	}
@@ -268,7 +268,7 @@ func (c *config) merge(other *config) *config {
 		merged.headers[k] = v
 	}
 	
-	// 合并 Queries
+	// Merge Queries
 	for k, vs := range c.queries {
 		for _, v := range vs {
 			merged.queries.Add(k, v)
@@ -280,7 +280,7 @@ func (c *config) merge(other *config) *config {
 		}
 	}
 	
-	// Request 级配置覆盖
+	// Request level configuration override
 	if other.ctx != nil {
 		merged.ctx = other.ctx
 	}
@@ -291,13 +291,13 @@ func (c *config) merge(other *config) *config {
 		merged.timeout = other.timeout
 	}
 	
-	// Retry 配置覆盖
+	// Retry configuration override
 	if other.retryEnabled != c.retryEnabled || len(other.retryOpts) > 0 {
 		merged.retryEnabled = other.retryEnabled
 		merged.retryOpts = other.retryOpts
 	}
 	
-	// Breaker 配置覆盖
+	// Breaker configuration override
 	if other.breakerManager != nil {
 		merged.breakerManager = other.breakerManager
 	}
@@ -311,7 +311,7 @@ func (c *config) merge(other *config) *config {
 		merged.breakerDisabled = other.breakerDisabled
 	}
 	
-	// 钩子函数覆盖
+	// hook function override
 	if other.beforeRequest != nil {
 		merged.beforeRequest = other.beforeRequest
 	}

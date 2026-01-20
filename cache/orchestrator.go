@@ -13,15 +13,15 @@ import (
 	"golang.org/x/sync/singleflight"
 )
 
-// CacheInvalidator 缓存失效接口
-// 事件实现此接口后，cache 组件可自动提取参数进行精确缓存失效
+// CacheInvalidator cache invalidation interface
+// After an event implements this interface, the cache component can automatically extract parameters to precisely invalidate caches
 type CacheInvalidator interface {
-	// CacheArgs 返回用于构建缓存 key 的参数列表
-	// 例如：ArticleDeletedEvent 返回 []any{articleID}
+	// Returns the parameters list used for constructing cache keys
+	// For example: ArticleDeletedEvent returns []any{articleID}
 	CacheArgs() []any
 }
 
-// DefaultOrchestrator 默认缓存编排中心实现
+// DefaultOrchestrator default cache orchestration center implementation
 type DefaultOrchestrator struct {
 	config     *Config
 	stores     map[string]Store
@@ -33,14 +33,14 @@ type DefaultOrchestrator struct {
 	sf         singleflight.Group
 	mu         sync.RWMutex
 
-	// 统计
+	// Statistical analysis
 	hits        int64
 	misses      int64
 	invalidates int64
 	errors      int64
 }
 
-// NewOrchestrator 创建编排中心
+// NewOrchestrator creates the orchestrator center
 func NewOrchestrator(cfg *Config, dispatcher event.Dispatcher, log *logger.CtxZapLogger) *DefaultOrchestrator {
 	cfg.ApplyDefaults()
 
@@ -54,13 +54,13 @@ func NewOrchestrator(cfg *Config, dispatcher event.Dispatcher, log *logger.CtxZa
 		logger:     log,
 	}
 
-	// 加载缓存项配置
+	// Load cache item configuration
 	for i := range cfg.Cacheables {
 		c := &cfg.Cacheables[i]
 		o.cacheables[c.Name] = c
 	}
 
-	// 订阅失效事件
+	// subscription expiration event
 	if dispatcher != nil {
 		o.subscribeInvalidationEvents()
 	}
@@ -68,7 +68,7 @@ func NewOrchestrator(cfg *Config, dispatcher event.Dispatcher, log *logger.CtxZa
 	return o
 }
 
-// RegisterLoader 注册数据加载器
+// RegisterLoader registers data loader
 func (o *DefaultOrchestrator) RegisterLoader(name string, loader LoaderFunc) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
@@ -78,7 +78,7 @@ func (o *DefaultOrchestrator) RegisterLoader(name string, loader LoaderFunc) {
 	}
 }
 
-// RegisterStore 注册存储后端
+// RegisterStore register storage backend
 func (o *DefaultOrchestrator) RegisterStore(name string, store Store) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
@@ -88,7 +88,7 @@ func (o *DefaultOrchestrator) RegisterStore(name string, store Store) {
 	}
 }
 
-// GetStore 获取存储后端
+// GetStore Retrieve storage backend
 func (o *DefaultOrchestrator) GetStore(name string) (Store, error) {
 	o.mu.RLock()
 	defer o.mu.RUnlock()
@@ -99,7 +99,7 @@ func (o *DefaultOrchestrator) GetStore(name string) (Store, error) {
 	return store, nil
 }
 
-// Call 执行缓存调用
+// Call execute cache call
 func (o *DefaultOrchestrator) Call(ctx context.Context, name string, args ...any) (any, error) {
 	o.mu.RLock()
 	config, ok := o.cacheables[name]
@@ -115,14 +115,14 @@ func (o *DefaultOrchestrator) Call(ctx context.Context, name string, args ...any
 	}
 
 	if !config.Enabled || !o.config.Enabled {
-		// 缓存禁用，直接调用 loader
+		// Cache disabled, call loader directly
 		return loader(ctx, args...)
 	}
 
-	// 获取存储后端
+	// Retrieve storage backend
 	store, err := o.getStoreForCacheable(config)
 	if err != nil {
-		// 存储不可用时降级到直接调用
+		// Degraded to direct call when storage is unavailable
 		atomic.AddInt64(&o.errors, 1)
 		if o.logger != nil {
 			o.logger.Warn("cache store unavailable, fallback to loader",
@@ -133,13 +133,13 @@ func (o *DefaultOrchestrator) Call(ctx context.Context, name string, args ...any
 		return loader(ctx, args...)
 	}
 
-	// 构建 Key
+	// Build Key
 	key := o.buildKey(config.KeyPattern, args...)
 
-	// 1. 尝试从缓存获取
+	// 1. Try to get from cache
 	data, err := store.Get(ctx, key)
 	if err == nil {
-		// 缓存命中
+		// cache hit
 		var result any
 		if err := o.serializer.Deserialize(data, &result); err == nil {
 			atomic.AddInt64(&o.hits, 1)
@@ -148,18 +148,18 @@ func (o *DefaultOrchestrator) Call(ctx context.Context, name string, args ...any
 			}
 			return result, nil
 		}
-		// 反序列化失败，按 miss 处理
+		// Deserialization failed, treat as miss
 		atomic.AddInt64(&o.errors, 1)
 	}
 
-	// 2. 缓存未命中，使用 singleflight 防止击穿
+	// 2. Cache miss, use singleflight to prevent penetration hits
 	atomic.AddInt64(&o.misses, 1)
 	if o.logger != nil {
 		o.logger.Debug("cache miss", zap.String("name", name), zap.String("key", key))
 	}
 
 	result, err, _ := o.sf.Do(key, func() (any, error) {
-		// Double-check：再次检查缓存
+		// Double-check: Recheck cache
 		if data, err := store.Get(ctx, key); err == nil {
 			var result any
 			if err := o.serializer.Deserialize(data, &result); err == nil {
@@ -167,13 +167,13 @@ func (o *DefaultOrchestrator) Call(ctx context.Context, name string, args ...any
 			}
 		}
 
-		// 调用 loader
+		// call loader
 		result, err := loader(ctx, args...)
 		if err != nil {
 			return nil, err
 		}
 
-		// 写入缓存
+		// Write to cache
 		ttl := config.TTL
 		if ttl <= 0 {
 			ttl = o.config.DefaultTTL
@@ -199,7 +199,7 @@ func (o *DefaultOrchestrator) Call(ctx context.Context, name string, args ...any
 	return result, err
 }
 
-// Invalidate 手动失效指定缓存
+// Invalidate specified cache manually
 func (o *DefaultOrchestrator) Invalidate(ctx context.Context, name string, args ...any) error {
 	config, ok := o.cacheables[name]
 	if !ok {
@@ -223,7 +223,7 @@ func (o *DefaultOrchestrator) Invalidate(ctx context.Context, name string, args 
 	return nil
 }
 
-// InvalidateByPattern 按模式失效
+// InvalidateByPattern invalidate by pattern
 func (o *DefaultOrchestrator) InvalidateByPattern(ctx context.Context, name string, pattern string) error {
 	config, ok := o.cacheables[name]
 	if !ok {
@@ -246,7 +246,7 @@ func (o *DefaultOrchestrator) InvalidateByPattern(ctx context.Context, name stri
 	return nil
 }
 
-// Stats 获取缓存统计信息
+// Get cache statistics
 func (o *DefaultOrchestrator) Stats() *CacheStats {
 	return &CacheStats{
 		Hits:        atomic.LoadInt64(&o.hits),
@@ -257,7 +257,7 @@ func (o *DefaultOrchestrator) Stats() *CacheStats {
 	}
 }
 
-// getStoreForCacheable 获取缓存项对应的存储后端
+// getStoreForCacheable Get the storage backend for a cache item
 func (o *DefaultOrchestrator) getStoreForCacheable(config *CacheableConfig) (Store, error) {
 	storeName := config.Store
 	if storeName == "" {
@@ -266,14 +266,14 @@ func (o *DefaultOrchestrator) getStoreForCacheable(config *CacheableConfig) (Sto
 	return o.GetStore(storeName)
 }
 
-// buildKey 构建缓存 Key
+// buildKey to construct cache key
 func (o *DefaultOrchestrator) buildKey(pattern string, args ...any) string {
 	result := pattern
 	for i, arg := range args {
 		placeholder := fmt.Sprintf("{%d}", i)
 		result = strings.ReplaceAll(result, placeholder, fmt.Sprintf("%v", arg))
 	}
-	// 处理 {hash} 占位符
+	// Handle {hash} placeholder
 	if strings.Contains(result, "{hash}") {
 		hash := hashArgs(args...)
 		result = strings.ReplaceAll(result, "{hash}", hash)
@@ -281,14 +281,14 @@ func (o *DefaultOrchestrator) buildKey(pattern string, args ...any) string {
 	return result
 }
 
-// hashArgs 计算参数哈希
+// hashArgs calculates parameter hash
 func hashArgs(args ...any) string {
-	// 简单实现：拼接参数字符串
+	// Simple implementation: concatenate parameter string
 	var sb strings.Builder
 	for _, arg := range args {
 		sb.WriteString(fmt.Sprintf("%v", arg))
 	}
-	// 返回简单哈希（实际应使用 MD5/SHA1）
+	// Return simple hash (should actually use MD5/SHA1)
 	s := sb.String()
 	if len(s) > 32 {
 		return s[:32]
@@ -296,7 +296,7 @@ func hashArgs(args ...any) string {
 	return s
 }
 
-// subscribeInvalidationEvents 订阅失效事件
+// subscribeInvalidationEvents
 func (o *DefaultOrchestrator) subscribeInvalidationEvents() {
 	for _, rule := range o.config.InvalidationRules {
 		rule := rule // capture
@@ -307,12 +307,12 @@ func (o *DefaultOrchestrator) subscribeInvalidationEvents() {
 	}
 }
 
-// createInvalidationHandler 创建失效事件处理器
+// createInvalidationHandler Create invalidation event handler
 func (o *DefaultOrchestrator) createInvalidationHandler(rule InvalidationRule) event.Listener {
 	return event.ListenerFunc(func(ctx context.Context, e event.Event) error {
 		for _, cacheableName := range rule.Invalidate {
 			if rule.Pattern != "" {
-				// 按模式失效（通配符）
+				// Fail according to pattern (wildcard)
 				if err := o.InvalidateByPattern(ctx, cacheableName, rule.Pattern); err != nil {
 					if o.logger != nil {
 						o.logger.Warn("cache invalidate by pattern failed",
@@ -323,7 +323,7 @@ func (o *DefaultOrchestrator) createInvalidationHandler(rule InvalidationRule) e
 					}
 				}
 			} else if inv, ok := e.(CacheInvalidator); ok {
-				// 事件实现了 CacheInvalidator 接口，精确失效
+				// The event implements the CacheInvalidator interface for precise invalidation
 				args := inv.CacheArgs()
 				if err := o.Invalidate(ctx, cacheableName, args...); err != nil {
 					if o.logger != nil {
@@ -335,7 +335,7 @@ func (o *DefaultOrchestrator) createInvalidationHandler(rule InvalidationRule) e
 					}
 				}
 			} else {
-				// 事件未实现接口，记录警告
+				// Event interface not implemented, log warning
 				if o.logger != nil {
 					o.logger.Warn("event does not implement CacheInvalidator, cannot extract cache args",
 						zap.String("event", e.Name()),
@@ -348,12 +348,12 @@ func (o *DefaultOrchestrator) createInvalidationHandler(rule InvalidationRule) e
 	})
 }
 
-// SetSerializer 设置序列化器
+// SetSerializer set serializer
 func (o *DefaultOrchestrator) SetSerializer(s Serializer) {
 	o.serializer = s
 }
 
-// Close 关闭编排中心
+// Close Orchestrator Center
 func (o *DefaultOrchestrator) Close() error {
 	o.mu.Lock()
 	defer o.mu.Unlock()

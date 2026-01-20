@@ -14,82 +14,82 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// TestClientManager_RealTimeout_With10SecondDelay 测试真实场景：服务端延迟10秒，客户端5秒超时
+// TestClientManager_RealTimeout_With10SecondDelay Test real scenario: server delay 10 seconds, client timeout 5 seconds
 func TestClientManager_RealTimeout_With10SecondDelay(t *testing.T) {
 	log := logger.GetLogger("grpc_test")
 
-	// 启动一个慢速测试服务器（会延迟响应）
-	server := startSlowTestGRPCServer(t, 10*time.Second) // 服务端延迟10秒
+	// Start a slow test server (will delay responses)
+	server := startSlowTestGRPCServer(t, 10*time.Second) // server delay of 10 seconds
 	defer server.Stop(context.Background())
 
-	// 配置5秒超时的客户端
+	// Configure client with 5 seconds timeout
 	configs := map[string]ClientConfig{
 		"slow-service": {
 			Target:  fmt.Sprintf("127.0.0.1:%d", server.Port),
-			Timeout: 5, // 5秒超时
+			Timeout: 5, // 5 second timeout
 		},
 	}
 
 	manager := NewClientManager(configs, log)
 	require.NotNil(t, manager)
 
-	// 预连接应该成功（只是建立TCP连接）
+	// The pre-connection should succeed (just establishing the TCP connection)
 	manager.PreConnect(3 * time.Second)
 
-	// 获取连接
+	// Get connection
 	conn, err := manager.GetConn("slow-service")
 	require.NoError(t, err)
 	require.NotNil(t, conn)
 
-	// 创建健康检查客户端
+	// Create health check client
 	healthClient := grpc_health_v1.NewHealthClient(conn)
 
-	// 调用应该在5秒内超时（虽然服务端需要10秒）
+	// The call should timeout within 5 seconds (although the server needs 10 seconds)
 	ctx := context.Background()
 	start := time.Now()
 	_, err = healthClient.Check(ctx, &grpc_health_v1.HealthCheckRequest{})
 	elapsed := time.Since(start)
 
-	// 验证超时
+	// Validate timeout
 	t.Logf("调用耗时: %v", elapsed)
 	assert.Error(t, err, "应该超时")
 
-	// 验证是超时错误
+	// Verify timeout error
 	st, ok := status.FromError(err)
 	require.True(t, ok, "应该是 gRPC 错误")
 	assert.Equal(t, codes.DeadlineExceeded, st.Code(), "应该是超时错误")
 
-	// 验证在5秒左右超时（允许±1秒误差）
+	// Validate timeout around 5 seconds (allowing ±1 second error)
 	assert.Greater(t, elapsed, 4*time.Second, "至少等待4秒")
 	assert.Less(t, elapsed, 7*time.Second, "不应超过7秒")
 
 	t.Logf("✅ 超时测试通过：配置5秒超时，实际 %v 超时", elapsed)
 }
 
-// TestClientManager_DifferentTimeouts_RealDelay 测试不同超时配置
+// TestClientManager_DifferentTimeouts_RealDelay Test different timeout configurations
 func TestClientManager_DifferentTimeouts_RealDelay(t *testing.T) {
 	log := logger.GetLogger("grpc_test")
 
-	// 启动一个慢速测试服务器（延迟3秒）
+	// Start a slow test server (3 second delay)
 	server := startSlowTestGRPCServer(t, 3*time.Second)
 	defer server.Stop(context.Background())
 
-	// 配置不同超时的客户端
+	// Configure clients with different timeouts
 	configs := map[string]ClientConfig{
 		"fast-client": {
 			Target:  fmt.Sprintf("127.0.0.1:%d", server.Port),
-			Timeout: 1, // 1秒超时（会超时）
+			Timeout: 1, // 1 second timeout (will time out)
 		},
 		"normal-client": {
 			Target:  fmt.Sprintf("127.0.0.1:%d", server.Port),
-			Timeout: 5, // 5秒超时（能成功）
+			Timeout: 5, // 5 second timeout (success)
 		},
 	}
 
 	manager := NewClientManager(configs, log)
 	require.NotNil(t, manager)
 
-	// 测试1: 1秒超时的客户端应该失败
+	// Test 1: The client should fail with a 1-second timeout
 	t.Run("1秒超时应该失败", func(t *testing.T) {
 		conn, err := manager.GetConn("fast-client")
 		require.NoError(t, err)
@@ -106,7 +106,7 @@ func TestClientManager_DifferentTimeouts_RealDelay(t *testing.T) {
 		t.Logf("   1秒超时客户端耗时: %v", elapsed)
 	})
 
-	// 测试2: 5秒超时的客户端应该成功
+	// Test 2: The client with a 5-second timeout should succeed
 	t.Run("5秒超时应该成功", func(t *testing.T) {
 		conn, err := manager.GetConn("normal-client")
 		require.NoError(t, err)
@@ -125,14 +125,14 @@ func TestClientManager_DifferentTimeouts_RealDelay(t *testing.T) {
 	})
 }
 
-// startSlowTestGRPCServer 启动一个慢速的测试gRPC服务器
-// delay: 每个请求的延迟时间
+// startSlowTestGRPCServer starts a slow test gRPC server
+// delay: latency for each request
 func startSlowTestGRPCServer(t *testing.T, delay time.Duration) *Server {
 	log := logger.GetLogger("grpc_test")
 
 	config := ServerConfig{
 		Enabled:       true,
-		Port:          0, // 自动分配端口
+		Port:          0, // Automatically assign port
 		MaxRecvSize:   4,
 		MaxSendSize:   4,
 		EnableReflect: false,
@@ -140,30 +140,30 @@ func startSlowTestGRPCServer(t *testing.T, delay time.Duration) *Server {
 
 	server := NewServer(config, log)
 
-	// 必须在 Start 之前注册服务
+	// Services must be registered before Start
 	grpc_health_v1.RegisterHealthServer(server.GetGRPCServer(), &slowHealthServer{delay: delay})
 
-	// 启动服务器
+	// Start server
 	go func() {
 		if err := server.Start(context.Background()); err != nil {
 			t.Logf("服务器启动失败: %v", err)
 		}
 	}()
 
-	// 等待服务器启动
+	// wait for server to start
 	time.Sleep(100 * time.Millisecond)
 
 	return server
 }
 
-// slowHealthServer 慢速健康检查服务（模拟延迟）
+// slowHealthServer Slow health check service (simulated delay)
 type slowHealthServer struct {
 	grpc_health_v1.UnimplementedHealthServer
 	delay time.Duration
 }
 
 func (s *slowHealthServer) Check(ctx context.Context, req *grpc_health_v1.HealthCheckRequest) (*grpc_health_v1.HealthCheckResponse, error) {
-	// 模拟慢速处理
+	// simulate slow processing
 	time.Sleep(s.delay)
 	return &grpc_health_v1.HealthCheckResponse{
 		Status: grpc_health_v1.HealthCheckResponse_SERVING,

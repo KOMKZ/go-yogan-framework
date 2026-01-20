@@ -2,18 +2,18 @@ package jwt
 
 import "time"
 
-// Claims JWT 声明
+// Claims JWT statements
 type Claims struct {
-	// 标准 Claims (JWT RFC 7519)
-	Subject   string    `json:"sub"`           // 用户唯一标识
-	IssuedAt  time.Time `json:"iat"`           // 签发时间
-	ExpiresAt time.Time `json:"exp"`           // 过期时间
-	NotBefore time.Time `json:"nbf,omitempty"` // 生效时间
-	Issuer    string    `json:"iss,omitempty"` // 签发者
-	Audience  string    `json:"aud,omitempty"` // 接收方
-	JTI       string    `json:"jti,omitempty"` // Token ID（防重放）
+	// Standard Claims (JWT RFC 7519)
+	Subject   string    `json:"sub"`           // User unique identifier
+	IssuedAt  time.Time `json:"iat"`           // issue time
+	ExpiresAt time.Time `json:"exp"`           // expiration time
+	NotBefore time.Time `json:"nbf,omitempty"` // Effective date
+	Issuer    string    `json:"iss,omitempty"` // issuer
+	Audience  string    `json:"aud,omitempty"` // receiver
+	JTI       string    `json:"jti,omitempty"` // Token ID (anti-replay)
 
-	// 自定义 Claims（应用层扩展）
+	// Custom Claims (application layer extensions)
 	UserID    int64                  `json:"user_id,omitempty"`
 	Username  string                 `json:"username,omitempty"`
 	Roles     []string               `json:"roles,omitempty"`
@@ -22,16 +22,16 @@ type Claims struct {
 	Extra     map[string]interface{} `json:"extra,omitempty"`
 }
 
-// Valid 验证 Claims 是否有效（实现 jwt.Claims 接口）
+// Validate whether Claims are valid (implement jwt.Claims interface)
 func (c *Claims) Valid() error {
 	now := time.Now()
 
-	// 检查过期时间
+	// Check expiration time
 	if !c.ExpiresAt.IsZero() && now.After(c.ExpiresAt) {
 		return ErrTokenExpired
 	}
 
-	// 检查生效时间
+	// Check effective time
 	if !c.NotBefore.IsZero() && now.Before(c.NotBefore) {
 		return ErrTokenNotYetValid
 	}
@@ -39,7 +39,7 @@ func (c *Claims) Valid() error {
 	return nil
 }
 
-// IsExpired 判断 token 是否过期
+// Check if token has expired
 func (c *Claims) IsExpired() bool {
 	if c.ExpiresAt.IsZero() {
 		return false
@@ -47,7 +47,7 @@ func (c *Claims) IsExpired() bool {
 	return time.Now().After(c.ExpiresAt)
 }
 
-// TTL 返回剩余有效时间
+// TTL returns remaining valid time
 func (c *Claims) TTL() time.Duration {
 	if c.ExpiresAt.IsZero() {
 		return 0

@@ -2,9 +2,9 @@ package application
 
 import "github.com/gin-gonic/gin"
 
-// RouterRegistrar 路由注册接口
-// 业务应用实现此接口来注册路由
-// 🎯 优化：路由注册时可以直接访问 Application（依赖容器）
+// Router Registrar routing registration interface
+// Business applications implement this interface to register routes
+// 🎯 Optimization: Directly access Application (dependency container) when registering routes
 type RouterRegistrar interface {
 	RegisterRoutes(engine *gin.Engine, app *Application)
 }

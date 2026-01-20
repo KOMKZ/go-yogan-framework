@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-// TestRegistry_Register 测试注册错误码
+// TestRegistry_Register test register error codes
 func TestRegistry_Register(t *testing.T) {
 	registry := &Registry{codes: make(map[int]string)}
 
@@ -27,7 +27,7 @@ func TestRegistry_Register(t *testing.T) {
 	}
 }
 
-// TestRegistry_Register_Duplicate 测试重复注册（幂等）
+// TestRegistry_Register_Duplicate Testing idempotence for duplicate registration
 func TestRegistry_Register_Duplicate(t *testing.T) {
 	registry := &Registry{codes: make(map[int]string)}
 
@@ -35,19 +35,19 @@ func TestRegistry_Register_Duplicate(t *testing.T) {
 	err2 := New(10, 1, "user", "error.user.not_found", "User not found")
 
 	registry.Register(err1)
-	registry.Register(err2) // 幂等，不会 panic
+	registry.Register(err2) // idempotent, will not panic
 
 	if registry.Count() != 1 {
 		t.Errorf("expected 1 registered code, got %d", registry.Count())
 	}
 }
 
-// TestRegistry_Register_Conflict 测试错误码冲突（panic）
+// TestRegistry_Register_Conflict test error code conflict (panic)
 func TestRegistry_Register_Conflict(t *testing.T) {
 	registry := &Registry{codes: make(map[int]string)}
 
 	err1 := New(10, 1, "user", "error.user.not_found", "User not found")
-	err2 := New(10, 1, "user", "error.user.exists", "用户已存在") // 错误码相同，msgKey 不同
+	err2 := New(10, 1, "user", "error.user.exists", "用户已存在") // Error code is the same, but msgKey is different
 
 	registry.Register(err1)
 
@@ -57,10 +57,10 @@ func TestRegistry_Register_Conflict(t *testing.T) {
 		}
 	}()
 
-	registry.Register(err2) // 应该 panic
+	registry.Register(err2) // Should panic
 }
 
-// TestRegistry_Lock 测试锁定注册表
+// TestRegistry_Lock test registry lock
 func TestRegistry_Lock(t *testing.T) {
 	registry := &Registry{codes: make(map[int]string)}
 
@@ -73,7 +73,7 @@ func TestRegistry_Lock(t *testing.T) {
 		t.Errorf("registry should be locked")
 	}
 
-	// 尝试注册新错误码应该 panic
+	// Trying to register a new error code should cause a panic
 	err2 := New(10, 2, "user", "error.user.exists", "用户已存在")
 	defer func() {
 		if r := recover(); r == nil {
@@ -84,7 +84,7 @@ func TestRegistry_Lock(t *testing.T) {
 	registry.Register(err2)
 }
 
-// TestRegistry_Unlock 测试解锁注册表
+// TestRegistry_Unlock test registry unlock
 func TestRegistry_Unlock(t *testing.T) {
 	registry := &Registry{codes: make(map[int]string)}
 
@@ -98,7 +98,7 @@ func TestRegistry_Unlock(t *testing.T) {
 		t.Errorf("registry should be unlocked")
 	}
 
-	// 解锁后可以注册
+	// Unlocked, registration is available
 	err := New(10, 1, "user", "error.user.not_found", "User not found")
 	registry.Register(err)
 
@@ -107,7 +107,7 @@ func TestRegistry_Unlock(t *testing.T) {
 	}
 }
 
-// TestRegistry_Clear 测试清空注册表
+// TestRegistry_Clear test clear registry
 func TestRegistry_Clear(t *testing.T) {
 	registry := &Registry{codes: make(map[int]string)}
 
@@ -133,9 +133,9 @@ func TestRegistry_Clear(t *testing.T) {
 	}
 }
 
-// TestGlobalRegistry 测试全局注册表
+// TestGlobalRegistry test global registry
 func TestGlobalRegistry(t *testing.T) {
-	// 清空全局注册表（测试前）
+	// Clear global registry (before testing)
 	ClearGlobalRegistry()
 
 	err1 := New(10, 1, "user", "error.user.not_found", "User not found")
@@ -153,13 +153,13 @@ func TestGlobalRegistry(t *testing.T) {
 		t.Errorf("expected 'user:error.user.not_found', got %s", codes[100001])
 	}
 
-	// 清空全局注册表（测试后）
+	// Clear global registry (after testing)
 	ClearGlobalRegistry()
 }
 
-// TestGlobalRegistry_Lock 测试全局注册表锁定
+// TestGlobalRegistry_Lock test global registry lock
 func TestGlobalRegistry_Lock(t *testing.T) {
-	// 清空全局注册表（测试前）
+	// Clear global registry (before testing)
 	ClearGlobalRegistry()
 
 	err1 := New(10, 1, "user", "error.user.not_found", "User not found")
@@ -171,13 +171,13 @@ func TestGlobalRegistry_Lock(t *testing.T) {
 		t.Errorf("global registry should be locked")
 	}
 
-	// 尝试注册新错误码应该 panic
+	// Registering new error codes should cause a panic
 	err2 := New(10, 2, "user", "error.user.exists", "用户已存在")
 	defer func() {
 		if r := recover(); r == nil {
 			t.Errorf("expected panic when registering after lock")
 		}
-		// 解锁并清空（测试后）
+		// Unlock and clear (after testing)
 		UnlockGlobalRegistry()
 		ClearGlobalRegistry()
 	}()
@@ -185,7 +185,7 @@ func TestGlobalRegistry_Lock(t *testing.T) {
 	Register(err2)
 }
 
-// TestRegistry_ConcurrentRegister 测试并发注册
+// TestRegistry_ConcurrentRegister test concurrent registration
 func TestRegistry_ConcurrentRegister(t *testing.T) {
 	registry := &Registry{codes: make(map[int]string)}
 
@@ -207,11 +207,11 @@ func TestRegistry_ConcurrentRegister(t *testing.T) {
 	}
 }
 
-// TestRegistry_ConcurrentGetAll 测试并发读取
+// TestRegistry_ConcurrentGetAll tests concurrent read operations
 func TestRegistry_ConcurrentGetAll(t *testing.T) {
 	registry := &Registry{codes: make(map[int]string)}
 
-	// 预先注册一些错误码
+	// Pre-register some error codes
 	for i := 0; i < 10; i++ {
 		err := New(10+i, 1, "module", "error.key", "message")
 		registry.Register(err)

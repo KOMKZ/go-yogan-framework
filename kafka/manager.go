@@ -11,13 +11,13 @@ import (
 	"go.uber.org/zap"
 )
 
-// Manager Kafka 管理器
+// Kafka Manager
 type Manager struct {
 	config       Config
 	saramaConfig *sarama.Config
 	logger       *zap.Logger
 
-	client        sarama.Client    // Sarama 客户端
+	client        sarama.Client    // Sarama client
 	producer      Producer
 	asyncProducer *AsyncProducer
 	consumers     map[string]*ConsumerGroup
@@ -26,21 +26,21 @@ type Manager struct {
 	closed bool
 }
 
-// NewManager 创建 Kafka 管理器
+// Create new Kafka manager
 func NewManager(cfg Config, logger *zap.Logger) (*Manager, error) {
 	if logger == nil {
 		return nil, fmt.Errorf("logger cannot be nil")
 	}
 
-	// 应用默认值
+	// Apply default values
 	cfg.ApplyDefaults()
 
-	// 验证配置
+	// Validate configuration
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("config validation failed: %w", err)
 	}
 
-	// 创建 Sarama 配置
+	// Create Sarama configuration
 	saramaCfg, err := buildSaramaConfig(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("build sarama config failed: %w", err)
@@ -56,21 +56,21 @@ func NewManager(cfg Config, logger *zap.Logger) (*Manager, error) {
 	return m, nil
 }
 
-// buildSaramaConfig 构建 Sarama 配置
+// buildSaramaConfig Build Sarama configuration
 func buildSaramaConfig(cfg Config) (*sarama.Config, error) {
 	saramaCfg := sarama.NewConfig()
 
-	// 解析版本
+	// Parse version
 	version, err := sarama.ParseKafkaVersion(cfg.Version)
 	if err != nil {
 		return nil, fmt.Errorf("parse kafka version failed: %w", err)
 	}
 	saramaCfg.Version = version
 
-	// 客户端 ID
+	// Client ID
 	saramaCfg.ClientID = cfg.ClientID
 
-	// 生产者配置
+	// Producer configuration
 	if cfg.Producer.Enabled {
 		saramaCfg.Producer.Return.Successes = true
 		saramaCfg.Producer.Return.Errors = true
@@ -90,7 +90,7 @@ func buildSaramaConfig(cfg Config) (*sarama.Config, error) {
 		saramaCfg.Producer.MaxMessageBytes = cfg.Producer.MaxMessageBytes
 		saramaCfg.Producer.Idempotent = cfg.Producer.Idempotent
 
-		// 压缩
+		// Compress
 		switch cfg.Producer.Compression {
 		case "gzip":
 			saramaCfg.Producer.Compression = sarama.CompressionGZIP
@@ -104,12 +104,12 @@ func buildSaramaConfig(cfg Config) (*sarama.Config, error) {
 			saramaCfg.Producer.Compression = sarama.CompressionNone
 		}
 
-		// 批量发送
+		// batch send
 		saramaCfg.Producer.Flush.Frequency = cfg.Producer.FlushFrequency
 		saramaCfg.Producer.Flush.Messages = cfg.Producer.BatchSize
 	}
 
-	// 消费者配置
+	// consumer configuration
 	if cfg.Consumer.Enabled {
 		saramaCfg.Consumer.Return.Errors = true
 
@@ -130,7 +130,7 @@ func buildSaramaConfig(cfg Config) (*sarama.Config, error) {
 		saramaCfg.Consumer.Fetch.Max = cfg.Consumer.FetchMax
 		saramaCfg.Consumer.Fetch.Default = cfg.Consumer.FetchDefault
 
-		// 再平衡策略
+		// rebalance strategy
 		switch cfg.Consumer.RebalanceStrategy {
 		case "roundrobin":
 			saramaCfg.Consumer.Group.Rebalance.GroupStrategies = []sarama.BalanceStrategy{sarama.NewBalanceStrategyRoundRobin()}
@@ -141,7 +141,7 @@ func buildSaramaConfig(cfg Config) (*sarama.Config, error) {
 		}
 	}
 
-	// SASL 配置
+	// SASL configuration
 	if cfg.SASL != nil && cfg.SASL.Enabled {
 		saramaCfg.Net.SASL.Enable = true
 		saramaCfg.Net.SASL.User = cfg.SASL.Username
@@ -163,7 +163,7 @@ func buildSaramaConfig(cfg Config) (*sarama.Config, error) {
 		}
 	}
 
-	// TLS 配置
+	// TLS configuration
 	if cfg.TLS != nil && cfg.TLS.Enabled {
 		saramaCfg.Net.TLS.Enable = true
 		saramaCfg.Net.TLS.Config = &tls.Config{
@@ -174,7 +174,7 @@ func buildSaramaConfig(cfg Config) (*sarama.Config, error) {
 	return saramaCfg, nil
 }
 
-// Connect 连接 Kafka
+// Establish connection to Kafka
 func (m *Manager) Connect(ctx context.Context) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -183,12 +183,12 @@ func (m *Manager) Connect(ctx context.Context) error {
 		return fmt.Errorf("manager is closed")
 	}
 
-	// 测试连接
+	// Test connection
 	if err := m.testConnection(); err != nil {
 		return fmt.Errorf("test connection failed: %w", err)
 	}
 
-	// 创建生产者
+	// Create producer
 	if m.config.Producer.Enabled {
 		producer, err := NewSyncProducer(m.config.Brokers, m.config.Producer, m.saramaConfig, m.logger)
 		if err != nil {
@@ -203,34 +203,34 @@ func (m *Manager) Connect(ctx context.Context) error {
 	return nil
 }
 
-// testConnection 测试连接并保持客户端
+// testConnection test connection and maintain client
 func (m *Manager) testConnection() error {
 	client, err := sarama.NewClient(m.config.Brokers, m.saramaConfig)
 	if err != nil {
 		return fmt.Errorf("create client failed: %w", err)
 	}
 
-	// 获取 Broker 列表验证连接
+	// Get broker list and validate connection
 	brokers := client.Brokers()
 	if len(brokers) == 0 {
 		client.Close()
 		return fmt.Errorf("no brokers available")
 	}
 
-	// 保存客户端引用
+	// save client reference
 	m.client = client
 
 	return nil
 }
 
-// GetProducer 获取生产者
+// GetProducer 获取生产者功能
 func (m *Manager) GetProducer() Producer {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.producer
 }
 
-// GetAsyncProducer 获取异步生产者（按需创建）
+// GetAsyncProducer Obtain asynchronous producer (create as needed)
 func (m *Manager) GetAsyncProducer() (*AsyncProducer, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -248,7 +248,7 @@ func (m *Manager) GetAsyncProducer() (*AsyncProducer, error) {
 	return m.asyncProducer, nil
 }
 
-// CreateConsumer 创建消费者
+// CreateConsumer 创建消费者对象
 func (m *Manager) CreateConsumer(name string, cfg ConsumerConfig) (*ConsumerGroup, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -261,13 +261,13 @@ func (m *Manager) CreateConsumer(name string, cfg ConsumerConfig) (*ConsumerGrou
 		return nil, fmt.Errorf("consumer %s already exists", name)
 	}
 
-	// 应用默认值并验证
+	// Apply default values and validate
 	cfg.ApplyDefaults()
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("consumer config invalid: %w", err)
 	}
 
-	// 为消费者创建新的 Sarama 配置
+	// Create new Sarama configuration for consumers
 	consumerSaramaCfg := *m.saramaConfig
 	consumerSaramaCfg.Consumer.Offsets.AutoCommit.Enable = cfg.AutoCommit
 	consumerSaramaCfg.Consumer.Offsets.AutoCommit.Interval = cfg.AutoCommitInterval
@@ -281,14 +281,14 @@ func (m *Manager) CreateConsumer(name string, cfg ConsumerConfig) (*ConsumerGrou
 	return consumer, nil
 }
 
-// GetConsumer 获取消费者
+// GetConsumer 获取消费者信息
 func (m *Manager) GetConsumer(name string) *ConsumerGroup {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.consumers[name]
 }
 
-// Ping 检查 Kafka 连接
+// Ping check Kafka connection
 func (m *Manager) Ping(ctx context.Context) error {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -303,10 +303,10 @@ func (m *Manager) Ping(ctx context.Context) error {
 	}
 	defer client.Close()
 
-	// 设置超时
+	// Set timeout
 	done := make(chan error, 1)
 	go func() {
-		// 检查 Controller 是否可用
+		// Check if Controller is available
 		controller, err := client.Controller()
 		if err != nil {
 			done <- fmt.Errorf("get controller failed: %w", err)
@@ -337,7 +337,7 @@ func (m *Manager) Ping(ctx context.Context) error {
 	}
 }
 
-// ListTopics 列出所有 Topic
+// ListTopics list all Topics
 func (m *Manager) ListTopics(ctx context.Context) ([]string, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -356,12 +356,12 @@ func (m *Manager) ListTopics(ctx context.Context) ([]string, error) {
 	return topics, nil
 }
 
-// GetConfig 获取配置
+// GetConfig Retrieve configuration
 func (m *Manager) GetConfig() Config {
 	return m.config
 }
 
-// Close 关闭管理器
+// Close manager
 func (m *Manager) Close() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -373,7 +373,7 @@ func (m *Manager) Close() error {
 
 	var errs []error
 
-	// 关闭消费者
+	// Close consumer
 	for name, consumer := range m.consumers {
 		if err := consumer.Stop(); err != nil {
 			m.logger.Error("close consumer failed",
@@ -383,7 +383,7 @@ func (m *Manager) Close() error {
 		}
 	}
 
-	// 关闭异步生产者
+	// Shut down asynchronous producer
 	if m.asyncProducer != nil {
 		if err := m.asyncProducer.Close(); err != nil {
 			m.logger.Error("close async producer failed", zap.Error(err))
@@ -391,7 +391,7 @@ func (m *Manager) Close() error {
 		}
 	}
 
-	// 关闭同步生产者
+	// Shut down synchronous producer
 	if m.producer != nil {
 		if err := m.producer.Close(); err != nil {
 			m.logger.Error("close producer failed", zap.Error(err))
@@ -399,7 +399,7 @@ func (m *Manager) Close() error {
 		}
 	}
 
-	// 关闭客户端
+	// Close client
 	if m.client != nil {
 		if err := m.client.Close(); err != nil {
 			m.logger.Error("close client failed", zap.Error(err))
@@ -415,21 +415,21 @@ func (m *Manager) Close() error {
 	return nil
 }
 
-// Shutdown 实现 samber/do.Shutdownable 接口
+// Implementation of the samber/do.Shutdownable interface for shutdown functionality
 func (m *Manager) Shutdown() error {
 	return m.Close()
 }
 
-// ================== Topic 管理方法 ==================
+// ================== Topic Management Methods ==================
 
-// TopicInfo Topic 信息
+// Topic information
 type TopicInfo struct {
 	NumPartitions     int32
 	ReplicationFactor int16
 	Partitions        []PartitionInfo
 }
 
-// PartitionInfo 分区信息
+// PartitionInfo partition information
 type PartitionInfo struct {
 	ID       int32
 	Leader   int32
@@ -437,7 +437,7 @@ type PartitionInfo struct {
 	ISR      []int32
 }
 
-// CreateTopic 创建 Topic
+// CreateTopic create topic
 func (m *Manager) CreateTopic(ctx context.Context, name string, partitions int32, replication int16) error {
 	if m.client == nil {
 		return fmt.Errorf("kafka client not connected")
@@ -466,7 +466,7 @@ func (m *Manager) CreateTopic(ctx context.Context, name string, partitions int32
 	return nil
 }
 
-// DeleteTopic 删除 Topic
+// DeleteTopic delete topic
 func (m *Manager) DeleteTopic(ctx context.Context, name string) error {
 	if m.client == nil {
 		return fmt.Errorf("kafka client not connected")
@@ -487,7 +487,7 @@ func (m *Manager) DeleteTopic(ctx context.Context, name string) error {
 	return nil
 }
 
-// DescribeTopic 获取 Topic 详情
+// DescribeTopic Get Topic details
 func (m *Manager) DescribeTopic(ctx context.Context, name string) (*TopicInfo, error) {
 	if m.client == nil {
 		return nil, fmt.Errorf("kafka client not connected")
@@ -533,9 +533,9 @@ func (m *Manager) DescribeTopic(ctx context.Context, name string) (*TopicInfo, e
 	return info, nil
 }
 
-// ================== Offset 管理方法 ==================
+// ================== Offset Management Methods ==================
 
-// ResetOffset 重置消费者组的 Offset
+// ResetOffset reset the consumer group's Offset
 func (m *Manager) ResetOffset(ctx context.Context, groupID, topic string, offset int64) error {
 	if m.client == nil {
 		return fmt.Errorf("kafka client not connected")
@@ -547,13 +547,13 @@ func (m *Manager) ResetOffset(ctx context.Context, groupID, topic string, offset
 	}
 	defer admin.Close()
 
-	// 获取分区列表
+	// Get partition list
 	partitions, err := m.client.Partitions(topic)
 	if err != nil {
 		return fmt.Errorf("get partitions failed: %w", err)
 	}
 
-	// 构建 offset 映射
+	// Build offset mapping
 	offsets := make(map[string]map[int32]int64)
 	offsets[topic] = make(map[int32]int64)
 
@@ -572,7 +572,7 @@ func (m *Manager) ResetOffset(ctx context.Context, groupID, topic string, offset
 		offsets[topic][partition] = targetOffset
 	}
 
-	// 使用 offset commit 的方式重置
+	// Use offset commit to reset
 	offsetManager, err := sarama.NewOffsetManagerFromClient(groupID, m.client)
 	if err != nil {
 		return fmt.Errorf("create offset manager failed: %w", err)
@@ -588,7 +588,7 @@ func (m *Manager) ResetOffset(ctx context.Context, groupID, topic string, offset
 		pom.Close()
 	}
 
-	// 提交 offset
+	// Submit offset
 	offsetManager.Commit()
 
 	m.logger.Info("offset reset",
@@ -598,7 +598,7 @@ func (m *Manager) ResetOffset(ctx context.Context, groupID, topic string, offset
 	return nil
 }
 
-// GetOffset 获取消费者组的 Offset
+// GetOffset Get the consumer group's Offset
 func (m *Manager) GetOffset(ctx context.Context, groupID, topic string) (map[int32]int64, error) {
 	if m.client == nil {
 		return nil, fmt.Errorf("kafka client not connected")
@@ -610,18 +610,18 @@ func (m *Manager) GetOffset(ctx context.Context, groupID, topic string) (map[int
 	}
 	defer admin.Close()
 
-	// 获取分区列表
+	// Get partition list
 	partitions, err := m.client.Partitions(topic)
 	if err != nil {
 		return nil, fmt.Errorf("get partitions failed: %w", err)
 	}
 
-	// 构建查询映射
+	// Build query mapping
 	topicPartitions := map[string][]int32{
 		topic: partitions,
 	}
 
-	// 获取 offset
+	// Get offset
 	response, err := admin.ListConsumerGroupOffsets(groupID, topicPartitions)
 	if err != nil {
 		return nil, fmt.Errorf("list offsets failed: %w", err)
@@ -637,23 +637,23 @@ func (m *Manager) GetOffset(ctx context.Context, groupID, topic string) (map[int
 	return result, nil
 }
 
-// ================== Consumer Group 管理方法 ==================
+// ================== Consumer Group Management Methods ==================
 
-// ConsumerGroupInfo 消费者组信息
+// ConsumerGroupInformation
 type ConsumerGroupInfo struct {
 	State        string
 	ProtocolType string
 	Members      []ConsumerGroupMember
 }
 
-// ConsumerGroupMember 消费者组成员
+// ConsumerGroupMember consumer group member
 type ConsumerGroupMember struct {
 	MemberID   string
 	ClientID   string
 	ClientHost string
 }
 
-// ListConsumerGroups 列出所有消费者组
+// ListConsumerGroups list all consumer groups
 func (m *Manager) ListConsumerGroups(ctx context.Context) ([]string, error) {
 	if m.client == nil {
 		return nil, fmt.Errorf("kafka client not connected")
@@ -678,7 +678,7 @@ func (m *Manager) ListConsumerGroups(ctx context.Context) ([]string, error) {
 	return result, nil
 }
 
-// DescribeConsumerGroup 获取消费者组详情
+// DescribeConsumerGroup Get consumer group details
 func (m *Manager) DescribeConsumerGroup(ctx context.Context, groupID string) (*ConsumerGroupInfo, error) {
 	if m.client == nil {
 		return nil, fmt.Errorf("kafka client not connected")

@@ -7,15 +7,15 @@ import (
 	"strings"
 )
 
-// FlagSource 命令行参数数据源
-// 通过 struct tag 定义参数到配置 key 的映射
+// FlagSource command line argument data source
+// Define parameter to configuration key mapping through struct tags
 type FlagSource struct {
-	flags    interface{} // AppFlags 结构体
+	flags    interface{} // AppFlags structure
 	priority int
-	appType  string // 应用类型：grpc, http, mixed
+	appType  string // Application type: grpc, http, mixed
 }
 
-// NewFlagSource 创建命令行参数数据源
+// NewFlagSource creates command line argument data source
 func NewFlagSource(flags interface{}, appType string, priority int) *FlagSource {
 	return &FlagSource{
 		flags:    flags,
@@ -24,17 +24,17 @@ func NewFlagSource(flags interface{}, appType string, priority int) *FlagSource 
 	}
 }
 
-// Name 数据源名称
+// Data source name
 func (s *FlagSource) Name() string {
 	return "flags"
 }
 
-// Priority 优先级
+// Priority
 func (s *FlagSource) Priority() int {
 	return s.priority
 }
 
-// Load 加载命令行参数配置
+// Load command line argument configuration
 func (s *FlagSource) Load() (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 
@@ -56,26 +56,26 @@ func (s *FlagSource) Load() (map[string]interface{}, error) {
 
 	t := v.Type()
 
-	// 遍历所有字段
+	// Iterate through all fields
 	for i := 0; i < v.NumField(); i++ {
 		field := v.Field(i)
 		fieldType := t.Field(i)
 
-		// 跳过未导出的字段
+		// skip unexported fields
 		if !field.CanInterface() {
 			continue
 		}
 
-		// 获取 config tag（定义映射到哪个配置 key）
+		// Get config tag (define which configuration key to map to)
 		configTag := fieldType.Tag.Get("config")
 		if configTag == "" {
-			// 没有 tag，尝试使用默认映射规则
+			// No tag, try using default mapping rules
 			s.applyDefaultMapping(fieldType.Name, field, result)
 			continue
 		}
 
-		// 解析 tag：支持多个映射，用逗号分隔
-		// 例如：`config:"grpc.server.port,api_server.port"`
+		// Parse tag: Support multiple mappings, separated by commas
+		// For example: `config:"grpc.server.port,api_server.port"`
 		keys := strings.Split(configTag, ",")
 		for _, key := range keys {
 			key = strings.TrimSpace(key)
@@ -83,7 +83,7 @@ func (s *FlagSource) Load() (map[string]interface{}, error) {
 				continue
 			}
 
-			// 设置值（如果非零值）
+			// Set value (if non-zero)
 			if !isZeroValue(field) {
 				result[key] = field.Interface()
 			}
@@ -93,7 +93,7 @@ func (s *FlagSource) Load() (map[string]interface{}, error) {
 	return result, nil
 }
 
-// applyDefaultMapping 应用默认映射规则（基于字段名和应用类型）
+// Apply default mapping rules (based on field names and application type)
 func (s *FlagSource) applyDefaultMapping(fieldName string, field reflect.Value, result map[string]interface{}) {
 	if isZeroValue(field) {
 		return
@@ -103,14 +103,14 @@ func (s *FlagSource) applyDefaultMapping(fieldName string, field reflect.Value, 
 
 	switch fieldName {
 	case "Port":
-		// 根据应用类型选择配置路径
+		// Choose configuration path based on application type
 		switch s.appType {
 		case "grpc":
 			result["grpc.server.port"] = value
 		case "http":
 			result["api_server.port"] = value
 		case "mixed":
-			// 混合模式，同时设置两者
+			// Hybrid mode, set both simultaneously
 			result["grpc.server.port"] = value
 			result["api_server.port"] = value
 		}
@@ -140,7 +140,7 @@ func (s *FlagSource) applyDefaultMapping(fieldName string, field reflect.Value, 
 	}
 }
 
-// isZeroValue 判断是否为零值
+// checks if it is a zero value
 func isZeroValue(v reflect.Value) bool {
 	switch v.Kind() {
 	case reflect.String:
@@ -160,7 +160,7 @@ func isZeroValue(v reflect.Value) bool {
 	}
 }
 
-// ConvertValue 类型转换辅助函数
+// ConvertValue type conversion helper function
 func ConvertValue(value interface{}, targetKind reflect.Kind) (interface{}, error) {
 	switch targetKind {
 	case reflect.String:

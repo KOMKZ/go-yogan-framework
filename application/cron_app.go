@@ -8,26 +8,26 @@ import (
 	"go.uber.org/zap"
 )
 
-// CronApplication Cron 应用（组合 BaseApplication + Cron 专有功能）
+// Cron Application (combines BaseApplication with cron-specific features)
 type CronApplication struct {
-	*BaseApplication // 组合核心框架
+	*BaseApplication // Combine core framework
 
-	// Cron 专有
+	// Cron dedicated
 	scheduler      gocron.Scheduler
 	cronOnSetup    func(*CronApplication) error
 	cronOnReady    func(*CronApplication) error
 	cronOnShutdown func(*CronApplication) error
-	taskRegistrar  TaskRegistrar // 任务注册器
+	taskRegistrar  TaskRegistrar // Task registrar
 }
 
-// TaskRegistrar 任务注册接口
+// TaskRegistrar task registration interface
 type TaskRegistrar interface {
 	RegisterTasks(app *CronApplication) error
 }
 
-// NewCron 创建 Cron 应用实例
-// configPath: 配置目录路径（如 ../configs/cron-app）
-// configPrefix: 环境变量前缀（如 "APP"）
+// Create Cron application instance
+// configPath: Configuration directory path (e.g., ../configs/cron-app)
+// configPrefix: Configuration prefix (e.g., "APP")
 func NewCron(configPath, configPrefix string) (*CronApplication, error) {
 	if configPath == "" {
 		configPath = "../configs/cron-app"
@@ -38,7 +38,7 @@ func NewCron(configPath, configPrefix string) (*CronApplication, error) {
 
 	baseApp := NewBase(configPath, configPrefix, "cron", nil)
 
-	// 创建 gocron 调度器
+	// Create gocron scheduler
 	scheduler, err := gocron.NewScheduler()
 	if err != nil {
 		return nil, fmt.Errorf("创建调度器失败: %w", err)
@@ -50,46 +50,46 @@ func NewCron(configPath, configPrefix string) (*CronApplication, error) {
 	}, nil
 }
 
-// NewCronWithDefaults 创建 Cron 应用实例（使用默认配置）
+// Create Cron application instance with default configuration
 func NewCronWithDefaults(appName string) (*CronApplication, error) {
 	return NewCron("../configs/"+appName, "APP")
 }
 
-// Run 启动 Cron 应用（阻塞直到收到关闭信号）
+// Run the Cron application (block until shutdown signal received)
 func (a *CronApplication) Run() error {
 	return a.run(true)
 }
 
-// RunNonBlocking 非阻塞启动应用（用于测试环境）
+// RunNonBlocking Start application non-blockingly (for testing environment)
 func (a *CronApplication) RunNonBlocking() error {
 	return a.run(false)
 }
 
-// run 内部启动逻辑（统一实现）
+// run internal startup logic (uniform implementation)
 func (a *CronApplication) run(blocking bool) error {
-	// 1. Setup 阶段（配置 + 日志 + 组件初始化）
+	// 1. Setup phase (configuration + logging + component initialization)
 	if err := a.Setup(); err != nil {
 		return fmt.Errorf("setup failed: %w", err)
 	}
 
-	// 2. 触发 Cron 专有 Setup 回调
+	// Trigger Cron dedicated setup callback
 	if a.cronOnSetup != nil {
 		if err := a.cronOnSetup(a); err != nil {
 			return fmt.Errorf("cron onSetup failed: %w", err)
 		}
 	}
 
-	// 3. 注册任务
+	// 3. Register task
 	if a.taskRegistrar != nil {
 		if err := a.taskRegistrar.RegisterTasks(a); err != nil {
 			return fmt.Errorf("register tasks failed: %w", err)
 		}
 	}
 
-	// 4. 启动调度器
+	// 4. Start the scheduler
 	a.scheduler.Start()
 
-	// 5. 触发 OnReady 回调
+	// 5. Trigger OnReady callback
 	a.BaseApplication.setState(StateRunning)
 	if a.cronOnReady != nil {
 		if err := a.cronOnReady(a); err != nil {
@@ -100,7 +100,7 @@ func (a *CronApplication) run(blocking bool) error {
 	logger := a.MustGetLogger()
 	logger.DebugCtx(a.ctx, "✅ Cron application started", zap.String("state", a.GetState().String()), zap.Duration("startup_time", a.GetStartDuration()))
 
-	// 6. 如果是阻塞模式，等待关闭信号
+	// If in blocking mode, wait for shutdown signal
 	if blocking {
 		a.WaitShutdown()
 		return a.gracefulShutdown()
@@ -109,19 +109,19 @@ func (a *CronApplication) run(blocking bool) error {
 	return nil
 }
 
-// gracefulShutdown Cron 应用优雅关闭
+// graceful shutdown for Cron application
 func (a *CronApplication) gracefulShutdown() error {
 	logger := a.MustGetLogger()
 	logger.DebugCtx(a.ctx, "Starting Cron application graceful shutdown...")
 
-	// 1. 触发 Cron 专有关闭回调（快速执行：释放锁等）
+	// Trigger Cron dedicated shutdown callback (quick execution: release locks, etc.)
 	if a.cronOnShutdown != nil {
 		if err := a.cronOnShutdown(a); err != nil {
 			logger.ErrorCtx(a.ctx, "Cron OnShutdown callback failed", zap.Error(err))
 		}
 	}
 
-	// 2. 关闭调度器（带超时控制）
+	// 2. Shutdown scheduler (with timeout control)
 	if a.scheduler != nil {
 		if err := a.shutdownSchedulerWithTimeout(); err != nil {
 			if logger != nil {
@@ -130,18 +130,18 @@ func (a *CronApplication) gracefulShutdown() error {
 		}
 	}
 
-	// 3. 调用 Base 的通用关闭逻辑
+	// Call Base's generic shutdown logic
 	return a.BaseApplication.Shutdown(10 * time.Second)
 }
 
-// shutdownSchedulerWithTimeout 关闭调度器（带超时控制）
+// shutdownSchedulerWithTimeout Shutdown scheduler (with timeout control)
 func (a *CronApplication) shutdownSchedulerWithTimeout() error {
 	logger := a.MustGetLogger()
 
-	// 默认超时时间 30 秒（可通过配置调整）
+	// Default timeout of 30 seconds (can be adjusted via configuration)
 	timeout := 30 * time.Second
 
-	// 尝试从配置加载超时时间
+	// Try to load timeout from configuration
 	configLoader := a.GetConfigLoader()
 	if configLoader != nil {
 		var cfg struct {
@@ -159,13 +159,13 @@ func (a *CronApplication) shutdownSchedulerWithTimeout() error {
 			zap.Duration("timeout", timeout))
 	}
 
-	// 在 goroutine 中关闭调度器
+	// Close the scheduler in a goroutine
 	done := make(chan error, 1)
 	go func() {
 		done <- a.scheduler.Shutdown()
 	}()
 
-	// 等待完成或超时
+	// wait for completion or timeout
 	select {
 	case err := <-done:
 		if err != nil {
@@ -180,7 +180,7 @@ func (a *CronApplication) shutdownSchedulerWithTimeout() error {
 		return nil
 
 	case <-time.After(timeout):
-		// ⚠️ 超时，强制退出
+		// ⚠️ Timeout, force exit
 		if logger != nil {
 			logger.WarnCtx(a.ctx, "⚠️  Scheduler close timeout, forcing exit",
 				zap.Duration("timeout", timeout))
@@ -190,12 +190,12 @@ func (a *CronApplication) shutdownSchedulerWithTimeout() error {
 	}
 }
 
-// GetScheduler 获取调度器实例
+// Get scheduler instance
 func (a *CronApplication) GetScheduler() gocron.Scheduler {
 	return a.scheduler
 }
 
-// RegisterTask 注册单个任务（便捷方法）
+// RegisterTask registers a single task (convenience method)
 func (a *CronApplication) RegisterTask(cronExpr string, task interface{}, options ...gocron.JobOption) (gocron.Job, error) {
 	return a.scheduler.NewJob(
 		gocron.CronJob(cronExpr, false),
@@ -204,39 +204,39 @@ func (a *CronApplication) RegisterTask(cronExpr string, task interface{}, option
 	)
 }
 
-// RegisterTasks 注册任务注册器
+// RegisterTasks registers the task registrar
 func (a *CronApplication) RegisterTasks(registrar TaskRegistrar) *CronApplication {
 	a.taskRegistrar = registrar
 	return a
 }
 
-// OnSetup 注册 Setup 阶段回调
+// OnSetup registers the callback for the Setup phase
 func (a *CronApplication) OnSetup(fn func(*CronApplication) error) *CronApplication {
 	a.cronOnSetup = fn
-	// 同时设置 Base 的回调（转换类型）
+	// Set the callback for Base (conversion type) simultaneously
 	a.BaseApplication.OnSetup(func(base *BaseApplication) error {
 		return fn(a)
 	})
 	return a
 }
 
-// OnReady 注册启动完成回调
+// Register startup completion callback
 func (a *CronApplication) OnReady(fn func(*CronApplication) error) *CronApplication {
 	a.cronOnReady = fn
-	// 同时设置 Base 的回调（转换类型）
+	// Set the callback for Base (conversion type) simultaneously
 	a.BaseApplication.OnReady(func(base *BaseApplication) error {
 		return fn(a)
 	})
 	return a
 }
 
-// OnShutdown 注册关闭前回调
+// Register shutdown callback
 func (a *CronApplication) OnShutdown(fn func(*CronApplication) error) *CronApplication {
 	a.cronOnShutdown = fn
 	return a
 }
 
-// Shutdown 手动触发关闭
+// Shutdown manually triggered
 func (a *CronApplication) Shutdown() {
 	a.Cancel()
 }

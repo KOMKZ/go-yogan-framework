@@ -5,139 +5,139 @@ import (
 	"time"
 )
 
-// Config OpenTelemetry 配置
+// Configure OpenTelemetry
 type Config struct {
-	Enabled        bool                   `mapstructure:"enabled"`             // 是否启用
-	ServiceName    string                 `mapstructure:"service_name"`        // 服务名称
-	ServiceVersion string                 `mapstructure:"service_version"`     // 服务版本
-	Exporter       ExporterConfig         `mapstructure:"exporter"`            // 导出器配置
-	Sampler        SamplerConfig          `mapstructure:"sampler"`             // 采样配置
-	ResourceAttrs  map[string]interface{} `mapstructure:"resource_attributes"` // 资源属性（支持嵌套）
-	Span           SpanConfig             `mapstructure:"span"`                // Span 配置
-	Batch          BatchConfig            `mapstructure:"batch"`               // 批处理配置
-	CircuitBreaker CircuitBreakerConfig   `mapstructure:"circuit_breaker"`     // 熔断器配置
-	Metrics        MetricsConfig          `mapstructure:"metrics"`             // 🎯 Metrics 配置
+	Enabled        bool                   `mapstructure:"enabled"`             // Is enabled
+	ServiceName    string                 `mapstructure:"service_name"`        // service name
+	ServiceVersion string                 `mapstructure:"service_version"`     // service version
+	Exporter       ExporterConfig         `mapstructure:"exporter"`            // exporter configuration
+	Sampler        SamplerConfig          `mapstructure:"sampler"`             // Sampling configuration
+	ResourceAttrs  map[string]interface{} `mapstructure:"resource_attributes"` // Resource attributes (support nesting)
+	Span           SpanConfig             `mapstructure:"span"`                // Span configuration
+	Batch          BatchConfig            `mapstructure:"batch"`               // Batch processing configuration
+	CircuitBreaker CircuitBreakerConfig   `mapstructure:"circuit_breaker"`     // circuit breaker configuration
+	Metrics        MetricsConfig          `mapstructure:"metrics"`             // 🎯 Metrics configuration
 }
 
-// ExporterConfig 导出器配置
+// ExporterConfig exporter configuration
 type ExporterConfig struct {
-	Type     string            `mapstructure:"type"`     // 导出类型：otlp, jaeger, stdout
-	Endpoint string            `mapstructure:"endpoint"` // 导出端点
-	Insecure bool              `mapstructure:"insecure"` // 是否使用不安全连接
-	Timeout  time.Duration     `mapstructure:"timeout"`  // 导出超时
-	Headers  map[string]string `mapstructure:"headers"`  // 🎯 自定义 Headers（用于认证等）
+	Type     string            `mapstructure:"type"`     // Export type: otlp, jaeger, stdout
+	Endpoint string            `mapstructure:"endpoint"` // Export endpoint
+	Insecure bool              `mapstructure:"insecure"` // Whether to use an insecure connection
+	Timeout  time.Duration     `mapstructure:"timeout"`  // Export timeout
+	Headers  map[string]string `mapstructure:"headers"`  // 🎯 Custom Headers (for authentication etc.)
 }
 
-// SamplerConfig 采样配置
+// SamplerConfig Sampling configuration
 type SamplerConfig struct {
-	Type  string  `mapstructure:"type"`  // 采样类型
-	Ratio float64 `mapstructure:"ratio"` // 采样比例（仅 trace_id_ratio 时有效）
+	Type  string  `mapstructure:"type"`  // sampling type
+	Ratio float64 `mapstructure:"ratio"` // Sampling ratio (effective only when using trace_id_ratio)
 }
 
-// SpanConfig Span 配置
+// SpanConfig Span configuration
 type SpanConfig struct {
-	MaxAttributes      int `mapstructure:"max_attributes"`       // Span 最大属性数
-	MaxEvents          int `mapstructure:"max_events"`           // Span 最大事件数
-	MaxLinks           int `mapstructure:"max_links"`            // Span 最大链接数
-	MaxAttributeLength int `mapstructure:"max_attribute_length"` // 单个属性最大长度
+	MaxAttributes      int `mapstructure:"max_attributes"`       // Maximum number of span attributes
+	MaxEvents          int `mapstructure:"max_events"`           // Maximum number of events per span
+	MaxLinks           int `mapstructure:"max_links"`            // Maximum number of connections per span
+	MaxAttributeLength int `mapstructure:"max_attribute_length"` // Maximum length of a single attribute
 }
 
-// BatchConfig 批处理配置
+// BatchConfig batch processing configuration
 type BatchConfig struct {
-	Enabled            bool          `mapstructure:"enabled"`               // 是否启用批处理
-	MaxQueueSize       int           `mapstructure:"max_queue_size"`        // 队列最大大小
-	MaxExportBatchSize int           `mapstructure:"max_export_batch_size"` // 单次导出最大 Span 数
-	ScheduleDelay      time.Duration `mapstructure:"schedule_delay"`        // 导出间隔
-	ExportTimeout      time.Duration `mapstructure:"export_timeout"`        // 导出超时
+	Enabled            bool          `mapstructure:"enabled"`               // Whether batch processing is enabled
+	MaxQueueSize       int           `mapstructure:"max_queue_size"`        // maximum queue size
+	MaxExportBatchSize int           `mapstructure:"max_export_batch_size"` // Maximum number of Spans per export
+	ScheduleDelay      time.Duration `mapstructure:"schedule_delay"`        // export interval
+	ExportTimeout      time.Duration `mapstructure:"export_timeout"`        // Export timeout
 }
 
-// MetricsConfig Metrics 配置
+// Metrics Configuration
 type MetricsConfig struct {
-	Enabled        bool              `mapstructure:"enabled"`         // 是否启用 Metrics
-	ExportInterval time.Duration     `mapstructure:"export_interval"` // 导出间隔
-	ExportTimeout  time.Duration     `mapstructure:"export_timeout"`  // 导出超时
-	Namespace      string            `mapstructure:"namespace"`       // 指标命名空间前缀
-	Labels         map[string]string `mapstructure:"labels"`          // 全局标签 (env, region 等)
-	HTTP           HTTPMetrics       `mapstructure:"http"`            // HTTP 层指标配置
-	Database       DBMetrics         `mapstructure:"database"`        // 数据库层指标配置
-	GRPC           GRPCMetrics       `mapstructure:"grpc"`            // gRPC 层指标配置
-	Redis          RedisMetrics      `mapstructure:"redis"`           // Redis 指标配置
-	Kafka          KafkaMetrics      `mapstructure:"kafka"`           // Kafka 指标配置
-	Limiter        LimiterMetrics    `mapstructure:"limiter"`         // 限流指标配置
-	Breaker        BreakerMetrics    `mapstructure:"breaker"`         // 熔断指标配置
-	JWT            JWTMetrics        `mapstructure:"jwt"`             // JWT 指标配置
-	Auth           AuthMetrics       `mapstructure:"auth"`            // 认证指标配置
-	Event          EventMetrics      `mapstructure:"event"`           // 事件指标配置
+	Enabled        bool              `mapstructure:"enabled"`         // Whether Metrics is enabled
+	ExportInterval time.Duration     `mapstructure:"export_interval"` // export interval
+	ExportTimeout  time.Duration     `mapstructure:"export_timeout"`  // Export timeout
+	Namespace      string            `mapstructure:"namespace"`       // metric namespace prefix
+	Labels         map[string]string `mapstructure:"labels"`          // Global tags (env, region, etc.)
+	HTTP           HTTPMetrics       `mapstructure:"http"`            // HTTP layer metric configuration
+	Database       DBMetrics         `mapstructure:"database"`        // Database layer metric configuration
+	GRPC           GRPCMetrics       `mapstructure:"grpc"`            // gRPC layer metric configuration
+	Redis          RedisMetrics      `mapstructure:"redis"`           // Redis metric configuration
+	Kafka          KafkaMetrics      `mapstructure:"kafka"`           // Kafka metric configuration
+	Limiter        LimiterMetrics    `mapstructure:"limiter"`         // Rate limiting configuration indicators
+	Breaker        BreakerMetrics    `mapstructure:"breaker"`         // circuit breaker metric configuration
+	JWT            JWTMetrics        `mapstructure:"jwt"`             // JWT metric configuration
+	Auth           AuthMetrics       `mapstructure:"auth"`            // Authentication metric configuration
+	Event          EventMetrics      `mapstructure:"event"`           // Event metric configuration
 }
 
-// HTTPMetrics HTTP 层指标配置
+// HTTP Metrics HTTP layer metric configuration
 type HTTPMetrics struct {
-	Enabled           bool `mapstructure:"enabled"`             // 是否启用
-	RecordRequestSize bool `mapstructure:"record_request_size"` // 是否记录请求大小
-	RecordResponseSize bool `mapstructure:"record_response_size"` // 是否记录响应大小
+	Enabled           bool `mapstructure:"enabled"`             // Whether to enable
+	RecordRequestSize bool `mapstructure:"record_request_size"` // Whether to log request size
+	RecordResponseSize bool `mapstructure:"record_response_size"` // Whether to log response size
 }
 
-// DBMetrics 数据库层指标配置
+// DBMetrics database layer metric configuration
 type DBMetrics struct {
-	Enabled          bool          `mapstructure:"enabled"`           // 是否启用
-	RecordSQLText    bool          `mapstructure:"record_sql_text"`   // 是否记录 SQL 文本（⚠️ 性能影响）
-	SlowQuerySeconds float64       `mapstructure:"slow_query_seconds"` // 慢查询阈值（秒）
-	PoolInterval     time.Duration `mapstructure:"pool_interval"`     // 连接池指标采集间隔
+	Enabled          bool          `mapstructure:"enabled"`           // Is enabled
+	RecordSQLText    bool          `mapstructure:"record_sql_text"`   // Whether to log SQL text (⚠ Performance impact)
+	SlowQuerySeconds float64       `mapstructure:"slow_query_seconds"` // slow query threshold (seconds)
+	PoolInterval     time.Duration `mapstructure:"pool_interval"`     // pool metrics collection interval
 }
 
-// GRPCMetrics gRPC 层指标配置
+// GRPCMetrics gRPC layer metric configuration
 type GRPCMetrics struct {
-	Enabled             bool `mapstructure:"enabled"`               // 是否启用
-	RecordMessageSize   bool `mapstructure:"record_message_size"`   // 是否记录消息大小
-	RecordStreamMetrics bool `mapstructure:"record_stream_metrics"` // 是否记录流式传输指标
+	Enabled             bool `mapstructure:"enabled"`               // Is enabled
+	RecordMessageSize   bool `mapstructure:"record_message_size"`   // Whether to log message size
+	RecordStreamMetrics bool `mapstructure:"record_stream_metrics"` // Whether to log streaming metrics
 }
 
-// RedisMetrics Redis 指标配置
+// RedisMetrics Redis metric configuration
 type RedisMetrics struct {
-	Enabled          bool `mapstructure:"enabled"`            // 是否启用
-	RecordHitMiss    bool `mapstructure:"record_hit_miss"`    // 是否记录缓存命中/未命中
-	RecordPoolStats  bool `mapstructure:"record_pool_stats"`  // 是否记录连接池状态
-	RecordLatencyP99 bool `mapstructure:"record_latency_p99"` // 是否记录 P99 延迟
+	Enabled          bool `mapstructure:"enabled"`            // Is Enabled
+	RecordHitMiss    bool `mapstructure:"record_hit_miss"`    // Whether to log cache hits/misses
+	RecordPoolStats  bool `mapstructure:"record_pool_stats"`  // Whether to log connection pool status
+	RecordLatencyP99 bool `mapstructure:"record_latency_p99"` // Whether to log P99 latency
 }
 
-// KafkaMetrics Kafka 指标配置
+// Kafka Metrics Kafka metric configuration
 type KafkaMetrics struct {
-	Enabled        bool `mapstructure:"enabled"`         // 是否启用
-	RecordLag      bool `mapstructure:"record_lag"`      // 是否记录消费延迟
-	RecordBatchSize bool `mapstructure:"record_batch_size"` // 是否记录批次大小
+	Enabled        bool `mapstructure:"enabled"`         // Whether to enable
+	RecordLag      bool `mapstructure:"record_lag"`      // Whether to record consumption delay
+	RecordBatchSize bool `mapstructure:"record_batch_size"` // Whether to log batch size
 }
 
-// LimiterMetrics 限流指标配置
+// LimiterMetrics rate limiting metrics configuration
 type LimiterMetrics struct {
-	Enabled         bool `mapstructure:"enabled"`          // 是否启用
-	RecordTokens    bool `mapstructure:"record_tokens"`    // 是否记录令牌数
-	RecordRejectRate bool `mapstructure:"record_reject_rate"` // 是否记录拒绝率
+	Enabled         bool `mapstructure:"enabled"`          // Whether to enable
+	RecordTokens    bool `mapstructure:"record_tokens"`    // Whether to log token count
+	RecordRejectRate bool `mapstructure:"record_reject_rate"` // Whether to record rejection rate
 }
 
-// BreakerMetrics 熔断指标配置
+// CircuitBreaker metrics configuration
 type BreakerMetrics struct {
-	Enabled           bool `mapstructure:"enabled"`             // 是否启用
-	RecordState       bool `mapstructure:"record_state"`        // 是否记录状态变化
-	RecordSuccessRate bool `mapstructure:"record_success_rate"` // 是否记录成功率
+	Enabled           bool `mapstructure:"enabled"`             // Is enabled
+	RecordState       bool `mapstructure:"record_state"`        // Whether to log state changes
+	RecordSuccessRate bool `mapstructure:"record_success_rate"` // Whether to log success rate
 }
 
-// JWTMetrics JWT 指标配置
+// JWT Metrics JWT metric configuration
 type JWTMetrics struct {
-	Enabled bool `mapstructure:"enabled"` // 是否启用
+	Enabled bool `mapstructure:"enabled"` // Whether to enable
 }
 
-// AuthMetrics 认证指标配置
+// AuthMetrics authentication metrics configuration
 type AuthMetrics struct {
-	Enabled bool `mapstructure:"enabled"` // 是否启用
+	Enabled bool `mapstructure:"enabled"` // Is enabled
 }
 
-// EventMetrics 事件指标配置
+// EventMetrics event metric configuration
 type EventMetrics struct {
-	Enabled         bool `mapstructure:"enabled"`          // 是否启用
-	RecordQueueSize bool `mapstructure:"record_queue_size"` // 是否记录队列大小
+	Enabled         bool `mapstructure:"enabled"`          // Is enabled
+	RecordQueueSize bool `mapstructure:"record_queue_size"` // Whether to record queue size
 }
 
-// DefaultConfig 返回默认配置
+// Return default configuration
 func DefaultConfig() Config {
 	return Config{
 		Enabled:        false,
@@ -176,7 +176,7 @@ func DefaultConfig() Config {
 			FallbackExporterType: "stdout",
 		},
 		Metrics: MetricsConfig{
-			Enabled:        false, // 默认关闭
+			Enabled:        false, // Default off
 			ExportInterval: 10 * time.Second,
 			ExportTimeout:  5 * time.Second,
 			Namespace:      "yogan",
@@ -232,46 +232,46 @@ func DefaultConfig() Config {
 	}
 }
 
-// Validate 验证配置
+// Validate configuration
 func (c *Config) Validate() error {
 	if !c.Enabled {
-		return nil // 未启用，无需验证
+		return nil // not enabled, verification not required
 	}
 
-	// 验证服务名称
+	// Validate service name
 	if c.ServiceName == "" {
 		return fmt.Errorf("service_name is required when telemetry is enabled")
 	}
 
-	// 验证导出器类型
+	// Validate exporter type
 	switch c.Exporter.Type {
 	case "otlp", "stdout":
-		// 支持的类型
+		// Supported types
 	default:
 		return fmt.Errorf("unsupported exporter type: %s (supported: otlp, stdout)", c.Exporter.Type)
 	}
 
-	// 验证 OTLP 导出器端点
+	// Verify OTLP exporter endpoint
 	if c.Exporter.Type == "otlp" && c.Exporter.Endpoint == "" {
 		return fmt.Errorf("exporter endpoint is required for otlp exporter")
 	}
 
-	// 验证采样类型
+	// Validate sampling type
 	switch c.Sampler.Type {
 	case "always_on", "always_off", "trace_id_ratio", "parent_based_always_on":
-		// 支持的类型
+		// Supported types
 	default:
 		return fmt.Errorf("unsupported sampler type: %s", c.Sampler.Type)
 	}
 
-	// 验证采样比例
+	// Validate sampling ratio
 	if c.Sampler.Type == "trace_id_ratio" {
 		if c.Sampler.Ratio < 0 || c.Sampler.Ratio > 1 {
 			return fmt.Errorf("sampler ratio must be between 0 and 1, got: %f", c.Sampler.Ratio)
 		}
 	}
 
-	// 验证批处理配置
+	// Validate batch processing configuration
 	if c.Batch.Enabled {
 		if c.Batch.MaxQueueSize <= 0 {
 			return fmt.Errorf("batch max_queue_size must be positive, got: %d", c.Batch.MaxQueueSize)
@@ -281,7 +281,7 @@ func (c *Config) Validate() error {
 		}
 	}
 
-	// 验证熔断器配置
+	// Verify circuit breaker configuration
 	if c.CircuitBreaker.Enabled {
 		if c.CircuitBreaker.FailureThreshold <= 0 {
 			return fmt.Errorf("circuit_breaker failure_threshold must be positive, got: %d", c.CircuitBreaker.FailureThreshold)
@@ -294,7 +294,7 @@ func (c *Config) Validate() error {
 		}
 		switch c.CircuitBreaker.FallbackExporterType {
 		case "stdout", "noop":
-			// 支持的类型
+			// Supported types
 		default:
 			return fmt.Errorf("unsupported fallback exporter type: %s (supported: stdout, noop)", c.CircuitBreaker.FallbackExporterType)
 		}

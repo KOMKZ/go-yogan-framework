@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// etcdClientConfig etcd 客户端配置
+// etcdClientConfig etcd client configuration
 type etcdClientConfig struct {
 	Endpoints   []string
 	DialTimeout time.Duration
@@ -18,7 +18,7 @@ type etcdClientConfig struct {
 	Password    string
 }
 
-// defaultEtcdClientConfig 返回默认配置
+// returns the default configuration for Etcd client
 func defaultEtcdClientConfig() etcdClientConfig {
 	return etcdClientConfig{
 		Endpoints:   []string{"127.0.0.1:2379"},
@@ -26,43 +26,43 @@ func defaultEtcdClientConfig() etcdClientConfig {
 	}
 }
 
-// etcdClient etcd 客户端封装
+// etcdClient encapsulation of etcd client
 type etcdClient struct {
 	client *clientv3.Client
 	config etcdClientConfig
 	logger *logger.CtxZapLogger
 }
 
-// newEtcdClient 创建 etcd 客户端
+// Create etcd client
 func newEtcdClient(cfg etcdClientConfig, log *logger.CtxZapLogger) (*etcdClient, error) {
 	if log == nil {
 		log = logger.GetLogger("yogan")
 	}
 
-	// 应用默认值
+	// Apply default values
 	if cfg.DialTimeout == 0 {
 		cfg.DialTimeout = 5 * time.Second
 	}
 
-	// 创建 etcd 客户端配置
+	// Create etcd client configuration
 	clientCfg := clientv3.Config{
 		Endpoints:   cfg.Endpoints,
 		DialTimeout: cfg.DialTimeout,
 	}
 
-	// 如果提供了认证信息
+	// If authentication information is provided
 	if cfg.Username != "" {
 		clientCfg.Username = cfg.Username
 		clientCfg.Password = cfg.Password
 	}
 
-	// 连接 etcd
+	// Connect to etcd
 	client, err := clientv3.New(clientCfg)
 	if err != nil {
 		return nil, fmt.Errorf("连接 etcd 失败: %w", err)
 	}
 
-	// 测试连接
+	// Test connection
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.DialTimeout)
 	defer cancel()
 
@@ -83,12 +83,12 @@ func newEtcdClient(cfg etcdClientConfig, log *logger.CtxZapLogger) (*etcdClient,
 	}, nil
 }
 
-// GetClient 获取原生 etcd 客户端
+// GetClient Obtain the native etcd client
 func (c *etcdClient) GetClient() *clientv3.Client {
 	return c.client
 }
 
-// Close 关闭连接
+// Close connection
 func (c *etcdClient) Close() error {
 	if c.client != nil {
 		c.logger.DebugCtx(context.Background(), "关闭 etcd 连接")
@@ -97,7 +97,7 @@ func (c *etcdClient) Close() error {
 	return nil
 }
 
-// Put 设置键值
+// Set key-value pair
 func (c *etcdClient) Put(ctx context.Context, key, value string) error {
 	_, err := c.client.Put(ctx, key, value)
 	if err != nil {
@@ -106,7 +106,7 @@ func (c *etcdClient) Put(ctx context.Context, key, value string) error {
 	return nil
 }
 
-// Get 获取键值
+// Get key value
 func (c *etcdClient) Get(ctx context.Context, key string) (string, error) {
 	resp, err := c.client.Get(ctx, key)
 	if err != nil {
@@ -120,7 +120,7 @@ func (c *etcdClient) Get(ctx context.Context, key string) (string, error) {
 	return string(resp.Kvs[0].Value), nil
 }
 
-// Delete 删除键
+// Delete key
 func (c *etcdClient) Delete(ctx context.Context, key string) error {
 	_, err := c.client.Delete(ctx, key)
 	if err != nil {
@@ -129,7 +129,7 @@ func (c *etcdClient) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
-// GetWithPrefix 获取指定前缀的所有键值
+// GetWithPrefix Retrieve all key-value pairs with the specified prefix
 func (c *etcdClient) GetWithPrefix(ctx context.Context, prefix string) (map[string]string, error) {
 	resp, err := c.client.Get(ctx, prefix, clientv3.WithPrefix())
 	if err != nil {

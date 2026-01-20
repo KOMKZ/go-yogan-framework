@@ -7,7 +7,7 @@ import (
 )
 
 // ============================================================
-// NewRequest 测试
+// NewRequest test
 // ============================================================
 
 func TestNewRequest(t *testing.T) {
@@ -59,7 +59,7 @@ func TestNewDeleteRequest(t *testing.T) {
 }
 
 // ============================================================
-// WithHeader 测试
+// WithHeader test
 // ============================================================
 
 func TestRequest_WithHeader(t *testing.T) {
@@ -87,7 +87,7 @@ func TestRequest_WithHeader_Chaining(t *testing.T) {
 }
 
 // ============================================================
-// WithQuery 测试
+// WithQuery test
 // ============================================================
 
 func TestRequest_WithQuery(t *testing.T) {
@@ -115,7 +115,7 @@ func TestRequest_WithQuery_Chaining(t *testing.T) {
 }
 
 // ============================================================
-// WithBody 测试
+// WithBody test
 // ============================================================
 
 func TestRequest_WithBody(t *testing.T) {
@@ -142,7 +142,7 @@ func TestRequest_WithBody_Nil(t *testing.T) {
 }
 
 // ============================================================
-// WithJSON 测试
+// WithJSON test
 // ============================================================
 
 func TestRequest_WithJSON(t *testing.T) {
@@ -162,7 +162,7 @@ func TestRequest_WithJSON(t *testing.T) {
 		t.Error("bodyBytes should be set")
 	}
 	
-	// 验证 JSON 内容
+	// Validate JSON content
 	bodyStr := string(req.bodyBytes)
 	if !strings.Contains(bodyStr, "Alice") {
 		t.Error("JSON body should contain 'Alice'")
@@ -179,7 +179,7 @@ func TestRequest_WithJSON_Nil(t *testing.T) {
 }
 
 // ============================================================
-// WithForm 测试
+// WithForm test
 // ============================================================
 
 func TestRequest_WithForm(t *testing.T) {
@@ -199,7 +199,7 @@ func TestRequest_WithForm(t *testing.T) {
 		t.Error("bodyBytes should be set")
 	}
 	
-	// 验证 Form 内容
+	// Validate form content
 	bodyStr := string(req.bodyBytes)
 	if !strings.Contains(bodyStr, "username=alice") {
 		t.Error("Form body should contain 'username=alice'")
@@ -216,7 +216,7 @@ func TestRequest_WithForm_Nil(t *testing.T) {
 }
 
 // ============================================================
-// buildHTTPRequest 测试
+// buildHTTPRequest test
 // ============================================================
 
 func TestRequest_buildHTTPRequest_Basic(t *testing.T) {
@@ -312,7 +312,7 @@ func TestRequest_buildHTTPRequest_WithBody(t *testing.T) {
 }
 
 // ============================================================
-// Clone 测试
+// Clone test
 // ============================================================
 
 func TestRequest_Clone(t *testing.T) {
@@ -323,7 +323,7 @@ func TestRequest_Clone(t *testing.T) {
 	
 	clone := req.Clone()
 	
-	// 验证克隆
+	// Validate clone
 	if clone.Method != req.Method {
 		t.Error("Method not cloned")
 	}
@@ -344,7 +344,7 @@ func TestRequest_Clone(t *testing.T) {
 		t.Error("bodyBytes not cloned")
 	}
 	
-	// 验证独立性（修改原对象不影响克隆）
+	// Verify independence (modifying the original object does not affect the clone)
 	req.WithHeader("X-Test", "value")
 	if clone.Headers["X-Test"] == "value" {
 		t.Error("Clone should be independent")

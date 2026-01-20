@@ -2,28 +2,28 @@ package kafka
 
 import "context"
 
-// ConsumerHandler 消费者处理器接口
-// 应用层只需实现此接口，内核负责运行时管理
+// ConsumerHandler consumer handler interface
+// The application layer only needs to implement this interface; the kernel is responsible for runtime management
 type ConsumerHandler interface {
-	// Name 消费者名称（用于日志、指标、配置索引）
+	// Name Consumer name (for logs, metrics, configuration indexing)
 	Name() string
 
-	// Topics 订阅的 Topic 列表
+	// List of Topics subscribed to for Topics
 	Topics() []string
 
-	// Handle 处理消息
+	// Handle message
 	Handle(ctx context.Context, msg *ConsumedMessage) error
 }
 
-// ConsumerHandlerFunc 函数式 Handler（简单场景）
-// 适用于不需要依赖注入的简单消费者
+// ConsumerHandlerFunc functional Handler (simple scenario)
+// For simple consumers that do not require dependency injection
 type ConsumerHandlerFunc struct {
 	name    string
 	topics  []string
 	handler MessageHandler
 }
 
-// NewConsumerHandlerFunc 创建函数式 Handler
+// NewConsumerHandlerFunc creates a functional Handler
 func NewConsumerHandlerFunc(name string, topics []string, handler MessageHandler) *ConsumerHandlerFunc {
 	return &ConsumerHandlerFunc{
 		name:    name,
@@ -32,17 +32,17 @@ func NewConsumerHandlerFunc(name string, topics []string, handler MessageHandler
 	}
 }
 
-// Name 返回消费者名称
+// Returns the consumer name
 func (h *ConsumerHandlerFunc) Name() string {
 	return h.name
 }
 
-// Topics 返回订阅的 Topic 列表
+// Topics return the list of subscribed Topics
 func (h *ConsumerHandlerFunc) Topics() []string {
 	return h.topics
 }
 
-// Handle 处理消息
+// Handle message
 func (h *ConsumerHandlerFunc) Handle(ctx context.Context, msg *ConsumedMessage) error {
 	if h.handler == nil {
 		return nil

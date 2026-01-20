@@ -7,13 +7,13 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// PasswordService 密码服务
+// PasswordService password service
 type PasswordService struct {
 	policy     PasswordPolicy
 	bcryptCost int
 }
 
-// NewPasswordService 创建密码服务
+// Create password service
 func NewPasswordService(policy PasswordPolicy, bcryptCost int) *PasswordService {
 	return &PasswordService{
 		policy:     policy,
@@ -21,7 +21,7 @@ func NewPasswordService(policy PasswordPolicy, bcryptCost int) *PasswordService 
 	}
 }
 
-// HashPassword 加密密码（bcrypt）
+// HashPassword hash password (bcrypt)
 func (s *PasswordService) HashPassword(password string) (string, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), s.bcryptCost)
 	if err != nil {
@@ -30,15 +30,15 @@ func (s *PasswordService) HashPassword(password string) (string, error) {
 	return string(hash), nil
 }
 
-// CheckPassword 验证密码
+// CheckPassword validate password
 func (s *PasswordService) CheckPassword(password, hash string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return err == nil
 }
 
-// ValidatePassword 验证密码策略
+// ValidatePassword verify password policy
 func (s *PasswordService) ValidatePassword(password string) error {
-	// 1. 长度检查
+	// Length check
 	if len(password) < s.policy.MinLength {
 		return ErrPasswordTooShort
 	}
@@ -46,7 +46,7 @@ func (s *PasswordService) ValidatePassword(password string) error {
 		return ErrPasswordTooLong
 	}
 
-	// 2. 复杂度检查
+	// 2. Complexity Check
 	var hasUpper, hasLower, hasDigit, hasSpecial bool
 	for _, ch := range password {
 		switch {
@@ -74,7 +74,7 @@ func (s *PasswordService) ValidatePassword(password string) error {
 		return ErrPasswordRequireSpecial
 	}
 
-	// 3. 黑名单检查
+	// 3. Blacklist check
 	passwordLower := strings.ToLower(password)
 	for _, weak := range s.policy.Blacklist {
 		if strings.Contains(passwordLower, strings.ToLower(weak)) {
@@ -85,7 +85,7 @@ func (s *PasswordService) ValidatePassword(password string) error {
 	return nil
 }
 
-// GetPolicy 获取密码策略
+// GetPolicy Retrieve password policy
 func (s *PasswordService) GetPolicy() PasswordPolicy {
 	return s.policy
 }

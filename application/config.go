@@ -7,21 +7,21 @@ import (
 	"github.com/KOMKZ/go-yogan-framework/logger"
 )
 
-// AppConfig 框架配置（只包含框架层配置）
+// AppConfig framework configuration (contains only framework-level configurations)
 //
-// 注意：不再包含业务配置（如 Database, Redis）
-// 业务组件应该自己从 ConfigLoader 读取配置
+// Note: Business configurations (such as Database, Redis) are no longer included.
+// The business component should read configurations from ConfigLoader itself.
 type AppConfig struct {
-	// 必选配置 - 值类型（应用必须配置）
+	// Required configuration - value type (the application must be configured)
 	ApiServer ApiServerConfig `mapstructure:"api_server"`
 
-	// 可选配置 - 指针（有默认值或可不配置）
+	// Optional configuration - pointer (has default value or can be left unconfigured)
 	Logger     *logger.ManagerConfig       `mapstructure:"logger,omitempty"`
-	Middleware *MiddlewareConfig           `mapstructure:"middleware,omitempty"` // 中间件配置
-	Httpx      *httpx.ErrorLoggingConfig   `mapstructure:"httpx,omitempty"`      // HTTP 错误处理配置
+	Middleware *MiddlewareConfig           `mapstructure:"middleware,omitempty"` // middleware configuration
+	Httpx      *httpx.ErrorLoggingConfig   `mapstructure:"httpx,omitempty"`      // HTTP error handling configuration
 }
 
-// ApiServerConfig HTTP API 服务器配置
+// ApiServerConfig HTTP API server configuration
 type ApiServerConfig struct {
 	Host         string `mapstructure:"host"`
 	Port         int    `mapstructure:"port"`
@@ -30,77 +30,77 @@ type ApiServerConfig struct {
 	WriteTimeout int    `mapstructure:"write_timeout"`
 }
 
-// MiddlewareConfig 中间件配置
+// MiddlewareConfig middleware configuration
 type MiddlewareConfig struct {
 	CORS       *CORSConfig       `mapstructure:"cors,omitempty"`
 	TraceID    *TraceIDConfig    `mapstructure:"trace_id,omitempty"`
 	RequestLog *RequestLogConfig `mapstructure:"request_log,omitempty"`
 }
 
-// TraceIDConfig TraceID 中间件配置
+// TraceIDConfig Trace ID middleware configuration
 type TraceIDConfig struct {
-	// Enable 是否启用 TraceID 中间件（默认 true）
+	// Enable whether to use the TraceID middleware (default true)
 	Enable bool `mapstructure:"enable"`
 
-	// TraceIDKey Context 中存储的 Key（默认 "trace_id"）
+	// TraceIDKey stored in Context (default "trace_id")
 	TraceIDKey string `mapstructure:"trace_id_key"`
 
-	// TraceIDHeader HTTP Header 中的 Key（默认 "X-Trace-ID"）
+	// TraceIDHeader is the key in the HTTP Header (default "X-Trace-ID")
 	TraceIDHeader string `mapstructure:"trace_id_header"`
 
-	// EnableResponseHeader 是否将 TraceID 写入 Response Header（默认 true）
+	// EnableResponseHeader whether to write TraceID into Response Header (default true)
 	EnableResponseHeader bool `mapstructure:"enable_response_header"`
 }
 
-// RequestLogConfig HTTP 请求日志中间件配置
+// RequestLogConfig HTTP request log middleware configuration
 type RequestLogConfig struct {
-	// Enable 是否启用请求日志中间件（默认 true）
+	// Enable request log middleware (default true)
 	Enable bool `mapstructure:"enable"`
 
-	// SkipPaths 跳过记录的路径列表（例如健康检查）
+	// SkipPaths list of paths to skip recording (e.g., health checks)
 	SkipPaths []string `mapstructure:"skip_paths"`
 
-	// EnableBody 是否记录请求体（默认 false，性能考虑）
+	// EnableBody whether to log request body (default false, for performance considerations)
 	EnableBody bool `mapstructure:"enable_body"`
 
-	// MaxBodySize 最大请求体记录大小（字节，默认 4KB）
+	// MaxBodySize maximum request body recording size (bytes, default 4KB)
 	MaxBodySize int `mapstructure:"max_body_size"`
 }
 
-// CORSConfig CORS 跨域中间件配置
+// CORSConfig CORS cross-domain middleware configuration
 type CORSConfig struct {
-	// Enable 是否启用 CORS 中间件（默认 false）
+	// Enable whether to use the CORS middleware (default false)
 	Enable bool `mapstructure:"enable"`
 
-	// AllowOrigins 允许的源列表（默认 ["*"]）
-	// 示例：["https://example.com", "https://app.example.com"]
+	// AllowOrigins list of allowed sources (default ["*"])
+	// Example: ["https://example.com", "https://app.example.com"]
 	AllowOrigins []string `mapstructure:"allow_origins"`
 
-	// AllowMethods 允许的 HTTP 方法列表（默认 ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]）
+	// AllowMethods list of allowed HTTP methods (default ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"])
 	AllowMethods []string `mapstructure:"allow_methods"`
 
-	// AllowHeaders 允许的请求头列表（默认 ["Origin", "Content-Type", "Accept", "Authorization"]）
+	// AllowHeaders list of allowed request headers (default ["Origin", "Content-Type", "Accept", "Authorization"])
 	AllowHeaders []string `mapstructure:"allow_headers"`
 
-	// ExposeHeaders 暴露给客户端的响应头列表（默认 []）
+	// ExposeHeaders list of response headers exposed to the client (default [])
 	ExposeHeaders []string `mapstructure:"expose_headers"`
 
-	// AllowCredentials 是否允许发送凭证（Cookie、HTTP认证等）（默认 false）
-	// 注意：当为 true 时，AllowOrigins 不能使用 "*"
+	// Whether to allow sending credentials (such as Cookies, HTTP authentication, etc.) (default is false)
+	// Note: When set to true, AllowOrigins cannot use "*"
 	AllowCredentials bool `mapstructure:"allow_credentials"`
 
-	// MaxAge 预检请求缓存时间（秒）（默认 43200，即12小时）
+	// MaxAge pre-check request cache time (seconds) (default 43200, i.e., 12 hours)
 	MaxAge int `mapstructure:"max_age"`
 }
 
 
-// ApplyDefaults 应用默认值
+// ApplyDefaults Apply default values
 func (c *MiddlewareConfig) ApplyDefaults() {
 	if c == nil {
 		return
 	}
 
-	// CORS 默认值
+	// CORS default values
 	if c.CORS != nil {
 		if len(c.CORS.AllowOrigins) == 0 {
 			c.CORS.AllowOrigins = []string{"*"}
@@ -112,11 +112,11 @@ func (c *MiddlewareConfig) ApplyDefaults() {
 			c.CORS.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
 		}
 		if c.CORS.MaxAge == 0 {
-			c.CORS.MaxAge = 43200 // 12小时
+			c.CORS.MaxAge = 43200 // 12 hours
 		}
 	}
 
-	// TraceID 默认值
+	// Trace ID default value
 	if c.TraceID != nil {
 		if c.TraceID.TraceIDKey == "" {
 			c.TraceID.TraceIDKey = "trace_id"
@@ -126,7 +126,7 @@ func (c *MiddlewareConfig) ApplyDefaults() {
 		}
 	}
 
-	// RequestLog 默认值
+	// Default value for RequestLog
 	if c.RequestLog != nil {
 		if c.RequestLog.MaxBodySize == 0 {
 			c.RequestLog.MaxBodySize = 4096 // 4KB
@@ -134,9 +134,9 @@ func (c *MiddlewareConfig) ApplyDefaults() {
 	}
 }
 
-// LoadAppConfig 加载框架配置
+// LoadAppConfig load framework configuration
 func (a *Application) LoadAppConfig() (*AppConfig, error) {
-	// 从注册中心获取 ConfigLoader
+	// Retrieve ConfigLoader from the registry center
 	loader := a.GetConfigLoader()
 	if loader == nil {
 		return nil, fmt.Errorf("配置加载器未初始化")
@@ -147,7 +147,7 @@ func (a *Application) LoadAppConfig() (*AppConfig, error) {
 		return nil, err
 	}
 
-	// 应用中间件配置默认值
+	// Apply middleware configuration default values
 	if cfg.Middleware != nil {
 		cfg.Middleware.ApplyDefaults()
 	}

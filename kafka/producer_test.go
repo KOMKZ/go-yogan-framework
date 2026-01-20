@@ -54,7 +54,7 @@ func TestNewAsyncProducer_NilLogger(t *testing.T) {
 	assert.Contains(t, err.Error(), "logger cannot be nil")
 }
 
-// MockSyncProducer 模拟同步生产者
+// MockSyncProducer simulated synchronous producer
 type MockSyncProducer struct {
 	sendFunc  func(msg *Message) (*ProducerResult, error)
 	closeFunc func() error
@@ -147,28 +147,28 @@ func TestMockSyncProducer_SendAfterClose(t *testing.T) {
 	assert.Error(t, err)
 }
 
-// 测试 SyncProducer 的验证逻辑
+// Test the validation logic of SyncProducer
 func TestSyncProducer_Send_Validation(t *testing.T) {
 	logger := zap.NewNop()
 
-	// 创建一个模拟的 SyncProducer 结构来测试验证逻辑
+	// Create a simulated SyncProducer structure to test validation logic
 	p := &SyncProducer{
 		logger: logger,
 		closed: false,
 	}
 
-	// 测试 nil 消息
+	// Test nil message
 	t.Run("nil message", func(t *testing.T) {
-		// 由于没有实际的 sarama producer，这里只测试前置验证
-		// 实际的验证在 Send 方法开头
+		// Since there is no actual sarama producer, only pre-validation is tested here
+		// Actual validation occurs at the beginning of the Send method
 	})
 
-	// 测试空 topic
+	// Test empty topic
 	t.Run("empty topic", func(t *testing.T) {
-		// 验证逻辑测试
+		// Validate logic test
 	})
 
-	// 测试关闭后发送
+	// Test send after shutdown
 	t.Run("send after close", func(t *testing.T) {
 		p.closed = true
 		_, err := p.Send(context.Background(), &Message{Topic: "test"})
@@ -177,7 +177,7 @@ func TestSyncProducer_Send_Validation(t *testing.T) {
 	})
 }
 
-// 测试 AsyncProducer 的验证逻辑
+// Test the validation logic of AsyncProducer
 func TestAsyncProducer_Validation(t *testing.T) {
 	logger := zap.NewNop()
 
@@ -274,7 +274,7 @@ func TestAsyncProducer_Channels(t *testing.T) {
 		errorCh:   errorCh,
 	}
 
-	// 测试 Successes 和 Errors 通道
+	// Test Successes and Errors channels
 	assert.Equal(t, (<-chan *ProducerResult)(successCh), p.Successes())
 	assert.Equal(t, (<-chan error)(errorCh), p.Errors())
 }
@@ -284,12 +284,12 @@ func TestAsyncProducer_Close_Idempotent(t *testing.T) {
 
 	p := &AsyncProducer{
 		logger:    logger,
-		closed:    true, // 已关闭
+		closed:    true, // closed
 		successCh: make(chan *ProducerResult, 10),
 		errorCh:   make(chan error, 10),
 	}
 
-	// 重复关闭不应该报错
+	// Repeated closure should not result in an error
 	err := p.Close()
 	assert.NoError(t, err)
 }
@@ -299,15 +299,15 @@ func TestSyncProducer_Close_Idempotent(t *testing.T) {
 
 	p := &SyncProducer{
 		logger: logger,
-		closed: true, // 已关闭
+		closed: true, // closed
 	}
 
-	// 重复关闭不应该报错
+	// Repeated closure should not result in an error
 	err := p.Close()
 	assert.NoError(t, err)
 }
 
-// 测试真实的 Producer（需要 Kafka 运行）
+// Test the real Producer (requires Kafka to be running)
 func TestProducer_Send_WithKafka(t *testing.T) {
 	logger := zap.NewNop()
 	cfg := Config{
@@ -333,7 +333,7 @@ func TestProducer_Send_WithKafka(t *testing.T) {
 		t.Skip("Producer not created")
 	}
 
-	// 测试发送消息
+	// Test sending message
 	msg := &Message{
 		Topic: "test-topic",
 		Key:   []byte("key1"),
@@ -425,7 +425,7 @@ func TestProducer_SendAsync_WithKafka(t *testing.T) {
 
 	done := make(chan struct{})
 	producer.SendAsync(msg, func(result *ProducerResult, err error) {
-		// 不管成功失败都关闭 done
+		// close done regardless of success or failure
 		defer close(done)
 		if err != nil {
 			t.Log("Async send error:", err)
@@ -468,7 +468,7 @@ func TestSyncProducer_Send_EmptyTopic(t *testing.T) {
 	assert.Contains(t, err.Error(), "topic cannot be empty")
 }
 
-// 真实 Kafka 测试
+// Real Kafka test
 func TestProducer_RealKafka_FullFlow(t *testing.T) {
 	logger := zap.NewNop()
 	cfg := Config{
@@ -497,7 +497,7 @@ func TestProducer_RealKafka_FullFlow(t *testing.T) {
 		t.Skip("Producer not created")
 	}
 
-	// 测试发送带 Headers 的消息
+	// Test sending messages with Headers
 	msg := &Message{
 		Topic: "test-topic",
 		Key:   []byte("test-key"),
@@ -518,7 +518,7 @@ func TestProducer_RealKafka_FullFlow(t *testing.T) {
 	assert.GreaterOrEqual(t, result.Offset, int64(0))
 	t.Logf("Message sent: partition=%d, offset=%d", result.Partition, result.Offset)
 
-	// 测试发送 JSON
+	// Test sending JSON
 	jsonData := struct {
 		Name  string `json:"name"`
 		Value int    `json:"value"`
@@ -529,7 +529,7 @@ func TestProducer_RealKafka_FullFlow(t *testing.T) {
 	assert.NotNil(t, result2)
 	t.Logf("JSON sent: partition=%d, offset=%d", result2.Partition, result2.Offset)
 
-	// 测试异步发送
+	// Test asynchronous sending
 	done := make(chan struct{})
 	producer.SendAsync(&Message{
 		Topic: "test-topic",
@@ -618,7 +618,7 @@ func TestManager_RealKafka_CreateConsumer(t *testing.T) {
 	assert.NotNil(t, consumer)
 	assert.False(t, consumer.IsRunning())
 
-	// 获取消费者
+	// Get consumer
 	got := manager.GetConsumer("real-consumer")
 	assert.Equal(t, consumer, got)
 }
@@ -650,19 +650,19 @@ func TestAsyncProducer_RealKafka(t *testing.T) {
 		t.Skip("Cannot get async producer:", err)
 	}
 
-	// 测试 SendJSON
+	// Test SendJSON
 	jsonData := map[string]interface{}{"test": "async-json"}
 	_, sendErr := asyncProducer.SendJSON(context.Background(), "test-topic", "async-key", jsonData)
 	assert.NoError(t, sendErr)
 
-	// 测试 Successes 和 Errors channels
+	// Test Successes and Errors channels
 	successCh := asyncProducer.Successes()
 	assert.NotNil(t, successCh)
 
 	errorsCh := asyncProducer.Errors()
 	assert.NotNil(t, errorsCh)
 
-	// 等待一下让消息处理
+	// wait for the message to be processed
 	time.Sleep(500 * time.Millisecond)
 }
 
@@ -674,7 +674,7 @@ func TestSyncProducer_SendJSON_Error(t *testing.T) {
 		closed: false,
 	}
 
-	// 测试 JSON 序列化失败
+	// Test JSON serialization failure
 	_, err := p.SendJSON(context.Background(), "test-topic", "key", make(chan int))
 	assert.Error(t, err)
 }
@@ -706,7 +706,7 @@ func TestAsyncProducer_RealKafka_FullFlow(t *testing.T) {
 		t.Skip("Cannot get async producer:", err)
 	}
 
-	// 发送多条异步消息
+	// Send multiple asynchronous messages
 	for i := 0; i < 5; i++ {
 		msg := &Message{
 			Topic: "test-topic",
@@ -723,22 +723,22 @@ func TestAsyncProducer_RealKafka_FullFlow(t *testing.T) {
 		})
 	}
 
-	// 等待消息发送完成
+	// wait for message send completion
 	time.Sleep(2 * time.Second)
 
-	// 测试 Successes 和 Errors channels
+	// Test Successes and Errors channels
 	select {
 	case result := <-asyncProducer.Successes():
 		t.Logf("Got success from channel: partition=%d, offset=%d", result.Partition, result.Offset)
 	case <-time.After(100 * time.Millisecond):
-		// 超时也是正常的
+		// Timeout is also normal
 	}
 
 	select {
 	case err := <-asyncProducer.Errors():
 		t.Logf("Got error from channel: %v", err)
 	case <-time.After(100 * time.Millisecond):
-		// 超时也是正常的
+		// Timeout is also normal
 	}
 }
 
@@ -768,10 +768,10 @@ func TestAsyncProducer_SendAsync_AfterManagerClosed(t *testing.T) {
 		t.Skip("Cannot get async producer:", err)
 	}
 
-	// 关闭 manager
+	// Shut down manager
 	manager.Close()
 
-	// 尝试发送消息
+	// Try to send message
 	done := make(chan struct{})
 	asyncProducer.SendAsync(&Message{
 		Topic: "test-topic",
@@ -785,7 +785,7 @@ func TestAsyncProducer_SendAsync_AfterManagerClosed(t *testing.T) {
 
 	select {
 	case <-done:
-		// 完成
+		// Complete
 	case <-time.After(2 * time.Second):
 		t.Log("Timeout waiting for callback")
 	}

@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// mockValidator 模拟验证器（通过验证）
+// mockValidator simulated validator (passes validation)
 type mockValidator struct {
 	shouldFail bool
 	err        error
@@ -20,7 +20,7 @@ func (m mockValidator) Validate() error {
 	return nil
 }
 
-// TestValidateAll_Success 测试全部验证通过
+// TestValidateAll_Success All validations passed
 func TestValidateAll_Success(t *testing.T) {
 	v1 := mockValidator{shouldFail: false}
 	v2 := mockValidator{shouldFail: false}
@@ -30,7 +30,7 @@ func TestValidateAll_Success(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-// TestValidateAll_SingleFailure 测试单个验证失败
+// TestValidateAll_SingleFailure tests single validation failure
 func TestValidateAll_SingleFailure(t *testing.T) {
 	v1 := mockValidator{shouldFail: false}
 	v2 := mockValidator{shouldFail: true, err: errors.New("validation error")}
@@ -41,7 +41,7 @@ func TestValidateAll_SingleFailure(t *testing.T) {
 	assert.Equal(t, "validation error", err.Error())
 }
 
-// TestValidateAll_MultipleFailures 测试多个验证失败（返回第一个错误）
+// TestValidateAll_MultipleFailures test multiple validation failures (return first error)
 func TestValidateAll_MultipleFailures(t *testing.T) {
 	v1 := mockValidator{shouldFail: true, err: errors.New("first error")}
 	v2 := mockValidator{shouldFail: true, err: errors.New("second error")}
@@ -49,22 +49,22 @@ func TestValidateAll_MultipleFailures(t *testing.T) {
 
 	err := ValidateAll(v1, v2, v3)
 	assert.Error(t, err)
-	// 应该返回第一个错误
+	// Should return the first error
 	assert.Equal(t, "first error", err.Error())
 }
 
-// TestValidateAll_Empty 测试空验证器列表
+// TestValidateAll_Empty test empty validator list
 func TestValidateAll_Empty(t *testing.T) {
 	err := ValidateAll()
 	assert.NoError(t, err)
 }
 
-// TestValidateAll_NilValidator 测试包含 nil 的情况
+// TestValidateAll_NilValidator tests cases involving nil
 func TestValidateAll_WithNil(t *testing.T) {
 	v1 := mockValidator{shouldFail: false}
 	
-	// 这里会 panic，因为不能对 nil 调用方法
-	// 测试应该确保这种情况被正确处理
+	// This will cause a panic because a method cannot be called on nil.
+	// The test should ensure that this situation is handled correctly
 	defer func() {
 		if r := recover(); r != nil {
 			t.Logf("捕获到 panic: %v", r)
@@ -72,17 +72,17 @@ func TestValidateAll_WithNil(t *testing.T) {
 	}()
 
 	err := ValidateAll(v1, nil)
-	// 如果没有 panic，验证结果
+	// If there is no panic, verify the result
 	if err == nil {
 		t.Log("nil validator 被跳过")
 	}
 }
 
-// TestValidator_Interface 测试 Validator 接口实现
+// TestValidator_Interface test implementation of Validator interface
 func TestValidator_Interface(t *testing.T) {
 	var v Validator
 	
-	// 确保 mockValidator 实现了 Validator 接口
+	// Ensure that mockValidator implements the Validator interface
 	v = mockValidator{shouldFail: false}
 	assert.NotNil(t, v)
 	
@@ -90,7 +90,7 @@ func TestValidator_Interface(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-// realValidator 真实配置验证器示例
+// realValidator example of real configuration validator
 type realServerConfig struct {
 	Port int
 	Host string
@@ -106,7 +106,7 @@ func (c realServerConfig) Validate() error {
 	return nil
 }
 
-// TestValidateAll_RealExample 测试真实使用场景
+// TestValidateAll_RealExample test real usage scenarios
 func TestValidateAll_RealExample(t *testing.T) {
 	tests := []struct {
 		name      string

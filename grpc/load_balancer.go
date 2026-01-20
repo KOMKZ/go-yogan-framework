@@ -6,29 +6,29 @@ import (
 	"sync"
 )
 
-// LoadBalancer 负载均衡器接口
+// LoadBalancer load balancer interface
 type LoadBalancer interface {
-	// Select 从地址列表中选择一个地址
+	// Select an address from the address list
 	Select(addresses []string) (string, error)
-	// Update 更新地址列表（当服务实例变化时）
+	// Update address list (when service instance changes)
 	Update(addresses []string)
 }
 
-// RoundRobinBalancer 轮询负载均衡器
+// RoundRobinBalancer round-robin load balancer
 type RoundRobinBalancer struct {
 	mu        sync.Mutex
 	current   int
 	addresses []string
 }
 
-// NewRoundRobinBalancer 创建轮询负载均衡器
+// Create new round-robin load balancer
 func NewRoundRobinBalancer() *RoundRobinBalancer {
 	return &RoundRobinBalancer{
 		addresses: make([]string, 0),
 	}
 }
 
-// Update 更新地址列表
+// Update address list
 func (b *RoundRobinBalancer) Update(addresses []string) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -36,18 +36,18 @@ func (b *RoundRobinBalancer) Update(addresses []string) {
 	b.addresses = make([]string, len(addresses))
 	copy(b.addresses, addresses)
 	
-	// 重置索引（避免越界）
+	// Reset index (avoid out-of-bounds)
 	if b.current >= len(b.addresses) {
 		b.current = 0
 	}
 }
 
-// Select 选择下一个地址
+// Select the next address
 func (b *RoundRobinBalancer) Select(addresses []string) (string, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	
-	// 优先使用参数传入的地址列表
+	// Give priority to the address list passed as parameters
 	list := addresses
 	if len(list) == 0 {
 		list = b.addresses
@@ -63,20 +63,20 @@ func (b *RoundRobinBalancer) Select(addresses []string) (string, error) {
 	return addr, nil
 }
 
-// RandomBalancer 随机负载均衡器
+// RandomBalancer random load balancer
 type RandomBalancer struct {
 	mu        sync.Mutex
 	addresses []string
 }
 
-// NewRandomBalancer 创建随机负载均衡器
+// Create random load balancer
 func NewRandomBalancer() *RandomBalancer {
 	return &RandomBalancer{
 		addresses: make([]string, 0),
 	}
 }
 
-// Update 更新地址列表
+// Update address list
 func (b *RandomBalancer) Update(addresses []string) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -85,12 +85,12 @@ func (b *RandomBalancer) Update(addresses []string) {
 	copy(b.addresses, addresses)
 }
 
-// Select 随机选择一个地址
+// Select a random address
 func (b *RandomBalancer) Select(addresses []string) (string, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	
-	// 优先使用参数传入的地址列表
+	// Give priority to the address list passed as parameters
 	list := addresses
 	if len(list) == 0 {
 		list = b.addresses
@@ -104,7 +104,7 @@ func (b *RandomBalancer) Select(addresses []string) (string, error) {
 	return list[idx], nil
 }
 
-// NewLoadBalancer 根据策略创建负载均衡器
+// Create load balancer according to policy
 func NewLoadBalancer(strategy string) LoadBalancer {
 	switch strategy {
 	case "random":

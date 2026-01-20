@@ -5,30 +5,30 @@ import (
 	"fmt"
 )
 
-// HealthChecker 数据库健康检查器
+// HealthChecker database health checker
 type HealthChecker struct {
 	manager *Manager
 }
 
-// NewHealthChecker 创建数据库健康检查器
+// Create database health checker
 func NewHealthChecker(manager *Manager) *HealthChecker {
 	return &HealthChecker{
 		manager: manager,
 	}
 }
 
-// Name 检查项名称
+// Name Check item name
 func (h *HealthChecker) Name() string {
 	return "database"
 }
 
-// Check 执行健康检查
+// Check execution health check
 func (h *HealthChecker) Check(ctx context.Context) error {
 	if h.manager == nil {
 		return fmt.Errorf("database manager not initialized")
 	}
 
-	// 检查所有数据库实例
+	// Check all database instances
 	dbNames := h.manager.GetDBNames()
 	if len(dbNames) == 0 {
 		return fmt.Errorf("no database instances configured")
@@ -40,7 +40,7 @@ func (h *HealthChecker) Check(ctx context.Context) error {
 			return fmt.Errorf("database instance %s not found", name)
 		}
 
-		// Ping 数据库
+		// Ping database
 		sqlDB, err := db.DB()
 		if err != nil {
 			return fmt.Errorf("failed to get sql.DB for %s: %w", name, err)

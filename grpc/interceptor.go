@@ -11,7 +11,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-// UnaryLoggerInterceptor 服务端日志拦截器（支持配置开关）
+// UnaryLoggerInterceptor server log interceptor (supports configuration switch)
 func UnaryLoggerInterceptor(log *logger.CtxZapLogger, enableLog bool) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler) (interface{}, error) {
@@ -19,7 +19,7 @@ func UnaryLoggerInterceptor(log *logger.CtxZapLogger, enableLog bool) grpc.Unary
 		resp, err := handler(ctx, req)
 		duration := time.Since(start)
 
-		// 只有启用日志时才记录
+		// Only record when logging is enabled
 		if enableLog {
 			if err != nil {
 				log.ErrorCtx(ctx, "gRPC request",
@@ -39,7 +39,7 @@ func UnaryLoggerInterceptor(log *logger.CtxZapLogger, enableLog bool) grpc.Unary
 	}
 }
 
-// UnaryRecoveryInterceptor 服务端 Panic 恢复拦截器
+// Unary Recovery Interceptor Server Side Panic Recovery Interceptor
 func UnaryRecoveryInterceptor(log *logger.CtxZapLogger) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler) (resp interface{}, err error) {
@@ -56,7 +56,7 @@ func UnaryRecoveryInterceptor(log *logger.CtxZapLogger) grpc.UnaryServerIntercep
 	}
 }
 
-// UnaryClientLoggerInterceptor 客户端日志拦截器（支持配置开关）
+// UnaryClientLoggerInterceptor client log interceptor (supports configuration switch)
 func UnaryClientLoggerInterceptor(log *logger.CtxZapLogger, enableLog bool) grpc.UnaryClientInterceptor {
 	return func(ctx context.Context, method string, req, reply interface{},
 		cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
@@ -64,7 +64,7 @@ func UnaryClientLoggerInterceptor(log *logger.CtxZapLogger, enableLog bool) grpc
 		err := invoker(ctx, method, req, reply, cc, opts...)
 		duration := time.Since(start)
 
-		// 只有启用日志时才记录
+		// Only record when logging is enabled
 		if enableLog {
 			if err != nil {
 				log.ErrorCtx(ctx, "gRPC call",
@@ -86,13 +86,13 @@ func UnaryClientLoggerInterceptor(log *logger.CtxZapLogger, enableLog bool) grpc
 	}
 }
 
-// UnaryClientTimeoutInterceptor 客户端超时拦截器
-// 自动为每个 RPC 调用添加超时控制
+// UnaryClientTimeoutInterceptor client timeout interceptor
+// Automatically add timeout control for each RPC call
 func UnaryClientTimeoutInterceptor(timeout time.Duration, log *logger.CtxZapLogger) grpc.UnaryClientInterceptor {
 	return func(ctx context.Context, method string, req, reply interface{},
 		cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 
-		// 如果 context 已经有 deadline，使用更小的那个
+		// If the context already has a deadline, use the smaller one
 		if _, hasDeadline := ctx.Deadline(); !hasDeadline {
 			var cancel context.CancelFunc
 			ctx, cancel = context.WithTimeout(ctx, timeout)
@@ -103,19 +103,19 @@ func UnaryClientTimeoutInterceptor(timeout time.Duration, log *logger.CtxZapLogg
 	}
 }
 
-// UnaryClientBreakerInterceptor 客户端熔断器拦截器
-// 注意：clientMgr 用于动态获取 breaker，因为 breaker 在 Component.Start() 时才注入
+// UnaryClientBreakerInterceptor client circuit breaker interceptor
+// Note: clientMgr is used to dynamically obtain the breaker, as the breaker is injected only when Component.Start() is called.
 func UnaryClientBreakerInterceptor(clientMgr *ClientManager, serviceName string) grpc.UnaryClientInterceptor {
-	// 创建专用 logger
+	// Create dedicated logger
 	log := logger.GetLogger("yogan")
 
 	return func(ctx context.Context, method string, req, reply interface{},
 		cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 
-		// 获取熔断器
+		// Get circuit breaker
 		breakerMgr := clientMgr.GetBreaker()
 		if breakerMgr == nil {
-			// 熔断器未启用，直接调用
+			// circuit breaker is disabled, call directly
 			log.DebugCtx(ctx, "🔍 [Breaker] Not enabled, calling directly",
 				zap.String("service", serviceName),
 				zap.String("method", method))
@@ -126,9 +126,9 @@ func UnaryClientBreakerInterceptor(clientMgr *ClientManager, serviceName string)
 			zap.String("service", serviceName),
 			zap.String("method", method))
 
-		// 包装调用为 breaker.Request（使用服务名作为 resource）
+		// Wrap the call as breaker.Request (using the service name as the resource)
 		breakerReq := &breaker.Request{
-			Resource: serviceName, // 服务级熔断
+			Resource: serviceName, // service level circuit breaker
 			Execute: func(execCtx context.Context) (interface{}, error) {
 				err := invoker(execCtx, method, req, reply, cc, opts...)
 				log.DebugCtx(ctx, "🔍 [Breaker] Actual call completed",
@@ -138,7 +138,7 @@ func UnaryClientBreakerInterceptor(clientMgr *ClientManager, serviceName string)
 			},
 		}
 
-		// 通过熔断器执行
+		// Execute via circuit breaker
 		log.DebugCtx(ctx, "🔍 [Breaker] Preparing to execute circuit breaker", zap.String("service", serviceName))
 		_, err := breakerMgr.Execute(ctx, breakerReq)
 		log.DebugCtx(ctx, "🔍 [Breaker] Circuit breaker execution completed",

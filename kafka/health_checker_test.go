@@ -50,9 +50,9 @@ func TestHealthChecker_Check_WithManager(t *testing.T) {
 
 	checker := NewHealthChecker(manager)
 
-	// 如果 Kafka 运行中，检查应该成功
+	// If Kafka is running, the check should succeed
 	err = checker.Check(context.Background())
-	// 不论成功失败，都验证方法可调用
+	// Whether successful or not, verify that the method is callable
 	if err != nil {
 		t.Log("Health check failed (Kafka may not be available):", err)
 	}
@@ -77,9 +77,9 @@ func TestHealthChecker_Check_ContextTimeout(t *testing.T) {
 	assert.NoError(t, err)
 
 	checker := NewHealthChecker(manager)
-	checker.SetTimeout(1 * time.Nanosecond) // 极短超时
+	checker.SetTimeout(1 * time.Nanosecond) // Extremely short timeout
 
-	// 应该超时或连接失败
+	// should timeout or connection failed
 	err = checker.Check(context.Background())
 	assert.Error(t, err)
 }
@@ -95,7 +95,7 @@ func TestHealthChecker_Check_CancelledContext(t *testing.T) {
 
 	checker := NewHealthChecker(manager)
 
-	// 创建已取消的 context
+	// Create canceled context
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 

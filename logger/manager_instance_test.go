@@ -12,7 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// TestNewManager 测试创建独立 Manager 实例
+// TestNewManager test creating independent Manager instance
 func TestNewManager(t *testing.T) {
 	tmpDir := t.TempDir()
 	logDir := filepath.Join(tmpDir, "test")
@@ -30,13 +30,13 @@ func TestNewManager(t *testing.T) {
 	assert.NotNil(t, manager.loggers)
 }
 
-// TestManager_IndependentInstances 测试多个独立实例
+// TestManager_IndependentInstances test multiple independent instances
 func TestManager_IndependentInstances(t *testing.T) {
 	tmpDir := t.TempDir()
 	appLogDir := filepath.Join(tmpDir, "app")
 	auditLogDir := filepath.Join(tmpDir, "audit")
 
-	// 创建应用日志 Manager
+	// Create application log Manager
 	appManager := NewManager(ManagerConfig{
 		BaseLogDir:            appLogDir,
 		Level:                 "info",
@@ -47,7 +47,7 @@ func TestManager_IndependentInstances(t *testing.T) {
 		MaxSize:               10,
 	})
 
-	// 创建审计日志 Manager
+	// Create audit log Manager
 	auditManager := NewManager(ManagerConfig{
 		BaseLogDir:            auditLogDir,
 		Level:                 "info",
@@ -58,21 +58,21 @@ func TestManager_IndependentInstances(t *testing.T) {
 		MaxSize:               10,
 	})
 
-	// 独立使用
+	// Independent use
 	appManager.InfoCtx(context.Background(), "order", "Order creation", zap.String("id", "001"))
 	auditManager.InfoCtx(context.Background(), "security", "User login", zap.String("user", "admin"))
 
-	// 关闭
+	// Close
 	appManager.CloseAll()
 	auditManager.CloseAll()
 
-	// 验证文件独立
+	// Verify file independence
 	assert.DirExists(t, filepath.Join(appLogDir, "order"))
 	assert.DirExists(t, filepath.Join(auditLogDir, "security"))
 	assert.FileExists(t, filepath.Join(appLogDir, "order", "order-info.log"))
 	assert.FileExists(t, filepath.Join(auditLogDir, "security", "security-info.log"))
 
-	// 验证内容
+	// Verify content
 	appContent, _ := os.ReadFile(filepath.Join(appLogDir, "order", "order-info.log"))
 	assert.Contains(t, string(appContent), "Order creation")
 	assert.Contains(t, string(appContent), "001")
@@ -82,7 +82,7 @@ func TestManager_IndependentInstances(t *testing.T) {
 	assert.Contains(t, string(auditContent), "admin")
 }
 
-// TestManager_InstanceMethods 测试实例方法完整性
+// TestManager_InstanceMethods test instance method integrity
 func TestManager_InstanceMethods(t *testing.T) {
 	tmpDir := t.TempDir()
 	logDir := filepath.Join(tmpDir, "instance")
@@ -97,7 +97,7 @@ func TestManager_InstanceMethods(t *testing.T) {
 		MaxSize:               10,
 	})
 
-	// 测试所有级别
+	// Test all levels
 	manager.Debug("test", "Debug消息")
 	manager.DebugCtx(context.Background(), "test", "Info消息")
 	manager.Warn("test", "Warn消息")
@@ -105,19 +105,19 @@ func TestManager_InstanceMethods(t *testing.T) {
 
 	manager.CloseAll()
 
-	// 验证 info 文件
+	// Validate info file
 	infoContent, _ := os.ReadFile(filepath.Join(logDir, "test", "test-info.log"))
 	infoStr := string(infoContent)
 	assert.Contains(t, infoStr, "Info消息")
 	assert.Contains(t, infoStr, "Warn消息")
 
-	// 验证 error 文件
+	// Validate error file
 	errorContent, _ := os.ReadFile(filepath.Join(logDir, "test", "test-error.log"))
 	errorStr := string(errorContent)
 	assert.Contains(t, errorStr, "Error消息")
 }
 
-// TestManager_InstanceWithFields 测试实例的 WithFields
+// TestManager_InstanceWithFields test instance with fields
 func TestManager_InstanceWithFields(t *testing.T) {
 	tmpDir := t.TempDir()
 	logDir := filepath.Join(tmpDir, "fields")
@@ -132,7 +132,7 @@ func TestManager_InstanceWithFields(t *testing.T) {
 		MaxSize:               10,
 	})
 
-	// 使用 WithFields
+	// Use WithFields
 	orderLogger := manager.WithFields("order",
 		zap.String("service", "order-service"),
 		zap.String("version", "v1.0"),
@@ -152,7 +152,7 @@ func TestManager_InstanceWithFields(t *testing.T) {
 	assert.Contains(t, contentStr, "12345")
 }
 
-// TestManager_InstanceTraceID 测试实例的 TraceID 功能
+// TestManager_InstanceTraceID instance trace ID functionality testing
 func TestManager_InstanceTraceID(t *testing.T) {
 	tmpDir := t.TempDir()
 	logDir := filepath.Join(tmpDir, "trace")
@@ -177,14 +177,14 @@ func TestManager_InstanceTraceID(t *testing.T) {
 
 	manager.CloseAll()
 
-	// 验证 Info 日志
+	// Verify Info log
 	infoContent, _ := os.ReadFile(filepath.Join(logDir, "order", "order-info.log"))
 	infoStr := string(infoContent)
 	assert.Contains(t, infoStr, "trace_id")
 	assert.Contains(t, infoStr, "test-trace-123")
 	assert.Contains(t, infoStr, "Order creation")
 
-	// 验证 Error 日志
+	// Verify Error log
 	errorContent, _ := os.ReadFile(filepath.Join(logDir, "order", "order-error.log"))
 	errorStr := string(errorContent)
 	assert.Contains(t, errorStr, "trace_id")
@@ -192,7 +192,7 @@ func TestManager_InstanceTraceID(t *testing.T) {
 	assert.Contains(t, errorStr, "订单失败")
 }
 
-// TestManager_InstanceReloadConfig 测试实例的配置热重载
+// TestManager_InstanceReloadConfig Hot reload configuration for test instance
 func TestManager_InstanceReloadConfig(t *testing.T) {
 	tmpDir := t.TempDir()
 	logDir := filepath.Join(tmpDir, "reload")
@@ -207,10 +207,10 @@ func TestManager_InstanceReloadConfig(t *testing.T) {
 		MaxSize:               10,
 	})
 
-	// 记录初始日志
+	// Record initial log
 	manager.InfoCtx(context.Background(), "test", "初始配置")
 
-	// 重载配置（改为 debug 级别）
+	// Override configuration (change to debug level)
 	newCfg := ManagerConfig{
 		BaseLogDir:            logDir,
 		Level:                 "debug",
@@ -219,38 +219,38 @@ func TestManager_InstanceReloadConfig(t *testing.T) {
 		EnableLevelInFilename: true,
 		EnableDateInFilename:  false,
 		EnableStacktrace:      false,
-		StacktraceLevel:       "error", // 必须提供有效值
+		StacktraceLevel:       "error", // Must provide valid values
 		MaxSize:               10,
 	}
 
 	err := manager.ReloadConfig(newCfg)
 	assert.NoError(t, err)
 
-	// 重载后应该能记录 debug 日志
+	// The debug log should be able to be recorded after overriding.
 	manager.Debug("test", "重载后的Debug")
 	manager.DebugCtx(context.Background(), "test", "重载后的Info")
 
 	manager.CloseAll()
 
-	// 验证日志
+	// Validate log
 	infoContent, _ := os.ReadFile(filepath.Join(logDir, "test", "test-info.log"))
 	infoStr := string(infoContent)
 	assert.Contains(t, infoStr, "初始配置")
 	assert.Contains(t, infoStr, "重载后的Info")
 }
 
-// TestManager_GlobalAndInstanceCoexist 测试全局和实例共存
+// TestManager_GlobalAndInstanceCoexist test global and instance coexistence
 func TestManager_GlobalAndInstanceCoexist(t *testing.T) {
 	tmpDir := t.TempDir()
 	globalLogDir := filepath.Join(tmpDir, "global")
 	customLogDir := filepath.Join(tmpDir, "custom")
 
-	// 重置全局
+	// Reset global
 	globalManager = nil
 	managerOnce.Do(func() {})
 	managerOnce = sync.Once{}
 
-	// 初始化全局 Manager
+	// Initialize global Manager
 	InitManager(ManagerConfig{
 		BaseLogDir:            globalLogDir,
 		Level:                 "info",
@@ -261,7 +261,7 @@ func TestManager_GlobalAndInstanceCoexist(t *testing.T) {
 		MaxSize:               10,
 	})
 
-	// 创建自定义 Manager
+	// Create custom Manager
 	customManager := NewManager(ManagerConfig{
 		BaseLogDir:            customLogDir,
 		Level:                 "info",
@@ -272,16 +272,16 @@ func TestManager_GlobalAndInstanceCoexist(t *testing.T) {
 		MaxSize:               10,
 	})
 
-	// 全局使用
+	// Global usage
 	Info("order", "全局订单创建")
 
-	// 自定义使用
+	// Custom usage
 	customManager.InfoCtx(context.Background(), "order", "自定义订单创建")
 
 	CloseAll()
 	customManager.CloseAll()
 
-	// 验证两个独立的日志文件
+	// Verify two independent log files
 	assert.FileExists(t, filepath.Join(globalLogDir, "order", "order-info.log"))
 	assert.FileExists(t, filepath.Join(customLogDir, "order", "order-info.log"))
 
@@ -292,9 +292,9 @@ func TestManager_GlobalAndInstanceCoexist(t *testing.T) {
 	assert.Contains(t, string(customContent), "自定义订单创建")
 }
 
-// TestManager_IsolatedTesting 测试隔离的单元测试场景
+// TestManager_IsolatedTesting isolated unit test scenarios
 func TestManager_IsolatedTesting(t *testing.T) {
-	// 每个子测试使用独立的 Manager，互不干扰
+	// Each sub-test uses an independent Manager,不影响其他测试
 	t.Run("Test1", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		logDir := filepath.Join(tmpDir, "test1")

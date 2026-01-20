@@ -1,4 +1,4 @@
-// Package di 提供基于 samber/do 的依赖注入支持
+// Package di provides dependency injection support based on samber/do
 package di
 
 import (
@@ -16,7 +16,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// AppState 应用状态
+// Application state
 type AppState int
 
 const (
@@ -27,7 +27,7 @@ const (
 	StateStopped
 )
 
-// String 状态字符串表示
+// String represents status in text形式
 func (s AppState) String() string {
 	switch s {
 	case StateInit:
@@ -45,92 +45,92 @@ func (s AppState) String() string {
 	}
 }
 
-// DoApplication 基于 samber/do 的应用框架
-// 替代原有 BaseApplication，使用 samber/do 管理组件生命周期
+// DoApplication based on samber/do framework
+// Replace the original BaseApplication, use samber/do for managing component lifecycles
 type DoApplication struct {
 	// ═══════════════════════════════════════════════════════════
-	// 核心：samber/do 注入器
+	// Core: sabmer/do injector
 	// ═══════════════════════════════════════════════════════════
 	injector *do.RootScope
 
-	// 配置管理
+	// configuration management
 	configPath   string
 	configPrefix string
 	configLoader *config.Loader
 
-	// 日志
+	// Log
 	logger *logger.CtxZapLogger
 
-	// 生命周期
+	// Lifecycle
 	ctx    context.Context
 	cancel context.CancelFunc
 	state  AppState
 	mu     sync.RWMutex
 
-	// 应用元信息
+	// Apply metadata
 	name    string
 	version string
 
-	// 回调函数
+	// callback function
 	onSetup        func(*DoApplication) error
 	onReady        func(*DoApplication) error
 	onConfigReload func(*config.Loader)
 	onShutdown     func(context.Context) error
 }
 
-// DoAppOption 应用选项函数
+// DoAppOption application option function
 type DoAppOption func(*DoApplication)
 
-// WithConfigPath 设置配置路径
+// WithConfigPath set configuration path
 func WithConfigPath(path string) DoAppOption {
 	return func(app *DoApplication) {
 		app.configPath = path
 	}
 }
 
-// WithConfigPrefix 设置配置前缀
+// WithConfigPrefix set configuration prefix
 func WithConfigPrefix(prefix string) DoAppOption {
 	return func(app *DoApplication) {
 		app.configPrefix = prefix
 	}
 }
 
-// WithName 设置应用名称
+// Set application name
 func WithName(name string) DoAppOption {
 	return func(app *DoApplication) {
 		app.name = name
 	}
 }
 
-// WithVersion 设置应用版本
+// WithVersion sets the application version
 func WithVersion(version string) DoAppOption {
 	return func(app *DoApplication) {
 		app.version = version
 	}
 }
 
-// WithOnSetup 设置 Setup 回调
+// WithOnSetup sets up the Setup callback
 func WithOnSetup(fn func(*DoApplication) error) DoAppOption {
 	return func(app *DoApplication) {
 		app.onSetup = fn
 	}
 }
 
-// WithOnReady 设置 Ready 回调
+// Set Ready callback
 func WithOnReady(fn func(*DoApplication) error) DoAppOption {
 	return func(app *DoApplication) {
 		app.onReady = fn
 	}
 }
 
-// WithOnShutdown 设置 Shutdown 回调
+// WithOnShutdown sets the Shutdown callback
 func WithOnShutdown(fn func(context.Context) error) DoAppOption {
 	return func(app *DoApplication) {
 		app.onShutdown = fn
 	}
 }
 
-// NewDoApplication 创建基于 samber/do 的应用实例
+// Create an application instance based on samber/do
 func NewDoApplication(opts ...DoAppOption) *DoApplication {
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -144,7 +144,7 @@ func NewDoApplication(opts ...DoAppOption) *DoApplication {
 		version:    "0.0.1",
 	}
 
-	// 应用选项
+	// Apply options
 	for _, opt := range opts {
 		opt(app)
 	}
@@ -152,43 +152,43 @@ func NewDoApplication(opts ...DoAppOption) *DoApplication {
 	return app
 }
 
-// Injector 获取 do.Injector
+// Injector retrieves do.Injector
 func (app *DoApplication) Injector() *do.RootScope {
 	return app.injector
 }
 
-// Logger 获取日志实例
+// Get log instance
 func (app *DoApplication) Logger() *logger.CtxZapLogger {
 	return app.logger
 }
 
-// ConfigLoader 获取配置加载器
+// ConfigLoader obtain configuration loader
 func (app *DoApplication) ConfigLoader() *config.Loader {
 	return app.configLoader
 }
 
-// State 获取当前状态
+// Get current state
 func (app *DoApplication) State() AppState {
 	app.mu.RLock()
 	defer app.mu.RUnlock()
 	return app.state
 }
 
-// setState 设置状态
+// set state to update state
 func (app *DoApplication) setState(state AppState) {
 	app.mu.Lock()
 	defer app.mu.Unlock()
 	app.state = state
 }
 
-// Setup 初始化阶段
-// 1. 加载配置
-// 2. 初始化日志
-// 3. 注册核心 Provider
+// Setup initialization phase
+// 1. Load configuration
+// Initialize log
+// 3. Register core Provider
 func (app *DoApplication) Setup() error {
 	app.setState(StateSetup)
 
-	// 1. 初始化配置
+	// Initialize configuration
 	opts := ConfigOptions{
 		ConfigPath:   app.configPath,
 		ConfigPrefix: app.configPrefix,
@@ -202,7 +202,7 @@ func (app *DoApplication) Setup() error {
 	}
 	app.configLoader = loader
 
-	// 2. 初始化日志
+	// Initialize log
 	do.Provide(app.injector, ProvideLoggerManager)
 	do.Provide(app.injector, ProvideCtxLogger(app.name))
 
@@ -218,7 +218,7 @@ func (app *DoApplication) Setup() error {
 		zap.String("config_path", app.configPath),
 	)
 
-	// 3. 调用 Setup 回调
+	// Call Setup callback
 	if app.onSetup != nil {
 		if err := app.onSetup(app); err != nil {
 			return fmt.Errorf("setup 回调失败: %w", err)
@@ -228,7 +228,7 @@ func (app *DoApplication) Setup() error {
 	return nil
 }
 
-// Start 启动应用
+// Start Application Initialization
 func (app *DoApplication) Start() error {
 	app.setState(StateRunning)
 
@@ -238,7 +238,7 @@ func (app *DoApplication) Start() error {
 		zap.String("state", app.State().String()),
 	)
 
-	// 调用 Ready 回调
+	// Call Ready callback
 	if app.onReady != nil {
 		if err := app.onReady(app); err != nil {
 			return fmt.Errorf("ready 回调失败: %w", err)
@@ -248,7 +248,7 @@ func (app *DoApplication) Start() error {
 	return nil
 }
 
-// Run 运行应用（阻塞等待信号）
+// Run the application (block and wait for signals)
 func (app *DoApplication) Run() error {
 	// Setup
 	if err := app.Setup(); err != nil {
@@ -260,13 +260,13 @@ func (app *DoApplication) Run() error {
 		return err
 	}
 
-	// 等待退出信号
+	// waiting for exit signal
 	app.waitForSignal()
 
 	return nil
 }
 
-// waitForSignal 等待退出信号
+// wait for exit signal
 func (app *DoApplication) waitForSignal() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
@@ -274,7 +274,7 @@ func (app *DoApplication) waitForSignal() {
 	sig := <-quit
 	app.logger.Info("📥 收到退出信号", zap.String("signal", sig.String()))
 
-	// 优雅关闭
+	// graceful shutdown
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -283,23 +283,23 @@ func (app *DoApplication) waitForSignal() {
 	}
 }
 
-// Shutdown 优雅关闭
-// samber/do 会自动按依赖顺序反向关闭
+// Shut Down Gracefully
+// samber/do will automatically shut down in reverse order based on dependencies
 func (app *DoApplication) Shutdown(ctx context.Context) error {
 	app.setState(StateStopping)
 	app.logger.Info("🔄 开始优雅关闭...")
 
-	// 1. 调用用户自定义关闭回调
+	// Call the user-defined close callback
 	if app.onShutdown != nil {
 		if err := app.onShutdown(ctx); err != nil {
 			app.logger.Warn("shutdown 回调失败", zap.Error(err))
 		}
 	}
 
-	// 2. 取消上下文
+	// 2. Cancel context
 	app.cancel()
 
-	// 3. 关闭 samber/do 容器（自动按依赖顺序关闭）
+	// 3. Close the samber/do container (automatically shut down in dependency order)
 	if err := app.injector.Shutdown(); err != nil {
 		app.logger.Warn("injector shutdown 失败", zap.Error(err))
 	}
@@ -310,12 +310,12 @@ func (app *DoApplication) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-// HealthCheck 健康检查
+// HealthCheck Health check
 func (app *DoApplication) HealthCheck() map[string]error {
 	return app.injector.HealthCheck()
 }
 
-// IsHealthy 是否健康
+// IsHealthy whether healthy
 func (app *DoApplication) IsHealthy() bool {
 	checks := app.HealthCheck()
 	for _, err := range checks {

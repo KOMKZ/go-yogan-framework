@@ -9,45 +9,45 @@ import (
 	"go.uber.org/zap"
 )
 
-// Manager 服务治理管理器
-// 统一管理服务注册、健康检查、生命周期等
+// Manager Service governance manager
+// 统一 management of service registration, health checks, lifecycle, etc.
 type Manager struct {
-	// 服务注册器
+	// Service registry
 	registry ServiceRegistry
 
-	// 健康检查器
+	// Health checker
 	healthChecker HealthChecker
 
-	// 服务信息
+	// service information
 	serviceInfo *ServiceInfo
 
-	// 状态管理
+	// state management
 	mu         sync.RWMutex
 	registered bool
 
-	// 日志
+	// Log
 	logger *logger.CtxZapLogger
 }
 
-// ManagerConfig 治理管理器配置（已废弃，使用 component_config.go 中的 Config）
+// ManagerConfig Governance manager configuration (deprecated, use Config in component_config.go)
 type ManagerConfig struct {
-	// Registry 服务注册配置
+	// Registry service registration configuration
 	Registry RegistryConfig `mapstructure:"registry"`
 
-	// HealthCheck 健康检查配置
+	// HealthCheck configuration
 	HealthCheck HealthCheckConfig `mapstructure:"health_check"`
 }
 
-// RegistryConfig 服务注册配置（已废弃）
+// RegistryConfig service registration configuration (deprecated)
 type RegistryConfig struct {
-	Enabled     bool              `mapstructure:"enabled"`      // 是否启用服务注册
-	Type        string            `mapstructure:"type"`         // 注册中心类型（etcd/consul/nacos）
-	ServiceName string            `mapstructure:"service_name"` // 服务名称
-	TTL         int64             `mapstructure:"ttl"`          // 心跳间隔（秒）
-	Metadata    map[string]string `mapstructure:"metadata"`     // 元数据
+	Enabled     bool              `mapstructure:"enabled"`      // Whether service registration is enabled
+	Type        string            `mapstructure:"type"`         // Registry center type (etcd/consul/nacos)
+	ServiceName string            `mapstructure:"service_name"` // service name
+	TTL         int64             `mapstructure:"ttl"`          // Heartbeat interval (seconds)
+	Metadata    map[string]string `mapstructure:"metadata"`     // metadata
 }
 
-// NewManager 创建服务治理管理器
+// Create service governance manager
 func NewManager(registry ServiceRegistry, healthChecker HealthChecker, log *logger.CtxZapLogger) *Manager {
 	if log == nil {
 		log = logger.GetLogger("yogan")
@@ -64,8 +64,8 @@ func NewManager(registry ServiceRegistry, healthChecker HealthChecker, log *logg
 	}
 }
 
-// RegisterService 注册服务
-// 这是应用框架调用的主要入口点
+// Register service
+// This is the main entry point called by the application framework
 func (m *Manager) RegisterService(ctx context.Context, info *ServiceInfo) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -74,15 +74,15 @@ func (m *Manager) RegisterService(ctx context.Context, info *ServiceInfo) error 
 		return ErrAlreadyRegistered
 	}
 
-	// 验证服务信息
+	// Verify service information
 	if err := info.Validate(); err != nil {
 		return fmt.Errorf("validate service info: %w", err)
 	}
 
-	// 保存服务信息
+	// Save service information
 	m.serviceInfo = info
 
-	// 调用注册器注册服务
+	// Call the registrar to register the service
 	if err := m.registry.Register(ctx, info); err != nil {
 		return fmt.Errorf("register service: %w", err)
 	}
@@ -98,7 +98,7 @@ func (m *Manager) RegisterService(ctx context.Context, info *ServiceInfo) error 
 	return nil
 }
 
-// DeregisterService 注销服务
+// Unregister Service
 func (m *Manager) DeregisterService(ctx context.Context) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -107,7 +107,7 @@ func (m *Manager) DeregisterService(ctx context.Context) error {
 		return ErrNotRegistered
 	}
 
-	// 调用注册器注销服务
+	// Call the registrar to unregister the service
 	if err := m.registry.Deregister(ctx); err != nil {
 		m.logger.ErrorCtx(ctx, "Service deregistration failed", zap.Error(err))
 		return fmt.Errorf("deregister service: %w", err)
@@ -123,7 +123,7 @@ func (m *Manager) DeregisterService(ctx context.Context) error {
 	return nil
 }
 
-// UpdateMetadata 更新服务元数据
+// UpdateMetadata Update service metadata
 func (m *Manager) UpdateMetadata(ctx context.Context, metadata map[string]string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -132,7 +132,7 @@ func (m *Manager) UpdateMetadata(ctx context.Context, metadata map[string]string
 		return ErrNotRegistered
 	}
 
-	// 更新本地元数据
+	// Update local metadata
 	if m.serviceInfo.Metadata == nil {
 		m.serviceInfo.Metadata = make(map[string]string)
 	}
@@ -140,7 +140,7 @@ func (m *Manager) UpdateMetadata(ctx context.Context, metadata map[string]string
 		m.serviceInfo.Metadata[k] = v
 	}
 
-	// 调用注册器更新
+	// Call the registry update
 	if err := m.registry.UpdateMetadata(ctx, metadata); err != nil {
 		return fmt.Errorf("update metadata: %w", err)
 	}
@@ -150,31 +150,31 @@ func (m *Manager) UpdateMetadata(ctx context.Context, metadata map[string]string
 	return nil
 }
 
-// PerformHealthCheck 执行健康检查
+// PerformHealthCheck Execute health check
 func (m *Manager) PerformHealthCheck(ctx context.Context) error {
 	return m.healthChecker.Check(ctx)
 }
 
-// GetHealthStatus 获取健康状态
+// GetHealthStatus 获取健康状态英文为:Get Health Status
 func (m *Manager) GetHealthStatus() HealthStatus {
 	return m.healthChecker.GetStatus()
 }
 
-// IsRegistered 检查服务是否已注册
+// Checks if the service is registered
 func (m *Manager) IsRegistered() bool {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.registered
 }
 
-// GetServiceInfo 获取服务信息
+// Get service information
 func (m *Manager) GetServiceInfo() *ServiceInfo {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.serviceInfo
 }
 
-// Shutdown 关闭治理管理器（注销服务）
+// Shut down governance manager (unregister service)
 func (m *Manager) Shutdown(ctx context.Context) error {
 	m.logger.DebugCtx(ctx, "🔻 Starting governance manager shutdown...")
 

@@ -7,41 +7,41 @@ import (
 	"strings"
 )
 
-// AppFlags 应用启动标志
+// Application startup flags
 type AppFlags struct {
-	ConfigDir string // 配置目录路径
-	Env       string // 运行环境
-	Port      int    // 服务端口（0表示使用配置文件中的值）
-	Address   string // 服务地址（空表示使用配置文件中的值）
+	ConfigDir string // Configure directory path
+	Env       string // runtime environment
+	Port      int    // service port (0 indicates using the value from the configuration file)
+	Address   string // Service address (empty means use the value from the configuration file)
 }
 
-// ParseFlags 解析命令行标志和环境变量
+// ParseFlags parse command line flags and environment variables
 //
-// 参数：
-//   - appName: 应用名称（如 "user-api"），用于构造环境变量前缀
-//   - defaultConfigDir: 默认配置目录（如 "../configs/user-api"）
+// Parameters:
+// - appName: Application name (e.g., "user-api"), used for constructing environment variable prefixes
+// - defaultConfigDir: Default configuration directory (e.g., "../configs/user-api")
 //
-// 返回：
-//   - *AppFlags: 解析后的标志值
+// Return:
+// - *AppFlags: parsed flag values
 //
-// 优先级：
-//  1. 命令行参数 --config-dir、--env、--port、--address（最高优先级）
-//  2. 环境变量 {APP_NAME}_CONFIG_DIR、{APP_NAME}_ENV、{APP_NAME}_PORT、{APP_NAME}_ADDRESS
-//  3. 配置文件中的值（默认）
+// Priority:
+// 1. Command line arguments --config-dir, --env, --port, --address (highest priority)
+// 2. Environment variables {APP_NAME}_CONFIG_DIR, {APP_NAME}_ENV, {APP_NAME}_PORT, {APP_NAME}_ADDRESS
+// 3. Default values in configuration file
 //
-// 示例：
+// Example:
 //
-//	// user-api 应用
+// // user-api application
 //	flags := application.ParseFlags("user-api", "../configs/user-api")
-//	// 环境变量：USER_API_CONFIG_DIR、USER_API_ENV、USER_API_PORT、USER_API_ADDRESS
-//	// 命令行：--port 8081 --address 0.0.0.0
+// // Environment variables: USER_API_CONFIG_DIR, USER_API_ENV, USER_API_PORT, USER_API_ADDRESS
+// // Command line: --port 8081 --address 0.0.0.0
 //
-//	// auth-app 应用（启动第二个实例）
+// // auth-app application (launching a second instance)
 //	flags := application.ParseFlags("auth-app", "../configs/auth-app")
 //	// go run main.go --port 9003 --address 192.168.1.100
-//	// 环境变量：AUTH_APP_PORT、AUTH_APP_ADDRESS
+// // Environment variables: AUTH_APP_PORT, AUTH_APP_ADDRESS
 func ParseFlags(appName string, defaultConfigDir string) *AppFlags {
-	// 构造环境变量前缀（转大写，- 替换为 _）
+	// Construct environment variable prefix (convert to uppercase, replace - with _)
 	envPrefix := strings.ToUpper(strings.ReplaceAll(appName, "-", "_"))
 	configDirEnvKey := envPrefix + "_CONFIG_DIR"
 	envEnvKey := envPrefix + "_ENV"
@@ -53,7 +53,7 @@ func ParseFlags(appName string, defaultConfigDir string) *AppFlags {
 	var port int
 	var address string
 
-	// 定义命令行标志
+	// Define command line flags
 	flag.StringVar(&configDir, "config-dir", "",
 		"配置目录路径（默认：从 "+configDirEnvKey+" 环境变量读取，或 "+defaultConfigDir+"）")
 	flag.StringVar(&env, "env", "",
@@ -63,17 +63,17 @@ func ParseFlags(appName string, defaultConfigDir string) *AppFlags {
 	flag.StringVar(&address, "address", "",
 		"服务地址（空表示使用配置文件，默认从 "+addressEnvKey+" 环境变量读取）")
 
-	// 解析命令行参数
+	// Parse command line arguments
 	flag.Parse()
 
-	// 读取环境变量
+	// Read environment variables
 	envConfigDir := os.Getenv(configDirEnvKey)
 	envEnv := os.Getenv(envEnvKey)
 	envPort := os.Getenv(portEnvKey)
 	envAddress := os.Getenv(addressEnvKey)
 
-	// 确定最终配置目录
-	// 优先级：命令行参数 > 环境变量 > 默认值
+	// Determine final configuration directory
+	// Priority: Command line arguments > Environment variables > Default values
 	finalConfigDir := configDir
 	if finalConfigDir == "" {
 		if envConfigDir != "" {
@@ -83,39 +83,39 @@ func ParseFlags(appName string, defaultConfigDir string) *AppFlags {
 		}
 	}
 
-	// 确定最终环境
-	// 优先级：命令行参数 > 环境变量
+	// Determine final environment
+	// Priority: Command-line arguments > Environment variables
 	finalEnv := env
 	if finalEnv == "" {
 		finalEnv = envEnv
 	}
 
-	// 确定最终端口
-	// 优先级：命令行参数 > 环境变量 > 0（表示使用配置文件）
+	// Determine final port
+	// Priority: Command line arguments > Environment variables > 0 (indicating use of configuration file)
 	finalPort := port
 	if finalPort == 0 && envPort != "" {
-		// 尝试解析环境变量中的端口
+		// Try to parse the port from environment variables
 		fmt.Sscanf(envPort, "%d", &finalPort)
 	}
 
-	// 确定最终地址
-	// 优先级：命令行参数 > 环境变量 > 空（表示使用配置文件）
+	// Determine final address
+	// Priority: command line arguments > environment variables > none (indicating use of configuration file)
 	finalAddress := address
 	if finalAddress == "" {
 		finalAddress = envAddress
 	}
 
-	// 如果指定了环境，设置到 APP_ENV（供 config.Loader 使用）
+	// If an environment is specified, set it to APP_ENV (for use by config.Loader)
 	if finalEnv != "" {
 		os.Setenv("APP_ENV", finalEnv)
 	}
 
-	// 调试输出最终结果
+	// Debug output of final result
 	if os.Getenv("APP_DEBUG") == "1" {
-		//fmt.Printf("[DEBUG] 最终配置目录: %s\n", finalConfigDir)
-		//fmt.Printf("[DEBUG] 最终环境: %s\n", finalEnv)
-		//fmt.Printf("[DEBUG] 最终端口: %d\n", finalPort)
-		//fmt.Printf("[DEBUG] 最终地址: %s\n", finalAddress)
+		// fmt.Printf("[DEBUG] Final configuration directory: %s\n", finalConfigDir)
+		// fmt.Printf("[DEBUG] Final environment: %s\n", finalEnv)
+		// fmt.Printf("[DEBUG] Final port: %d\n", finalPort)
+		// fmt.Printf("[DEBUG] Final address: %s\n", finalAddress)
 		//fmt.Println("---")
 	}
 

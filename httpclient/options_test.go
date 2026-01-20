@@ -8,7 +8,7 @@ import (
 )
 
 // ============================================================
-// Option 测试
+// Option Test
 // ============================================================
 
 func TestWithBaseURL(t *testing.T) {
@@ -89,7 +89,7 @@ func TestWithRetryDefaults(t *testing.T) {
 
 func TestDisableRetry(t *testing.T) {
 	cfg := newConfig()
-	cfg.retryEnabled = true // 先启用
+	cfg.retryEnabled = true // Enable first
 	DisableRetry()(cfg)
 	
 	if cfg.retryEnabled {
@@ -113,7 +113,7 @@ func TestWithInsecureSkipVerify(t *testing.T) {
 }
 
 // ============================================================
-// config.merge 测试
+// config.merge test
 // ============================================================
 
 func TestConfig_merge_BaseURL(t *testing.T) {
@@ -135,7 +135,7 @@ func TestConfig_merge_Headers(t *testing.T) {
 	
 	other := newConfig()
 	other.headers["X-Other"] = "other"
-	other.headers["X-Base"] = "override" // 覆盖
+	other.headers["X-Base"] = "override" // override
 	
 	merged := base.merge(other)
 	if merged.headers["X-Base"] != "override" {
@@ -165,7 +165,7 @@ func TestConfig_merge_Retry(t *testing.T) {
 	base.retryOpts = []retry.Option{retry.MaxAttempts(3)}
 	
 	other := newConfig()
-	other.retryEnabled = false // 禁用
+	other.retryEnabled = false // disable
 	
 	merged := base.merge(other)
 	if merged.retryEnabled {
@@ -192,7 +192,7 @@ func TestConfig_merge_RetryOverride(t *testing.T) {
 }
 
 // ============================================================
-// applyOptions 测试
+// applyOptions test
 // ============================================================
 
 func TestApplyOptions(t *testing.T) {
@@ -220,11 +220,11 @@ func TestApplyOptions_NilOption(t *testing.T) {
 	cfg := newConfig()
 	opts := []Option{
 		WithBaseURL("https://api.example.com"),
-		nil, // nil option 应该被跳过
+		nil, // the nil option should be skipped
 		WithTimeout(5 * time.Second),
 	}
 	
-	// 不应该 panic
+	// Should not panic
 	applyOptions(cfg, opts)
 	
 	if cfg.baseURL != "https://api.example.com" {
@@ -236,7 +236,7 @@ func TestApplyOptions_NilOption(t *testing.T) {
 }
 
 // ============================================================
-// newConfig 测试
+// newConfig test
 // ============================================================
 
 func TestNewConfig(t *testing.T) {

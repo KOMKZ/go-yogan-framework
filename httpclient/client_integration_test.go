@@ -18,7 +18,7 @@ import (
 )
 
 // ============================================================
-// Client.Post/Put/Delete 完整测试
+// Complete testing for Client.Post/Put/Delete
 // ============================================================
 
 func TestClient_Post_WithBody(t *testing.T) {
@@ -65,7 +65,7 @@ func TestClient_Put_WithBody(t *testing.T) {
 }
 
 // ============================================================
-// DoWithData 完整测试
+// Complete testing for DoWithData
 // ============================================================
 
 type TestProduct struct {
@@ -137,7 +137,7 @@ func TestDoWithData_InvalidJSON(t *testing.T) {
 }
 
 // ============================================================
-// 泛型 Put 测试
+// Generic Put test
 // ============================================================
 
 func TestPut_Generic(t *testing.T) {
@@ -149,8 +149,8 @@ func TestPut_Generic(t *testing.T) {
 		var product TestProduct
 		json.NewDecoder(r.Body).Decode(&product)
 		
-		// 返回更新后的产品
-		product.Price = 89.99 // 修改价格
+		// Return the updated product
+		product.Price = 89.99 // Update price
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(product)
@@ -173,7 +173,7 @@ func TestPut_Generic(t *testing.T) {
 func TestPut_Generic_InvalidJSON(t *testing.T) {
 	client := NewClient()
 	
-	// 使用一个无法序列化的类型
+	// Using a non-serializable type
 	invalidData := make(chan int)
 	
 	_, err := Put[TestProduct](client, context.Background(), "http://example.com", invalidData)
@@ -188,7 +188,7 @@ func TestPut_Generic_InvalidJSON(t *testing.T) {
 func TestPost_Generic_InvalidJSON(t *testing.T) {
 	client := NewClient()
 	
-	// 使用一个无法序列化的类型
+	// Using an unserializable type
 	invalidData := make(chan int)
 	
 	_, err := Post[TestProduct](client, context.Background(), "http://example.com", invalidData)
@@ -198,7 +198,7 @@ func TestPost_Generic_InvalidJSON(t *testing.T) {
 }
 
 // ============================================================
-// Options 完整覆盖测试
+// Options comprehensive coverage test
 // ============================================================
 
 func TestWithTransport(t *testing.T) {
@@ -255,8 +255,8 @@ func TestWithJSON(t *testing.T) {
 	data := map[string]string{"name": "test"}
 	
 	WithJSON(data)(cfg)
-	// WithJSON 只是标记，实际序列化在执行时
-	// 这里只测试不会 panic
+	// WithJSON is just a marker, actual serialization happens at runtime
+	// Here only tests what won't cause a panic
 }
 
 func TestWithForm(t *testing.T) {
@@ -264,7 +264,7 @@ func TestWithForm(t *testing.T) {
 	data := map[string]string{"username": "alice"}
 	
 	WithForm(data)(cfg)
-	// WithForm 只是标记，实际编码在执行时
+	// WithForm is just a marker, actual encoding occurs during execution
 }
 
 func TestWithBody(t *testing.T) {
@@ -282,11 +282,11 @@ func TestWithBodyString(t *testing.T) {
 	cfg := newConfig()
 	
 	WithBodyString("test string")(cfg)
-	// WithBodyString 只是标记
+	// WithBodyString is just a marker
 }
 
 // ============================================================
-// 边界和错误场景测试
+// boundary and error scenario testing
 // ============================================================
 
 func TestClient_Do_BeforeRequestError(t *testing.T) {
@@ -514,7 +514,7 @@ func TestConfig_merge_AfterResponseOverride(t *testing.T) {
 		t.Error("afterResponse should be set")
 	}
 	
-	// 测试实际调用
+	// Test actual invocation
 	err := merged.afterResponse(&Response{})
 	if err == nil || !strings.Contains(err.Error(), "override") {
 		t.Error("afterResponse should be overridden")
@@ -522,7 +522,7 @@ func TestConfig_merge_AfterResponseOverride(t *testing.T) {
 }
 
 // ============================================================
-// Request buildHTTPRequest 边界测试
+// Request boundary test for buildHTTPRequest
 // ============================================================
 
 func TestRequest_buildHTTPRequest_InvalidURL(t *testing.T) {
@@ -535,7 +535,7 @@ func TestRequest_buildHTTPRequest_InvalidURL(t *testing.T) {
 }
 
 // ============================================================
-// 性能基准测试补充
+// Performance benchmark test supplement
 // ============================================================
 
 func BenchmarkClient_Do_NoRetry(b *testing.B) {

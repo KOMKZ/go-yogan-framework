@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestAppFlags_Struct 测试 AppFlags 结构体
+// TestAppFlags_Struct test AppFlags struct
 func TestAppFlags_Struct(t *testing.T) {
 	flags := &AppFlags{
 		ConfigDir: "/path/to/config",
@@ -23,12 +23,12 @@ func TestAppFlags_Struct(t *testing.T) {
 	assert.Equal(t, "0.0.0.0", flags.Address)
 }
 
-// TestParseFlags 测试 ParseFlags 函数
+// TestParseFlags test the ParseFlags function
 func TestParseFlags(t *testing.T) {
-	// 重置 flag 状态（flag 包是全局状态）
+	// Reset flag status (flag package is global state)
 	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 
-	// 保存和恢复环境变量
+	// Save and restore environment variables
 	origConfigDir := os.Getenv("PARSE_TEST_CONFIG_DIR")
 	origEnv := os.Getenv("PARSE_TEST_ENV")
 	origPort := os.Getenv("PARSE_TEST_PORT")
@@ -42,28 +42,28 @@ func TestParseFlags(t *testing.T) {
 		os.Setenv("APP_ENV", origAppEnv)
 	}()
 
-	// 设置环境变量
+	// Set environment variables
 	os.Setenv("PARSE_TEST_CONFIG_DIR", "/env/config")
 	os.Setenv("PARSE_TEST_ENV", "staging")
 	os.Setenv("PARSE_TEST_PORT", "7070")
 	os.Setenv("PARSE_TEST_ADDRESS", "10.0.0.1")
 
-	// 调用 ParseFlags
+	// Call ParseFlags
 	flags := ParseFlags("parse-test", "/default/config")
 
-	// 验证结果（环境变量应该生效）
+	// Verify the results (the environment variables should take effect)
 	assert.Equal(t, "/env/config", flags.ConfigDir)
 	assert.Equal(t, "staging", flags.Env)
 	assert.Equal(t, 7070, flags.Port)
 	assert.Equal(t, "10.0.0.1", flags.Address)
 }
 
-// TestParseFlags_DefaultValues 测试默认值
+// TestParseFlags_DefaultValues test default values
 func TestParseFlags_DefaultValues(t *testing.T) {
-	// 重置 flag 状态
+	// Reset flag status
 	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 
-	// 清除相关环境变量
+	// Clear related environment variables
 	os.Unsetenv("DEFAULT_TEST_CONFIG_DIR")
 	os.Unsetenv("DEFAULT_TEST_ENV")
 	os.Unsetenv("DEFAULT_TEST_PORT")
@@ -71,7 +71,7 @@ func TestParseFlags_DefaultValues(t *testing.T) {
 
 	flags := ParseFlags("default-test", "/my/default/path")
 
-	// 没有环境变量，应该使用默认值
+	// Without environment variables, default values should be used
 	assert.Equal(t, "/my/default/path", flags.ConfigDir)
 	assert.Equal(t, "", flags.Env)
 	assert.Equal(t, 0, flags.Port)

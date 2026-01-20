@@ -5,14 +5,14 @@ import (
 	"strings"
 )
 
-// EnvSource 环境变量数据源
+// EnvSource environment variable data source
 type EnvSource struct {
-	prefix   string // 环境变量前缀，如 "APP"
+	prefix   string // Environment variable prefix, such as "APP"
 	priority int
-	bindings map[string]string // key 映射，如 "grpc.server.port" -> "GRPC_SERVER_PORT"
+	bindings map[string]string // key mapping, such as "grpc.server.port" -> "GRPC_SERVER_PORT"
 }
 
-// NewEnvSource 创建环境变量数据源
+// NewEnvSource creates an environment variable data source
 func NewEnvSource(prefix string, priority int) *EnvSource {
 	return &EnvSource{
 		prefix:   prefix,
@@ -21,27 +21,27 @@ func NewEnvSource(prefix string, priority int) *EnvSource {
 	}
 }
 
-// AddBinding 添加 key 映射
-// 例如：AddBinding("grpc.server.port", "GRPC_SERVER_PORT")
+// AddBinding add key mapping
+// For example: AddBinding("grpc.server.port", "GRPC_SERVER_PORT")
 func (s *EnvSource) AddBinding(key, envKey string) {
 	s.bindings[key] = envKey
 }
 
-// Name 数据源名称
+// Data source name
 func (s *EnvSource) Name() string {
 	return "env:" + s.prefix
 }
 
-// Priority 优先级
+// Priority
 func (s *EnvSource) Priority() int {
 	return s.priority
 }
 
-// Load 加载环境变量配置
+// Load environment variable configuration
 func (s *EnvSource) Load() (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 
-	// 如果有明确的 bindings，使用 bindings
+	// If there are explicit bindings, use the bindings
 	if len(s.bindings) > 0 {
 		for key, envKey := range s.bindings {
 			fullEnvKey := envKey
@@ -56,7 +56,7 @@ func (s *EnvSource) Load() (map[string]interface{}, error) {
 		return result, nil
 	}
 
-	// 否则，扫描所有环境变量（前缀匹配）
+	// Otherwise, scan all environment variables (prefix matching)
 	if s.prefix == "" {
 		return result, nil
 	}
@@ -72,7 +72,7 @@ func (s *EnvSource) Load() (map[string]interface{}, error) {
 		value := parts[1]
 
 		if strings.HasPrefix(key, prefix) {
-			// 转换为配置 key：APP_GRPC_SERVER_PORT -> grpc.server.port
+			// Convert configuration key: APP_GRPC_SERVER_PORT -> grpc.server.port
 			configKey := strings.TrimPrefix(key, prefix)
 			configKey = strings.ToLower(configKey)
 			configKey = strings.ReplaceAll(configKey, "_", ".")

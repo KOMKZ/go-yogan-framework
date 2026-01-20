@@ -8,20 +8,20 @@ import (
 	"github.com/google/uuid"
 )
 
-// slidingWindowAlgorithm 滑动窗口算法实现
+// sliding window algorithm implementation
 type slidingWindowAlgorithm struct{}
 
-// NewSlidingWindowAlgorithm 创建滑动窗口算法
+// Create new sliding window algorithm
 func NewSlidingWindowAlgorithm() Algorithm {
 	return &slidingWindowAlgorithm{}
 }
 
-// Name 返回算法名称
+// Name Returns the algorithm name
 func (a *slidingWindowAlgorithm) Name() string {
 	return string(AlgorithmSlidingWindow)
 }
 
-// Allow 检查是否允许请求
+// Allow check if the request is permitted
 func (a *slidingWindowAlgorithm) Allow(ctx context.Context, store Store, resource string, n int64, cfg ResourceConfig) (*Response, error) {
 	if n <= 0 {
 		n = 1
@@ -30,29 +30,29 @@ func (a *slidingWindowAlgorithm) Allow(ctx context.Context, store Store, resourc
 	now := time.Now()
 	key := a.windowKey(resource)
 
-	// 删除窗口外的数据（删除 < windowStart 的数据）
+	// Delete data outside the window (delete data < windowStart)
 	windowStart := now.Add(-cfg.WindowSize)
 	minScore := float64(windowStart.UnixNano())
-	// 删除小于minScore的数据（不包括minScore本身）
+	// Delete data with scores less than minScore (excluding minScore itself)
 	if err := store.ZRemRangeByScore(ctx, key, 0, minScore-1); err != nil {
 		return nil, fmt.Errorf("remove old entries failed: %w", err)
 	}
 
-	// 统计当前窗口内的请求数（从windowStart到now，都包括）
+	// Count the number of requests within the current window (from windowStart to now, inclusive)
 	maxScore := float64(now.UnixNano())
 	count, err := store.ZCount(ctx, key, minScore, maxScore)
 	if err != nil {
 		return nil, fmt.Errorf("count requests failed: %w", err)
 	}
 
-	// 检查是否超过限制
+	// Check if exceeded limit
 	if count+n <= cfg.Limit {
-		// 添加新请求
+		// Add new request
 		for i := int64(0); i < n; i++ {
-			// 每个请求的score稍微递增，确保唯一
+			// Slightly increase the score for each request to ensure uniqueness
 			scoreTime := now.Add(time.Duration(i) * time.Nanosecond)
 			score := float64(scoreTime.UnixNano())
-			// 使用UUID确保member唯一（避免同一纳秒内的冲突）
+			// Use UUID to ensure member uniqueness (avoid conflicts within the same nanosecond)
 			member := uuid.New().String()
 			if err := store.ZAdd(ctx, key, score, member); err != nil {
 				return nil, fmt.Errorf("add request failed: %w", err)
@@ -67,7 +67,7 @@ func (a *slidingWindowAlgorithm) Allow(ctx context.Context, store Store, resourc
 		}, nil
 	}
 
-	// 超过限制，计算重试时间
+	// Exceeding limit, calculating retry time
 	retryAfter := cfg.WindowSize / time.Duration(cfg.Limit)
 
 	return &Response{
@@ -79,7 +79,7 @@ func (a *slidingWindowAlgorithm) Allow(ctx context.Context, store Store, resourc
 	}, nil
 }
 
-// Wait 等待获取许可
+// Wait for permission acquisition
 func (a *slidingWindowAlgorithm) Wait(ctx context.Context, store Store, resource string, n int64, cfg ResourceConfig, timeout time.Duration) error {
 	if n <= 0 {
 		n = 1
@@ -110,17 +110,17 @@ func (a *slidingWindowAlgorithm) Wait(ctx context.Context, store Store, resource
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-time.After(waitTime):
-			// 继续重试
+			// Continue retrying
 		}
 	}
 }
 
-// GetMetrics 获取当前指标
+// GetMetrics获取当前指标
 func (a *slidingWindowAlgorithm) GetMetrics(ctx context.Context, store Store, resource string) (*AlgorithmMetrics, error) {
 	now := time.Now()
 	key := a.windowKey(resource)
 
-	// 获取当前窗口内的请求数
+	// Get the number of requests within the current window
 	minScore := float64(now.Add(-1 * time.Second).UnixNano())
 	maxScore := float64(now.UnixNano())
 
@@ -137,13 +137,13 @@ func (a *slidingWindowAlgorithm) GetMetrics(ctx context.Context, store Store, re
 	}, nil
 }
 
-// Reset 重置状态
+// Reset reset status
 func (a *slidingWindowAlgorithm) Reset(ctx context.Context, store Store, resource string) error {
 	key := a.windowKey(resource)
 	return store.Del(ctx, key)
 }
 
-// windowKey 返回窗口存储键
+// windowKey returns the window storage key
 func (a *slidingWindowAlgorithm) windowKey(resource string) string {
 	return fmt.Sprintf("limiter:window:%s", resource)
 }

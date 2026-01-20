@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestErrorRateStrategy 测试错误率策略
+// TestErrorRateStrategy test error rate strategy
 func TestErrorRateStrategy(t *testing.T) {
 	strategy := &errorRateStrategy{}
 	config := DefaultResourceConfig()
@@ -41,7 +41,7 @@ func TestErrorRateStrategy(t *testing.T) {
 	})
 }
 
-// TestSlowCallRateStrategy 测试慢调用率策略
+// TestSlowCallRateStrategy test slow call rate strategy
 func TestSlowCallRateStrategy(t *testing.T) {
 	strategy := &slowCallRateStrategy{}
 	config := DefaultResourceConfig()
@@ -75,7 +75,7 @@ func TestSlowCallRateStrategy(t *testing.T) {
 	})
 }
 
-// TestConsecutiveFailuresStrategy 测试连续失败策略
+// TestConsecutiveFailuresStrategy test consecutive failures strategy
 func TestConsecutiveFailuresStrategy(t *testing.T) {
 	strategy := &consecutiveFailuresStrategy{}
 	config := DefaultResourceConfig()
@@ -121,7 +121,7 @@ func TestConsecutiveFailuresStrategy(t *testing.T) {
 	})
 }
 
-// TestGetStrategyByName 测试根据名称获取策略
+// TestGetStrategyByName tests getting strategy by name
 func TestGetStrategyByName(t *testing.T) {
 	t.Run("获取错误率策略", func(t *testing.T) {
 		strategy := GetStrategyByName("error_rate")
@@ -148,7 +148,7 @@ func TestGetStrategyByName(t *testing.T) {
 	})
 }
 
-// TestStrategyIntegration 测试策略集成
+// TestStrategyIntegration test strategy integration
 func TestStrategyIntegration(t *testing.T) {
 	t.Run("错误率策略实际场景", func(t *testing.T) {
 		config := DefaultResourceConfig()
@@ -159,7 +159,7 @@ func TestStrategyIntegration(t *testing.T) {
 		metrics := newSlidingWindowMetrics("test", config, sm)
 		strategy := GetStrategyByName("error_rate")
 		
-		// 模拟10次请求，6次失败
+		// Simulate 10 requests, 6 failures
 		for i := 0; i < 4; i++ {
 			metrics.RecordSuccess(100 * time.Millisecond)
 		}
@@ -181,12 +181,12 @@ func TestStrategyIntegration(t *testing.T) {
 		metrics := newSlidingWindowMetrics("test", config, sm)
 		strategy := GetStrategyByName("slow_call_rate")
 		
-		// 模拟10次请求，4次慢调用
+		// Simulate 10 requests, 4 slow calls
 		for i := 0; i < 6; i++ {
 			metrics.RecordSuccess(50 * time.Millisecond)
 		}
 		for i := 0; i < 4; i++ {
-			metrics.RecordSuccess(200 * time.Millisecond) // 慢调用
+			metrics.RecordSuccess(200 * time.Millisecond) // slow call
 		}
 		
 		snapshot := metrics.GetSnapshot()
@@ -194,7 +194,7 @@ func TestStrategyIntegration(t *testing.T) {
 	})
 }
 
-// mockStrategy 模拟策略（用于测试）
+// mock strategy (for testing)
 type mockStrategy struct {
 	name       string
 	shouldOpen bool
@@ -208,7 +208,7 @@ func (s *mockStrategy) ShouldOpen(snapshot *MetricsSnapshot, config ResourceConf
 	return s.shouldOpen
 }
 
-// TestMockStrategy 测试模拟策略
+// TestMockStrategy test mock strategy
 func TestMockStrategy(t *testing.T) {
 	strategy := &mockStrategy{
 		name:       "mock",

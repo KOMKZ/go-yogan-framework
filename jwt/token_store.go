@@ -5,23 +5,23 @@ import (
 	"time"
 )
 
-// TokenStore Token 存储接口（黑名单）
+// Token storage interface (blacklist)
 type TokenStore interface {
-	// IsBlacklisted 检查 Token 是否在黑名单
+	// Check if Token is in blacklist
 	IsBlacklisted(ctx context.Context, token string) (bool, error)
 
-	// AddToBlacklist 添加到黑名单（ttl 为剩余过期时间）
+	// AddToBlacklist Add to blacklist (TTL is remaining expiration time)
 	AddToBlacklist(ctx context.Context, token string, ttl time.Duration) error
 
-	// RemoveFromBlacklist 从黑名单移除（仅测试使用）
+	// RemoveFromBlacklist Remove from blacklist (for testing only)
 	RemoveFromBlacklist(ctx context.Context, token string) error
 
-	// BlacklistUserTokens 添加用户所有 Token 到黑名单（登出所有设备）
+	// Add all user tokens to the blacklist (logout from all devices)
 	BlacklistUserTokens(ctx context.Context, subject string, ttl time.Duration) error
 
-	// IsUserBlacklisted 检查用户是否被全局拉黑
+	// Check if the user is globally blacklisted
 	IsUserBlacklisted(ctx context.Context, subject string, issuedAt time.Time) (bool, error)
 
-	// Close 关闭连接
+	// Close connection
 	Close() error
 }

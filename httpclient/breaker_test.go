@@ -27,7 +27,7 @@ func (m *mockBreakerManager) Execute(ctx context.Context, req *breaker.Request) 
 	if m.executeFunc != nil {
 		return m.executeFunc(ctx, req)
 	}
-	// 默认直接执行
+	// Execute by default
 	return req.Execute(ctx)
 }
 
@@ -43,7 +43,7 @@ func (m *mockBreakerManager) GetState(resource string) breaker.State {
 }
 
 // ============================================================
-// Breaker 基础测试
+// Breaker basic test
 // ============================================================
 
 func TestWithBreaker(t *testing.T) {
@@ -85,7 +85,7 @@ func TestDisableBreaker(t *testing.T) {
 }
 
 // ============================================================
-// 熔断器集成测试
+// Circuit breaker integration test
 // ============================================================
 
 func TestClient_Do_WithBreaker_Success(t *testing.T) {
@@ -100,11 +100,11 @@ func TestClient_Do_WithBreaker_Success(t *testing.T) {
 		enabled: true,
 		executeFunc: func(ctx context.Context, req *breaker.Request) (interface{}, error) {
 			executeCalled = true
-			// 验证资源名称
+			// Validate resource name
 			if !strings.Contains(req.Resource, ts.URL) {
 				t.Errorf("unexpected resource: %s", req.Resource)
 			}
-			// 执行实际请求
+			// Execute the actual request
 			return req.Execute(ctx)
 		},
 	}
@@ -133,11 +133,11 @@ func TestClient_Do_WithBreaker_CircuitOpen(t *testing.T) {
 	}))
 	defer ts.Close()
 	
-	// 模拟熔断器打开
+	// simulate circuit breaker open
 	manager := &mockBreakerManager{
 		enabled: true,
 		executeFunc: func(ctx context.Context, req *breaker.Request) (interface{}, error) {
-			// 返回熔断错误
+			// Return circuit breaker error
 			return nil, errors.New("circuit breaker is open")
 		},
 	}
@@ -170,14 +170,14 @@ func TestClient_Do_WithBreaker_Fallback(t *testing.T) {
 		}, nil
 	}
 	
-	// 模拟熔断器执行降级
+	// Simulate circuit breaker executing fallback
 	manager := &mockBreakerManager{
 		enabled: true,
 		executeFunc: func(ctx context.Context, req *breaker.Request) (interface{}, error) {
-			// 先执行原请求（会失败）
+			// Execute the original request first (it will fail)
 			_, err := req.Execute(ctx)
 			if err != nil && req.Fallback != nil {
-				// 执行降级
+				// Execute degradation plan
 				return req.Fallback(ctx, err)
 			}
 			return nil, err
@@ -253,7 +253,7 @@ func TestClient_Do_BreakerDisabled(t *testing.T) {
 	client := NewClient(WithBreaker(manager))
 	req := NewGetRequest(ts.URL)
 	
-	// 请求级禁用熔断器
+	// Disable circuit breaker at request level
 	resp, err := client.Do(context.Background(), req, DisableBreaker())
 	if err != nil {
 		t.Fatalf("Do() failed: %v", err)
@@ -273,7 +273,7 @@ func TestClient_Do_BreakerNotEnabled(t *testing.T) {
 	
 	executeCalled := false
 	manager := &mockBreakerManager{
-		enabled: false, // 熔断器未启用
+		enabled: false, // Circuit breaker not enabled
 		executeFunc: func(ctx context.Context, req *breaker.Request) (interface{}, error) {
 			executeCalled = true
 			return req.Execute(ctx)
@@ -304,7 +304,7 @@ func TestClient_Do_WithBreaker_ServerError(t *testing.T) {
 	manager := &mockBreakerManager{
 		enabled: true,
 		executeFunc: func(ctx context.Context, req *breaker.Request) (interface{}, error) {
-			// 执行请求
+			// Execute request
 			result, err := req.Execute(ctx)
 			capturedError = err
 			return result, err
@@ -314,13 +314,13 @@ func TestClient_Do_WithBreaker_ServerError(t *testing.T) {
 	client := NewClient(WithBreaker(manager))
 	req := NewGetRequest(ts.URL)
 	
-	// 5xx 错误会被转换为 error 传递给熔断器
+	// 5xx errors will be converted to error and passed to the circuit breaker
 	_, err := client.Do(context.Background(), req)
 	if err == nil {
 		t.Error("expected error for 5xx response")
 	}
 	
-	// 熔断器应该收到错误
+	// The circuit breaker should receive an error
 	if capturedError == nil {
 		t.Error("breaker should receive error for 5xx response")
 	}
@@ -356,7 +356,7 @@ func TestClient_Do_WithBreaker_BaseURL(t *testing.T) {
 		t.Fatalf("Do() failed: %v", err)
 	}
 	
-	// 资源名称应该包含完整 URL
+	// The resource name should include the full URL
 	if !strings.Contains(capturedResource, ts.URL) {
 		t.Errorf("resource should contain base URL, got: %s", capturedResource)
 	}
@@ -366,7 +366,7 @@ func TestClient_Do_WithBreaker_BaseURL(t *testing.T) {
 }
 
 // ============================================================
-// Breaker + Retry 组合测试
+// Breaker + Retry Combination Test
 // ============================================================
 
 func TestClient_Do_WithBreakerAndRetry(t *testing.T) {
@@ -404,19 +404,19 @@ func TestClient_Do_WithBreakerAndRetry(t *testing.T) {
 	}
 	defer resp.Close()
 	
-	// 重试应该在熔断器外层
+	// Retries should be outside the circuit breaker
 	if attempts != 2 {
 		t.Errorf("expected 2 HTTP attempts, got %d", attempts)
 	}
 	
-	// 熔断器应该被调用 2 次（与重试次数一致）
+	// The circuit breaker should be called twice (consistent with the number of retries)
 	if breakerExecuteCount != 2 {
 		t.Errorf("expected 2 breaker executions, got %d", breakerExecuteCount)
 	}
 }
 
 // ============================================================
-// Config merge 测试
+// Config merge test
 // ============================================================
 
 func TestConfig_merge_Breaker(t *testing.T) {
@@ -462,7 +462,7 @@ func TestConfig_merge_BreakerFallback(t *testing.T) {
 		t.Error("breaker fallback should be set")
 	}
 	
-	// 测试实际调用
+	// Test actual invocation
 	resp, _ := merged.breakerFallback(context.Background(), errors.New("test"))
 	if resp.StatusCode != 200 {
 		t.Error("fallback should be overridden")

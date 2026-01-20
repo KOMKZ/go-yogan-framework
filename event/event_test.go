@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestEvent 测试事件
+// TestEvent test event
 type TestEvent struct {
 	BaseEvent
 	Data string
@@ -25,7 +25,7 @@ func NewTestEvent(name, data string) *TestEvent {
 	}
 }
 
-// ===== BaseEvent 测试 =====
+// ===== BaseEvent test =====
 
 func TestNewEvent(t *testing.T) {
 	e := NewEvent("test.event")
@@ -47,7 +47,7 @@ func TestBaseEvent_OccurredAt(t *testing.T) {
 	assert.True(t, e.OccurredAt().Before(after) || e.OccurredAt().Equal(after))
 }
 
-// ===== ListenerFunc 测试 =====
+// ===== ListenerFunc test ====
 
 func TestListenerFunc_Handle(t *testing.T) {
 	called := false
@@ -77,7 +77,7 @@ func TestListenerFunc_Handle_Error(t *testing.T) {
 	assert.Equal(t, expectedErr, err)
 }
 
-// ===== Dispatcher 基础测试 =====
+// ===== Basic Tests for Dispatcher =====
 
 func TestNewDispatcher(t *testing.T) {
 	d := NewDispatcher()
@@ -163,7 +163,7 @@ func TestDispatcher_Unsubscribe_Multiple(t *testing.T) {
 	assert.Equal(t, 0, d.ListenerCount("test.event"))
 }
 
-// ===== Dispatch 同步分发测试 =====
+// ===== Dispatch Synchronous Distribution Test =====
 
 func TestDispatcher_Dispatch(t *testing.T) {
 	d := NewDispatcher()
@@ -233,7 +233,7 @@ func TestDispatcher_Dispatch_Error_StopsExecution(t *testing.T) {
 
 	err := d.Dispatch(context.Background(), NewTestEvent("test.event", ""))
 	assert.Equal(t, expectedErr, err)
-	assert.Equal(t, []int{1}, called) // 第二个监听器未执行
+	assert.Equal(t, []int{1}, called) // The second listener was not executed
 }
 
 func TestDispatcher_Dispatch_StopPropagation(t *testing.T) {
@@ -252,11 +252,11 @@ func TestDispatcher_Dispatch_StopPropagation(t *testing.T) {
 	}))
 
 	err := d.Dispatch(context.Background(), NewTestEvent("test.event", ""))
-	assert.NoError(t, err) // ErrStopPropagation 不视为错误
+	assert.NoError(t, err) // ErrStopPropagation is not considered an error
 	assert.Equal(t, []int{1}, called)
 }
 
-// ===== Priority 优先级测试 =====
+// ===== Priority Priority Test =====
 
 func TestDispatcher_Priority(t *testing.T) {
 	d := NewDispatcher()
@@ -284,7 +284,7 @@ func TestDispatcher_Priority(t *testing.T) {
 	assert.Equal(t, []int{1, 2, 3}, order)
 }
 
-// ===== WithOnce 一次性监听器测试 =====
+// ====== Once Listener Test ======
 
 func TestDispatcher_WithOnce(t *testing.T) {
 	d := NewDispatcher()
@@ -296,19 +296,19 @@ func TestDispatcher_WithOnce(t *testing.T) {
 		return nil
 	}), WithOnce())
 
-	// 第一次分发
+	// Initial distribution
 	err := d.Dispatch(context.Background(), NewTestEvent("test.event", ""))
 	assert.NoError(t, err)
 	assert.Equal(t, 1, callCount)
 
-	// 第二次分发 - 监听器应该已被移除
+	// The second distribution - the listener should have been removed
 	err = d.Dispatch(context.Background(), NewTestEvent("test.event", ""))
 	assert.NoError(t, err)
 	assert.Equal(t, 1, callCount)
 	assert.Equal(t, 0, d.ListenerCount("test.event"))
 }
 
-// ===== WithAsync 异步监听器测试 =====
+// ===== Async Listener Test =====
 
 func TestDispatcher_WithAsync_InSyncDispatch(t *testing.T) {
 	d := NewDispatcher()
@@ -327,12 +327,12 @@ func TestDispatcher_WithAsync_InSyncDispatch(t *testing.T) {
 	err := d.Dispatch(context.Background(), NewTestEvent("test.event", ""))
 	assert.NoError(t, err)
 
-	// 等待异步执行完成
+	// wait for asynchronous execution to complete
 	wg.Wait()
 	assert.Equal(t, int32(1), atomic.LoadInt32(&asyncCalled))
 }
 
-// ===== DispatchAsync 异步分发测试 =====
+// ===== DispatchAsync Asynchronous Distribution Test =====
 
 func TestDispatcher_DispatchAsync(t *testing.T) {
 	d := NewDispatcher()
@@ -363,7 +363,7 @@ func TestDispatcher_DispatchAsync_NilEvent(t *testing.T) {
 	d := NewDispatcher()
 	defer d.Close()
 
-	// 不应 panic
+	// Should not panic
 	d.DispatchAsync(context.Background(), nil)
 }
 
@@ -379,7 +379,7 @@ func TestDispatcher_DispatchAsync_Error_NotReturned(t *testing.T) {
 		return errors.New("listener error")
 	}))
 
-	// 异步分发不返回错误
+	// Asynchronous distribution does not return errors
 	d.DispatchAsync(context.Background(), NewTestEvent("test.event", ""))
 	wg.Wait()
 }
@@ -405,7 +405,7 @@ func TestDispatcher_DispatchAsync_PreservesTraceID(t *testing.T) {
 	assert.Equal(t, "test-trace-123", receivedTraceID)
 }
 
-// ===== Interceptor 拦截器测试 =====
+// ===== Interceptor test =====
 
 func TestDispatcher_Use_Interceptor(t *testing.T) {
 	d := NewDispatcher()
@@ -468,7 +468,7 @@ func TestDispatcher_Interceptor_CanStopExecution(t *testing.T) {
 	interceptorErr := errors.New("interceptor blocked")
 
 	d.Use(func(ctx context.Context, e Event, next Next) error {
-		return interceptorErr // 不调用 next
+		return interceptorErr // Do not call next
 	})
 
 	d.Subscribe("test.event", ListenerFunc(func(ctx context.Context, e Event) error {
@@ -489,7 +489,7 @@ func TestDispatcher_Interceptor_CanModifyError(t *testing.T) {
 
 	d.Use(func(ctx context.Context, e Event, next Next) error {
 		_ = next(ctx, e)
-		return customErr // 替换错误
+		return customErr // Replace error
 	})
 
 	d.Subscribe("test.event", ListenerFunc(func(ctx context.Context, e Event) error {
@@ -500,7 +500,7 @@ func TestDispatcher_Interceptor_CanModifyError(t *testing.T) {
 	assert.Equal(t, customErr, err)
 }
 
-// ===== 并发测试 =====
+// ===== Concurrency Test =====
 
 func TestDispatcher_Concurrent_Subscribe(t *testing.T) {
 	d := NewDispatcher()
@@ -544,30 +544,30 @@ func TestDispatcher_Concurrent_Dispatch(t *testing.T) {
 	assert.Equal(t, int32(100), atomic.LoadInt32(&counter))
 }
 
-// ===== Close 测试 =====
+// ===== Close Test =====
 
 func TestDispatcher_Close(t *testing.T) {
 	d := NewDispatcher()
 	d.Close()
 
-	// 关闭后异步分发应该被忽略
+	// The asynchronous distribution should be ignored after closure
 	d.DispatchAsync(context.Background(), NewTestEvent("test.event", ""))
 }
 
-// ===== ErrStopPropagation 测试 =====
+// ===== ErrStopPropagation Test =====
 
 func TestErrStopPropagation(t *testing.T) {
 	assert.NotNil(t, ErrStopPropagation)
 	assert.Equal(t, "stop propagation", ErrStopPropagation.Error())
 }
 
-// ===== 边界测试 =====
+// ===== Boundary Testing =====
 
 func TestDispatcher_Unsubscribe_NotExists(t *testing.T) {
 	d := NewDispatcher()
 	defer d.Close()
 
-	// 取消不存在的订阅不应 panic
+	// Canceling non-existent subscriptions should not panic
 	d.unsubscribe("nonexistent", 999)
 }
 
@@ -578,7 +578,7 @@ func TestDispatcher_ListenerCount_NonExistent(t *testing.T) {
 	assert.Equal(t, 0, d.ListenerCount("nonexistent"))
 }
 
-// ===== Options 测试 =====
+// ===== Options Test =====
 
 func TestWithPriority(t *testing.T) {
 	entry := &listenerEntry{}

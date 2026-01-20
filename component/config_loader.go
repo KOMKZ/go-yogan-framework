@@ -1,45 +1,45 @@
 package component
 
-// ConfigLoader 配置加载器接口
+// ConfigLoader configuration loader interface
 //
-// 提供统一的配置读取能力，组件通过此接口读取自己的配置
-// 避免组件依赖具体的配置结构（如 AppConfig）
+// Provides unified configuration reading capability, components read their own configurations through this interface
+// Avoid component dependencies on specific configuration structures (such as AppConfig)
 type ConfigLoader interface {
-	// Get 获取配置项
+	// Get configuration item
 	//
-	// 参数：
-	//   key: 配置键（如 "redis.main.host"）
+	// Parameters:
+	// key: configuration key (e.g., "redis.main.host")
 	//
-	// 返回：
-	//   interface{}: 配置值
+	// Return:
+	// interface{}: configuration value
 	Get(key string) interface{}
 
-	// Unmarshal 将配置反序列化到结构体
+	// Unmarshal deserializes the configuration into a struct
 	//
-	// 参数：
-	//   key: 配置键（如 "redis" 会读取整个 redis 配置段）
-	//   v: 目标结构体指针
+	// Parameters:
+	// key: Configuration key (e.g., "redis" reads the entire redis configuration section)
+	// v: pointer to the target struct
 	//
-	// 返回：
-	//   error: 反序列化失败时返回错误
+	// Return:
+	// error: return error on deserialization failure
 	//
-	// 示例：
+	// Example:
 	//   var redisConfigs map[string]redis.Config
 	//   if err := loader.Unmarshal("redis", &redisConfigs); err != nil {
 	//       return err
 	//   }
 	Unmarshal(key string, v interface{}) error
 
-	// GetString 获取字符串配置
+	// GetString Get string configuration
 	GetString(key string) string
 
-	// GetInt 获取整数配置
+	// Get integer configuration
 	GetInt(key string) int
 
-	// GetBool 获取布尔配置
+	// GetBool Get boolean configuration
 	GetBool(key string) bool
 
-	// IsSet 检查配置项是否存在
+	// Check if the configuration item exists
 	IsSet(key string) bool
 }
 

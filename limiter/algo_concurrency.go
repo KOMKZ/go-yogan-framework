@@ -6,20 +6,20 @@ import (
 	"time"
 )
 
-// concurrencyAlgorithm 并发限流算法实现
+// concurrencyAlgorithm concurrent rate limiting algorithm implementation
 type concurrencyAlgorithm struct{}
 
-// NewConcurrencyAlgorithm 创建并发限流算法
+// NewConcurrencyAlgorithm creates concurrency rate limiting algorithm
 func NewConcurrencyAlgorithm() Algorithm {
 	return &concurrencyAlgorithm{}
 }
 
-// Name 返回算法名称
+// Name Returns algorithm name
 func (a *concurrencyAlgorithm) Name() string {
 	return string(AlgorithmConcurrency)
 }
 
-// Allow 检查是否允许请求
+// Allow check if the request is permitted
 func (a *concurrencyAlgorithm) Allow(ctx context.Context, store Store, resource string, n int64, cfg ResourceConfig) (*Response, error) {
 	if n <= 0 {
 		n = 1
@@ -27,7 +27,7 @@ func (a *concurrencyAlgorithm) Allow(ctx context.Context, store Store, resource 
 
 	key := a.concurrencyKey(resource)
 
-	// 获取当前并发数
+	// Get current concurrency count
 	current, err := store.GetInt64(ctx, key)
 	if err != nil && err != ErrKeyNotFound {
 		return nil, fmt.Errorf("get current concurrency failed: %w", err)
@@ -37,9 +37,9 @@ func (a *concurrencyAlgorithm) Allow(ctx context.Context, store Store, resource 
 		current = 0
 	}
 
-	// 检查是否超过限制
+	// Check if exceeded limit
 	if current+n <= cfg.MaxConcurrency {
-		// 增加并发数
+		// Increase concurrency number
 		newCurrent, err := store.IncrBy(ctx, key, n)
 		if err != nil {
 			return nil, fmt.Errorf("increment concurrency failed: %w", err)
@@ -59,7 +59,7 @@ func (a *concurrencyAlgorithm) Allow(ctx context.Context, store Store, resource 
 	}, nil
 }
 
-// Wait 等待获取许可
+// Wait for permission to be acquired
 func (a *concurrencyAlgorithm) Wait(ctx context.Context, store Store, resource string, n int64, cfg ResourceConfig, timeout time.Duration) error {
 	if n <= 0 {
 		n = 1
@@ -81,7 +81,7 @@ func (a *concurrencyAlgorithm) Wait(ctx context.Context, store Store, resource s
 			return ErrWaitTimeout
 		}
 
-		// 短暂等待后重试
+		// 短暂 wait 后重试
 		waitTime := min64Duration(100*time.Millisecond, time.Until(deadline))
 		if waitTime <= 0 {
 			return ErrWaitTimeout
@@ -91,12 +91,12 @@ func (a *concurrencyAlgorithm) Wait(ctx context.Context, store Store, resource s
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-time.After(waitTime):
-			// 继续重试
+			// Continue retrying
 		}
 	}
 }
 
-// GetMetrics 获取当前指标
+// GetMetrics获取当前指标
 func (a *concurrencyAlgorithm) GetMetrics(ctx context.Context, store Store, resource string) (*AlgorithmMetrics, error) {
 	key := a.concurrencyKey(resource)
 
@@ -116,13 +116,13 @@ func (a *concurrencyAlgorithm) GetMetrics(ctx context.Context, store Store, reso
 	}, nil
 }
 
-// Reset 重置状态
+// Reset reset status
 func (a *concurrencyAlgorithm) Reset(ctx context.Context, store Store, resource string) error {
 	key := a.concurrencyKey(resource)
 	return store.Del(ctx, key)
 }
 
-// Release 释放并发数（需要在请求完成后调用）
+// Release Decrease concurrency count (must be called after request completion)
 func (a *concurrencyAlgorithm) Release(ctx context.Context, store Store, resource string, n int64) error {
 	if n <= 0 {
 		n = 1
@@ -133,7 +133,7 @@ func (a *concurrencyAlgorithm) Release(ctx context.Context, store Store, resourc
 	return err
 }
 
-// concurrencyKey 返回并发数存储键
+// concurrencyKey returns the concurrency count storage key
 func (a *concurrencyAlgorithm) concurrencyKey(resource string) string {
 	return fmt.Sprintf("limiter:concurrency:%s:count", resource)
 }

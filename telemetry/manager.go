@@ -11,8 +11,8 @@ import (
 	"go.uber.org/zap"
 )
 
-// Manager 遥测管理器（替代 Component）
-// 管理 TracerProvider、MetricsRegistry 等
+// Manager Telemetry Manager (replacing Component)
+// Manage TracerProvider, MetricsRegistry etc.
 type Manager struct {
 	config         Config
 	logger         *logger.CtxZapLogger
@@ -23,7 +23,7 @@ type Manager struct {
 	mu             sync.RWMutex
 }
 
-// NewManager 创建遥测管理器
+// Create telemetry manager
 func NewManager(config Config, log *logger.CtxZapLogger) *Manager {
 	if log == nil {
 		log = logger.GetLogger("yogan")
@@ -34,14 +34,14 @@ func NewManager(config Config, log *logger.CtxZapLogger) *Manager {
 	}
 }
 
-// Start 启动遥测组件
+// Start telemetry component
 func (m *Manager) Start(ctx context.Context) error {
 	if !m.config.Enabled {
 		m.logger.InfoCtx(ctx, "Telemetry disabled, skipping initialization")
 		return nil
 	}
 
-	// 创建 TracerProvider
+	// Create TracerProvider
 	tp, shutdownFn, err := m.createTracerProvider(ctx)
 	if err != nil {
 		return err
@@ -50,7 +50,7 @@ func (m *Manager) Start(ctx context.Context) error {
 	m.tracerProvider = tp
 	m.shutdownFn = shutdownFn
 
-	// 设置全局 TracerProvider
+	// Set global TracerProvider
 	otel.SetTracerProvider(tp)
 
 	m.logger.InfoCtx(ctx, "✅ Telemetry started",
@@ -61,7 +61,7 @@ func (m *Manager) Start(ctx context.Context) error {
 	return nil
 }
 
-// Shutdown 关闭遥测组件
+// Shut down telemetry component
 func (m *Manager) Shutdown(ctx context.Context) error {
 	if m.shutdownFn != nil {
 		return m.shutdownFn(ctx)
@@ -69,7 +69,7 @@ func (m *Manager) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-// GetTracer 获取 Tracer
+// GetTracer obtain tracer
 func (m *Manager) GetTracer(name string) otelTrace.Tracer {
 	if m.tracerProvider == nil {
 		return otel.GetTracerProvider().Tracer(name)
@@ -77,22 +77,22 @@ func (m *Manager) GetTracer(name string) otelTrace.Tracer {
 	return m.tracerProvider.Tracer(name)
 }
 
-// GetCircuitBreaker 获取熔断器
+// GetCircuitBreaker obtain circuit breaker
 func (m *Manager) GetCircuitBreaker() *CircuitBreaker {
 	return m.circuitBreaker
 }
 
-// GetMetricsManager 获取 Metrics 管理器
+// GetMetricsManager obtain Metrics manager
 func (m *Manager) GetMetricsManager() *MetricsManager {
 	return m.metricsManager
 }
 
-// IsEnabled 是否启用
+// IsEnabled whether enabled
 func (m *Manager) IsEnabled() bool {
 	return m.config.Enabled
 }
 
-// GetConfig 获取配置
+// GetConfig Retrieve configuration
 func (m *Manager) GetConfig() Config {
 	return m.config
 }

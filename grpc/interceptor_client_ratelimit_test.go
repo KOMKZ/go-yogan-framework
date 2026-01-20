@@ -12,41 +12,41 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// TestUnaryClientRateLimitInterceptor 测试基础限速功能
+// Test unary client rate limit interceptor functionality
 func TestUnaryClientRateLimitInterceptor(t *testing.T) {
-	// 创建限速管理器（使用 default 配置）
+	// Create rate limiter manager (using default configuration)
 	limiterMgr, err := limiter.NewManagerWithLogger(limiter.Config{
 		Enabled:   true,
 		StoreType: "memory",
 		Default: limiter.ResourceConfig{
 			Algorithm:  string(limiter.AlgorithmTokenBucket),
-			Rate:       1,  // 每秒1个令牌
-			Capacity:   1,  // 桶容量1
-			InitTokens: 1,  // 初始1个令牌
+			Rate:       1,  // one token per second
+			Capacity:   1,  // Bucket capacity 1
+			InitTokens: 1,  // Initialize 1 token
 		},
 		Resources: map[string]limiter.ResourceConfig{},
 	}, logger.GetLogger("test"), nil, nil)
 	assert.NoError(t, err)
 
-	// 创建 ClientManager
+	// Create ClientManager
 	clientMgr := &ClientManager{
 		limiter: limiterMgr,
 		logger:  logger.GetLogger("test"),
 	}
 
-	// 创建拦截器
+	// Create an interceptor
 	interceptor := UnaryClientRateLimitInterceptor(clientMgr, "test-service")
 
-	// 模拟 invoker
+	// simulate invoker
 	invoker := func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, opts ...grpc.CallOption) error {
 		return nil
 	}
 
-	// 测试：第1次请求通过（使用 default 配置）
+	// Test: The first request passed (using default configuration)
 	err = interceptor(context.Background(), "/test.Service/Method", nil, nil, nil, invoker)
 	assert.NoError(t, err, "第1次请求应该通过（default 配置）")
 
-	// 测试：第2次请求被限流（桶容量=1，已用完）
+	// Test: The second request is rate-limited (bucket capacity = 1, already used up)
 	err = interceptor(context.Background(), "/test.Service/Method", nil, nil, nil, invoker)
 	if err != nil {
 		assert.Equal(t, codes.ResourceExhausted, status.Code(err), "应该返回 ResourceExhausted 错误码")
@@ -56,22 +56,22 @@ func TestUnaryClientRateLimitInterceptor(t *testing.T) {
 	}
 }
 
-// TestUnaryClientRateLimitInterceptor_MethodLevel 测试方法级限速（优先级高于 default）
+// TestUnaryClientRateLimitInterceptor_MethodLevel Method-level rate limiting test (priority higher than default)
 func TestUnaryClientRateLimitInterceptor_MethodLevel(t *testing.T) {
-	// 创建限速管理器（配置 default 和方法级）
+	// Create rate limiter manager (configure default and method-level)
 	limiterMgr, err := limiter.NewManagerWithLogger(limiter.Config{
 		Enabled:   true,
 		StoreType: "memory",
 		Default: limiter.ResourceConfig{
 			Algorithm:  string(limiter.AlgorithmTokenBucket),
-			Rate:       10,  // default: 每秒10个令牌
+			Rate:       10,  // default: 10 tokens per second
 			Capacity:   10,
 			InitTokens: 10,
 		},
 		Resources: map[string]limiter.ResourceConfig{
 			"test-service:/test.Service/SlowMethod": {
 				Algorithm:  string(limiter.AlgorithmTokenBucket),
-				Rate:       1,  // 方法级：每秒1个令牌（覆盖 default）
+				Rate:       1,  // Method level: 1 token per second (override default)
 				Capacity:   1,
 				InitTokens: 1,
 			},
@@ -79,26 +79,26 @@ func TestUnaryClientRateLimitInterceptor_MethodLevel(t *testing.T) {
 	}, logger.GetLogger("test"), nil, nil)
 	assert.NoError(t, err)
 
-	// 创建 ClientManager
+	// Create ClientManager
 	clientMgr := &ClientManager{
 		limiter: limiterMgr,
 		logger:  logger.GetLogger("test"),
 	}
 
-	// 创建拦截器
+	// Create an interceptor
 	interceptor := UnaryClientRateLimitInterceptor(clientMgr, "test-service")
 
 	invoker := func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, opts ...grpc.CallOption) error {
 		return nil
 	}
 
-	// 测试：快方法（使用 default 配置）
+	// Test: Fast method (using default configuration)
 	for i := 0; i < 5; i++ {
 		err = interceptor(context.Background(), "/test.Service/FastMethod", nil, nil, nil, invoker)
 		assert.NoError(t, err, "快方法应该使用 default 配置（rate=10）")
 	}
 
-	// 测试：慢方法（使用方法级配置）
+	// Testing: slow methods (using method-level configuration)
 	err = interceptor(context.Background(), "/test.Service/SlowMethod", nil, nil, nil, invoker)
 	assert.NoError(t, err, "慢方法第1次应该通过")
 
@@ -107,35 +107,35 @@ func TestUnaryClientRateLimitInterceptor_MethodLevel(t *testing.T) {
 	assert.Contains(t, err.Error(), "rate limit exceeded", "应该提示限流")
 }
 
-// TestUnaryClientRateLimitInterceptor_Disabled 测试限速器禁用时
+// TestUnaryClientRateLimitInterceptor_Disabled test when rate limiter is disabled
 func TestUnaryClientRateLimitInterceptor_Disabled(t *testing.T) {
-	// 创建 ClientManager（无限速器）
+	// Create ClientManager (unlimited throttler)
 	clientMgr := &ClientManager{
 		limiter: nil,
 		logger:  logger.GetLogger("test"),
 	}
 
-	// 创建拦截器
+	// Create an interceptor
 	interceptor := UnaryClientRateLimitInterceptor(clientMgr, "test-service")
 
 	invoker := func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, opts ...grpc.CallOption) error {
 		return nil
 	}
 
-	// 测试：没有限速器时，所有请求都通过
+	// Test: When there is no rate limiter, all requests pass
 	for i := 0; i < 100; i++ {
 		err := interceptor(context.Background(), "/test.Service/Method", nil, nil, nil, invoker)
 		assert.NoError(t, err, "没有限速器时所有请求都应该通过")
 	}
 }
 
-// TestUnaryClientRateLimitInterceptor_NoDefault 测试未配置 default 时的行为
+// TestUnaryClientRateLimitInterceptor_NoDefault Test behavior when default is not configured
 func TestUnaryClientRateLimitInterceptor_NoDefault(t *testing.T) {
-	// 创建限速管理器（不配置 default）
+	// Create rate limiter manager (without default configuration)
 	limiterMgr, err := limiter.NewManagerWithLogger(limiter.Config{
 		Enabled:   true,
 		StoreType: "memory",
-		Default:   limiter.ResourceConfig{}, // 空的 default（无效）
+		Default:   limiter.ResourceConfig{}, // empty default (invalid)
 		Resources: map[string]limiter.ResourceConfig{
 			"test-service:/test.Service/LimitedMethod": {
 				Algorithm:  string(limiter.AlgorithmTokenBucket),
@@ -158,13 +158,13 @@ func TestUnaryClientRateLimitInterceptor_NoDefault(t *testing.T) {
 		return nil
 	}
 
-	// 测试：未配置方法直接放行（因为 default 无效）
+	// Test: Unconfigured methods are allowed to pass directly (because default is ineffective)
 	for i := 0; i < 20; i++ {
 		err = interceptor(context.Background(), "/test.Service/UnlimitedMethod", nil, nil, nil, invoker)
 		assert.NoError(t, err, "未配置方法应该直接放行（default 无效）")
 	}
 
-	// 测试：已配置方法受限流
+	// Test: Configured method is rate-limited
 	err = interceptor(context.Background(), "/test.Service/LimitedMethod", nil, nil, nil, invoker)
 	assert.NoError(t, err, "已配置方法第1次应该通过")
 

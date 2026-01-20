@@ -5,56 +5,56 @@ import (
 	"path/filepath"
 )
 
-// LoaderBuilder 配置加载器构建器
+// LoaderBuilder configuration loader builder
 type LoaderBuilder struct {
 	configPath string
 	envPrefix  string
 	appType    string      // grpc, http, mixed
-	flags      interface{} // 命令行参数
+	flags      interface{} // command line arguments
 }
 
-// NewLoaderBuilder 创建加载器构建器
+// NewLoaderBuilder creates a loader builder
 func NewLoaderBuilder() *LoaderBuilder {
 	return &LoaderBuilder{
-		appType: "grpc", // 默认
+		appType: "grpc", // DefaultValueHandling.DEFAULT
 	}
 }
 
-// WithConfigPath 设置配置目录
+// WithConfigPath set configuration directory
 func (b *LoaderBuilder) WithConfigPath(path string) *LoaderBuilder {
 	b.configPath = path
 	return b
 }
 
-// WithEnvPrefix 设置环境变量前缀
+// Set environment variable prefix
 func (b *LoaderBuilder) WithEnvPrefix(prefix string) *LoaderBuilder {
 	b.envPrefix = prefix
 	return b
 }
 
-// WithAppType 设置应用类型
+// Set application type
 func (b *LoaderBuilder) WithAppType(appType string) *LoaderBuilder {
 	b.appType = appType
 	return b
 }
 
-// WithFlags 设置命令行参数
+// WithFlags set command line arguments
 func (b *LoaderBuilder) WithFlags(flags interface{}) *LoaderBuilder {
 	b.flags = flags
 	return b
 }
 
-// Build 构建加载器
+// Build loader
 func (b *LoaderBuilder) Build() (*Loader, error) {
 	loader := NewLoader()
 
-	// 1. 基础配置文件（优先级 10）
+	// 1. Basic configuration file (priority 10)
 	if b.configPath != "" {
 		configFile := filepath.Join(b.configPath, "config.yaml")
 		loader.AddSource(NewFileSource(configFile, 10))
 	}
 
-	// 2. 环境配置文件（优先级 20）
+	// Environment configuration file (priority 20)
 	if b.configPath != "" {
 		env := GetEnv()
 		if env != "" {
@@ -63,17 +63,17 @@ func (b *LoaderBuilder) Build() (*Loader, error) {
 		}
 	}
 
-	// 3. 环境变量（优先级 50）
+	// 3. Environment variables (priority 50)
 	if b.envPrefix != "" {
 		loader.AddSource(NewEnvSource(b.envPrefix, 50))
 	}
 
-	// 4. 命令行参数（优先级 100）
+	// 4. Command line arguments (priority 100)
 	if b.flags != nil {
 		loader.AddSource(NewFlagSource(b.flags, b.appType, 100))
 	}
 
-	// 加载所有数据源
+	// Load all data sources
 	if err := loader.Load(); err != nil {
 		return nil, err
 	}
@@ -81,8 +81,8 @@ func (b *LoaderBuilder) Build() (*Loader, error) {
 	return loader, nil
 }
 
-// GetEnv 获取环境变量（优先级：APP_ENV > ENV > 默认dev）
-// 导出供其他包使用
+// GetEnv retrieves environment variables (priority: APP_ENV > ENV > default dev)
+// Exported for use by other packages
 func GetEnv() string {
 	if env := os.Getenv("APP_ENV"); env != "" {
 		return env
@@ -90,6 +90,6 @@ func GetEnv() string {
 	if env := os.Getenv("ENV"); env != "" {
 		return env
 	}
-	return "dev" // 默认开发环境
+	return "dev" // Default development environment
 }
 

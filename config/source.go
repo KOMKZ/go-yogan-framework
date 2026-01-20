@@ -1,22 +1,22 @@
 package config
 
-// ConfigSource 配置数据源接口
-// 所有配置来源（文件、环境变量、命令行参数等）都实现此接口
+// Configuration Source interface for configuration data sources
+// All configuration sources (files, environment variables, command-line arguments, etc.) implement this interface
 type ConfigSource interface {
-	// Name 数据源名称（用于日志和调试）
+	// Data source name (for logs and debugging)
 	Name() string
 
-	// Priority 优先级（数字越大优先级越高）
-	// 建议值：
-	//   - 默认值：1
-	//   - 配置文件(config.yaml)：10
-	//   - 环境配置文件(dev.yaml)：20
-	//   - 环境变量：50
-	//   - 命令行参数：100
+	// Priority (Higher numerical value indicates higher priority)
+	// Suggested value:
+	// - Default value: 1
+	// - Configuration file (config.yaml): 10
+	// - Environment configuration file (dev.yaml): 20
+	// - Environment variable: 50
+	// - Command line argument: 100
 	Priority() int
 
-	// Load 加载配置数据
-	// 返回的 map 使用点号分隔的 key，如 "grpc.server.port"
+	// Load configuration data
+	// The returned map uses keys separated by dots, such as "grpc.server.port"
 	Load() (map[string]interface{}, error)
 }
 

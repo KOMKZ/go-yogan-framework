@@ -39,13 +39,13 @@ func TestRequestLog_SkipPaths(t *testing.T) {
 		c.JSON(200, gin.H{"data": "test"})
 	})
 
-	// 测试跳过的路径
+	// Test skipped paths
 	req1 := httptest.NewRequest("GET", "/health", nil)
 	w1 := httptest.NewRecorder()
 	router.ServeHTTP(w1, req1)
 	assert.Equal(t, 200, w1.Code)
 
-	// 测试正常路径
+	// Test normal path
 	req2 := httptest.NewRequest("GET", "/api", nil)
 	w2 := httptest.NewRecorder()
 	router.ServeHTTP(w2, req2)

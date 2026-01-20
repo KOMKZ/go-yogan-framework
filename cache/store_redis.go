@@ -9,14 +9,14 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// RedisStore Redis 缓存存储
+// RedisStore Redis cache storage
 type RedisStore struct {
 	name      string
 	client    *redis.Client
 	keyPrefix string
 }
 
-// NewRedisStore 创建 Redis 存储
+// Create new Redis storage
 func NewRedisStore(name string, client *redis.Client, keyPrefix string) *RedisStore {
 	return &RedisStore{
 		name:      name,
@@ -25,12 +25,12 @@ func NewRedisStore(name string, client *redis.Client, keyPrefix string) *RedisSt
 	}
 }
 
-// Name 返回存储名称
+// Returns the storage name
 func (s *RedisStore) Name() string {
 	return s.name
 }
 
-// buildKey 构建完整的 Key
+// buildKey Construct the complete key
 func (s *RedisStore) buildKey(key string) string {
 	if s.keyPrefix == "" {
 		return key
@@ -38,7 +38,7 @@ func (s *RedisStore) buildKey(key string) string {
 	return s.keyPrefix + key
 }
 
-// Get 获取缓存值
+// Get cache value
 func (s *RedisStore) Get(ctx context.Context, key string) ([]byte, error) {
 	fullKey := s.buildKey(key)
 	result, err := s.client.Get(ctx, fullKey).Bytes()
@@ -51,7 +51,7 @@ func (s *RedisStore) Get(ctx context.Context, key string) ([]byte, error) {
 	return result, nil
 }
 
-// Set 设置缓存值
+// Set cache value
 func (s *RedisStore) Set(ctx context.Context, key string, value []byte, ttl time.Duration) error {
 	fullKey := s.buildKey(key)
 	err := s.client.Set(ctx, fullKey, value, ttl).Err()
@@ -61,7 +61,7 @@ func (s *RedisStore) Set(ctx context.Context, key string, value []byte, ttl time
 	return nil
 }
 
-// Delete 删除缓存
+// Delete cache
 func (s *RedisStore) Delete(ctx context.Context, key string) error {
 	fullKey := s.buildKey(key)
 	err := s.client.Del(ctx, fullKey).Err()
@@ -71,11 +71,11 @@ func (s *RedisStore) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
-// DeleteByPrefix 按前缀删除
+// DeleteByPrefix delete by prefix
 func (s *RedisStore) DeleteByPrefix(ctx context.Context, prefix string) error {
 	fullPrefix := s.buildKey(prefix)
 	
-	// 使用 SCAN 避免阻塞
+	// Use SCAN to avoid blocking
 	var cursor uint64
 	var keys []string
 	
@@ -101,7 +101,7 @@ func (s *RedisStore) DeleteByPrefix(ctx context.Context, prefix string) error {
 	return nil
 }
 
-// Exists 检查 Key 是否存在
+// Exists check if Key exists
 func (s *RedisStore) Exists(ctx context.Context, key string) bool {
 	fullKey := s.buildKey(key)
 	n, err := s.client.Exists(ctx, fullKey).Result()
@@ -111,15 +111,15 @@ func (s *RedisStore) Exists(ctx context.Context, key string) bool {
 	return n > 0
 }
 
-// Close 关闭存储
+// Close storage
 func (s *RedisStore) Close() error {
-	// Redis client 由外部管理，这里不关闭
+	// The Redis client is managed externally, so we do not close it here.
 	return nil
 }
 
-// DeleteByPattern 按模式删除（支持通配符）
+// DeleteByPattern delete by pattern (supports wildcards)
 func (s *RedisStore) DeleteByPattern(ctx context.Context, pattern string) error {
-	// 如果 pattern 不包含通配符，直接删除
+	// If pattern does not contain wildcards, delete directly
 	if !strings.Contains(pattern, "*") {
 		return s.Delete(ctx, pattern)
 	}

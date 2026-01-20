@@ -9,18 +9,18 @@ import (
 	"go.uber.org/zap"
 )
 
-// Manager Redis 管理器（支持多实例、Cluster）
+// Manager for Redis (supports multiple instances, Cluster)
 type Manager struct {
-	instances map[string]*redis.Client        // 单机实例
-	clusters  map[string]*redis.ClusterClient // 集群实例
-	configs   map[string]Config               // 配置
-	logger    *zap.Logger                     // 注入的日志器
-	mu        sync.RWMutex                    // 读写锁
+	instances map[string]*redis.Client        // single-machine instance
+	clusters  map[string]*redis.ClusterClient // cluster instance
+	configs   map[string]Config               // Configuration
+	logger    *zap.Logger                     // Injector logger
+	mu        sync.RWMutex                    // read-write lock
 }
 
-// NewManager 创建 Redis 管理器
-// configs: Redis 配置（支持多实例）
-// logger: 业务日志器（注入的 zap.Logger 实例，不能为 nil）
+// Create Redis manager
+// configs: Redis configuration (supporting multiple instances)
+// logger: business logger (injected zap.Logger instance, must not be nil)
 func NewManager(configs map[string]Config, logger *zap.Logger) (*Manager, error) {
 	if logger == nil {
 		return nil, fmt.Errorf("logger cannot be nil")
@@ -33,17 +33,17 @@ func NewManager(configs map[string]Config, logger *zap.Logger) (*Manager, error)
 		logger:    logger,
 	}
 
-	// 初始化所有实例
+	// Initialize all instances
 	for name, cfg := range configs {
-		// 应用默认值
+		// Apply default values
 		cfg.ApplyDefaults()
 
-		// 验证配置
+		// Validate configuration
 		if err := cfg.Validate(); err != nil {
 			return nil, fmt.Errorf("invalid config for %s: %w", name, err)
 		}
 
-		// 根据模式创建客户端
+		// Create client according to pattern
 		if cfg.Mode == "standalone" {
 			client, err := m.createClient(cfg)
 			if err != nil {
@@ -69,10 +69,10 @@ func NewManager(configs map[string]Config, logger *zap.Logger) (*Manager, error)
 	return m, nil
 }
 
-// createClient 创建单机客户端
+// createClient Create single-machine client
 func (m *Manager) createClient(cfg Config) (*redis.Client, error) {
 	client := redis.NewClient(&redis.Options{
-		Addr:         cfg.Addrs[0], // 单机模式使用第一个地址
+		Addr:         cfg.Addrs[0], // Use the first address in single-machine mode
 		Password:     cfg.Password,
 		DB:           cfg.DB,
 		PoolSize:     cfg.PoolSize,
@@ -83,7 +83,7 @@ func (m *Manager) createClient(cfg Config) (*redis.Client, error) {
 		WriteTimeout: cfg.WriteTimeout,
 	})
 
-	// 测试连接
+	// Test connection
 	ctx := context.Background()
 	if err := client.Ping(ctx).Err(); err != nil {
 		client.Close()
@@ -93,10 +93,10 @@ func (m *Manager) createClient(cfg Config) (*redis.Client, error) {
 	return client, nil
 }
 
-// createClusterClient 创建集群客户端
+// createClusterClient Create cluster client
 func (m *Manager) createClusterClient(cfg Config) (*redis.ClusterClient, error) {
 	cluster := redis.NewClusterClient(&redis.ClusterOptions{
-		Addrs:        cfg.Addrs, // 集群模式使用所有地址
+		Addrs:        cfg.Addrs, // Use all addresses in cluster mode
 		Password:     cfg.Password,
 		PoolSize:     cfg.PoolSize,
 		MinIdleConns: cfg.MinIdleConns,
@@ -106,7 +106,7 @@ func (m *Manager) createClusterClient(cfg Config) (*redis.ClusterClient, error) 
 		WriteTimeout: cfg.WriteTimeout,
 	})
 
-	// 测试连接
+	// Test connection
 	ctx := context.Background()
 	if err := cluster.Ping(ctx).Err(); err != nil {
 		cluster.Close()
@@ -116,48 +116,48 @@ func (m *Manager) createClusterClient(cfg Config) (*redis.ClusterClient, error) 
 	return cluster, nil
 }
 
-// Client 获取单机实例
-// name: 实例名称（配置中的 key）
-// 返回 nil 如果实例不存在或不是单机模式
+// Client retrieves single-instance configuration
+// name: instance name (key in configuration)
+// Return nil if the instance does not exist or is not in single-machine mode
 func (m *Manager) Client(name string) *redis.Client {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.instances[name]
 }
 
-// Cluster 获取集群实例
-// name: 实例名称（配置中的 key）
-// 返回 nil 如果实例不存在或不是集群模式
+// Get cluster instance
+// name: instance name (key in configuration)
+// Return nil if the instance does not exist or is not in cluster mode
 func (m *Manager) Cluster(name string) *redis.ClusterClient {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.clusters[name]
 }
 
-// WithDB 切换数据库（仅单机模式）
-// name: 实例名称
-// db: 数据库编号（0-15）
-// 返回一个新的 Redis 客户端，连接到指定的数据库
-// 返回 nil 如果实例不存在或不是单机模式
+// WithDB switch database (single machine mode only)
+// name: instance name
+// db: database number (0-15)
+// Return a new Redis client connected to the specified database
+// Return nil if the instance does not exist or is not in single-machine mode
 //
-// 用法：
+// Usage:
 //
-//	sessionRedis := manager.WithDB("main", 1) // 使用 DB 1 作为 Session 存储
-//	cacheRedis := manager.WithDB("main", 2)   // 使用 DB 2 作为缓存
+// sessionRedis := manager.WithDB("main", 1) // use DB 1 for session storage
+// cacheRedis := manager.WithDB("main", 2)   // Use DB 2 for caching
 func (m *Manager) WithDB(name string, db int) *redis.Client {
 	client := m.Client(name)
 	if client == nil {
 		return nil
 	}
 
-	// 复制配置并修改 DB
+	// Copy configuration and modify DB
 	opts := client.Options()
 	opts.DB = db
 
-	// 创建新的客户端
+	// Create new client
 	newClient := redis.NewClient(opts)
 
-	// 测试连接
+	// Test connection
 	ctx := context.Background()
 	if err := newClient.Ping(ctx).Err(); err != nil {
 		m.logger.Error("WithDB 连接失败",
@@ -171,19 +171,19 @@ func (m *Manager) WithDB(name string, db int) *redis.Client {
 	return newClient
 }
 
-// Ping 检查所有连接
+// Ping check all connections
 func (m *Manager) Ping(ctx context.Context) error {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	// 检查单机实例
+	// Check single-instance configuration
 	for name, client := range m.instances {
 		if err := client.Ping(ctx).Err(); err != nil {
 			return fmt.Errorf("ping %s failed: %w", name, err)
 		}
 	}
 
-	// 检查集群实例
+	// Check cluster instance
 	for name, cluster := range m.clusters {
 		if err := cluster.Ping(ctx).Err(); err != nil {
 			return fmt.Errorf("ping cluster %s failed: %w", name, err)
@@ -193,7 +193,7 @@ func (m *Manager) Ping(ctx context.Context) error {
 	return nil
 }
 
-// GetInstanceNames 获取所有单机实例名称
+// GetInstanceNames Retrieve all single-instance names
 func (m *Manager) GetInstanceNames() []string {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -205,7 +205,7 @@ func (m *Manager) GetInstanceNames() []string {
 	return names
 }
 
-// GetClusterNames 获取所有集群实例名称
+// GetClusterNames Retrieve all cluster instance names
 func (m *Manager) GetClusterNames() []string {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -217,12 +217,12 @@ func (m *Manager) GetClusterNames() []string {
 	return names
 }
 
-// Close 关闭所有连接
+// Close all connections
 func (m *Manager) Close() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	// 关闭单机实例
+	// Shut down single-instance
 	for name, client := range m.instances {
 		if err := client.Close(); err != nil {
 			m.logger.Error("关闭 Redis 连接失败",
@@ -234,7 +234,7 @@ func (m *Manager) Close() error {
 		}
 	}
 
-	// 关闭集群实例
+	// Shut down cluster instance
 	for name, cluster := range m.clusters {
 		if err := cluster.Close(); err != nil {
 			m.logger.Error("关闭 Redis 集群连接失败",
@@ -249,8 +249,8 @@ func (m *Manager) Close() error {
 	return nil
 }
 
-// Shutdown 实现 samber/do.Shutdownable 接口
-// 用于在 DI 容器关闭时自动关闭 Redis 连接
+// Shutdown implements the sambertx/ShutDownable interface
+// For automatically closing Redis connections when the DI container shuts down
 func (m *Manager) Shutdown() error {
 	return m.Close()
 }

@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-// Aggregator 健康检查聚合器
-// 统一管理多个健康检查项
+// HealthCheck Aggregator
+// Unified management of multiple health check items
 type Aggregator struct {
 	checkers []Checker
 	timeout  time.Duration
@@ -15,10 +15,10 @@ type Aggregator struct {
 	metadata map[string]interface{}
 }
 
-// NewAggregator 创建健康检查聚合器
+// Create health check aggregator
 func NewAggregator(timeout time.Duration) *Aggregator {
 	if timeout <= 0 {
-		timeout = 5 * time.Second // 默认 5 秒超时
+		timeout = 5 * time.Second // Default 5 second timeout
 	}
 	return &Aggregator{
 		checkers: make([]Checker, 0),
@@ -27,25 +27,25 @@ func NewAggregator(timeout time.Duration) *Aggregator {
 	}
 }
 
-// Register 注册健康检查项
+// Register health check item
 func (a *Aggregator) Register(checker Checker) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	a.checkers = append(a.checkers, checker)
 }
 
-// SetMetadata 设置元数据
+// SetMetadata Set metadata
 func (a *Aggregator) SetMetadata(key string, value interface{}) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	a.metadata[key] = value
 }
 
-// Check 执行所有健康检查
+// Check all health checks execution
 func (a *Aggregator) Check(ctx context.Context) *Response {
 	start := time.Now()
 
-	// 创建超时上下文
+	// Create timeout context
 	checkCtx, cancel := context.WithTimeout(ctx, a.timeout)
 	defer cancel()
 
@@ -58,7 +58,7 @@ func (a *Aggregator) Check(ctx context.Context) *Response {
 	}
 	a.mu.RUnlock()
 
-	// 并发执行所有检查
+	// Concurrently execute all checks
 	results := make(chan CheckResult, len(checkers))
 	for _, checker := range checkers {
 		go func(c Checker) {
@@ -66,14 +66,14 @@ func (a *Aggregator) Check(ctx context.Context) *Response {
 		}(checker)
 	}
 
-	// 收集结果
+	// Collect results
 	checks := make(map[string]CheckResult)
 	for i := 0; i < len(checkers); i++ {
 		result := <-results
 		checks[result.Name] = result
 	}
 
-	// 计算整体状态
+	// Calculate overall status
 	overallStatus := a.calculateOverallStatus(checks)
 
 	return &Response{
@@ -85,7 +85,7 @@ func (a *Aggregator) Check(ctx context.Context) *Response {
 	}
 }
 
-// checkOne 执行单个检查
+// execute single check
 func (a *Aggregator) checkOne(ctx context.Context, checker Checker) CheckResult {
 	start := time.Now()
 	result := CheckResult{
@@ -108,10 +108,10 @@ func (a *Aggregator) checkOne(ctx context.Context, checker Checker) CheckResult 
 	return result
 }
 
-// calculateOverallStatus 计算整体健康状态
+// calculateOverallStatus Calculate overall health status
 func (a *Aggregator) calculateOverallStatus(checks map[string]CheckResult) Status {
 	if len(checks) == 0 {
-		return StatusHealthy // 无检查项，默认健康
+		return StatusHealthy // No checks performed, default healthy
 	}
 
 	hasUnhealthy := false

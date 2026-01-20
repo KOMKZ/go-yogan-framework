@@ -7,13 +7,13 @@ import (
 	"go.uber.org/zap"
 )
 
-// AuthService 认证服务
+// Authentication service
 type AuthService struct {
 	providers map[string]AuthProvider
 	logger    *logger.CtxZapLogger
 }
 
-// NewAuthService 创建认证服务
+// Create authentication service
 func NewAuthService(logger *logger.CtxZapLogger) *AuthService {
 	return &AuthService{
 		providers: make(map[string]AuthProvider),
@@ -21,22 +21,22 @@ func NewAuthService(logger *logger.CtxZapLogger) *AuthService {
 	}
 }
 
-// RegisterProvider 注册认证提供者
+// RegisterAuthProvider:Register the authentication provider
 func (s *AuthService) RegisterProvider(provider AuthProvider) {
 	s.providers[provider.Name()] = provider
 	s.logger.InfoCtx(context.Background(), "auth provider registered",
 		zap.String("provider", provider.Name()))
 }
 
-// Authenticate 执行认证
+// Authenticate execution authorization
 func (s *AuthService) Authenticate(ctx context.Context, providerName string, credentials Credentials) (*AuthResult, error) {
-	// 1. 获取认证提供者
+	// 1. Get the authentication provider
 	provider, ok := s.providers[providerName]
 	if !ok {
 		return nil, ErrProviderNotSupported
 	}
 
-	// 2. 执行认证
+	// 2. Perform authentication
 	result, err := provider.Authenticate(ctx, credentials)
 	if err != nil {
 		s.logger.WarnCtx(ctx, "authentication failed",
@@ -46,7 +46,7 @@ func (s *AuthService) Authenticate(ctx context.Context, providerName string, cre
 		return nil, err
 	}
 
-	// 3. 记录认证成功日志
+	// Record successful authentication log
 	s.logger.InfoCtx(ctx, "authentication successful",
 		zap.String("provider", providerName),
 		zap.Int64("user_id", result.UserID),
@@ -55,7 +55,7 @@ func (s *AuthService) Authenticate(ctx context.Context, providerName string, cre
 	return result, nil
 }
 
-// GetProvider 获取认证提供者
+// GetProvider Get authentication provider
 func (s *AuthService) GetProvider(name string) (AuthProvider, bool) {
 	provider, ok := s.providers[name]
 	return provider, ok

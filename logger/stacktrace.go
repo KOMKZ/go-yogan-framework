@@ -7,18 +7,18 @@ import (
 	"strings"
 )
 
-// CaptureStacktrace 捕获当前调用栈（支持深度限制）
-// skip: 跳过的栈帧数（通常是 2-3，跳过 CaptureStacktrace 和调用者本身）
-// depth: 最大深度（0 表示不限制，建议 5-10）
-// 返回格式化的堆栈字符串，每行一个调用帧
+// CaptureStackTrace captures the current call stack (with depth limit support)
+// skip: number of stack frames to skip (usually 2-3, skipping CaptureStacktrace and the caller itself)
+// depth: maximum depth (0 means unlimited, recommended 5-10)
+// Return the formatted stack string, one call frame per line
 func CaptureStacktrace(skip int, depth int) string {
 	maxDepth := depth
 	if maxDepth <= 0 {
-		maxDepth = 32 // 默认最大 32 层
+		maxDepth = 32 // Default maximum 32 layers
 	}
 
 	var frames []string
-	// 预留更多空间，确保能捕获到足够的帧
+	// reserve more space to ensure sufficient frames are captured
 	pcs := make([]uintptr, maxDepth*2)
 	n := runtime.Callers(skip, pcs)
 
@@ -31,12 +31,12 @@ func CaptureStacktrace(skip int, depth int) string {
 	for {
 		frame, more := callersFrames.Next()
 
-		// 格式化：函数名
-		//         文件:行号
+		// Format: function name
+		// File: Line number
 		frames = append(frames, fmt.Sprintf("%s\n\t%s:%d", frame.Function, frame.File, frame.Line))
 		frameCount++
 
-		// 达到深度限制或没有更多帧
+		// reached depth limit or no more frames
 		if frameCount >= maxDepth || !more {
 			break
 		}
@@ -45,13 +45,13 @@ func CaptureStacktrace(skip int, depth int) string {
 	return strings.Join(frames, "\n")
 }
 
-// shouldCaptureStacktrace 判断当前日志级别是否需要记录堆栈
+// shouldCaptureStacktrace determines whether the current log level requires capturing a stack trace
 func shouldCaptureStacktrace(level string, config ManagerConfig) bool {
 	if !config.EnableStacktrace {
 		return false
 	}
 
-	// 定义级别优先级
+	// Define level priority
 	levels := map[string]int{
 		"debug": 0,
 		"info":  1,

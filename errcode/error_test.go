@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// TestLayeredError_New 测试创建分层错误码
+// TestLayeredError_New test for creating layered error codes
 func TestLayeredError_New(t *testing.T) {
 	err := New(10, 1, "user", "error.user.not_found", "User not found")
 
@@ -27,7 +27,7 @@ func TestLayeredError_New(t *testing.T) {
 	}
 }
 
-// TestLayeredError_New_WithHTTPStatus 测试创建错误码并指定 HTTP 状态码
+// TestLayeredError_New_WithHTTPStatus Tests creating error codes and specifying HTTP status codes
 func TestLayeredError_New_WithHTTPStatus(t *testing.T) {
 	err := New(10, 1, "user", "error.user.not_found", "User not found", http.StatusNotFound)
 
@@ -36,7 +36,7 @@ func TestLayeredError_New_WithHTTPStatus(t *testing.T) {
 	}
 }
 
-// TestLayeredError_Error 测试 error 接口实现
+// TestLayeredError_Error interface implementation test
 func TestLayeredError_Error(t *testing.T) {
 	err := New(10, 1, "user", "error.user.not_found", "User not found")
 
@@ -45,7 +45,7 @@ func TestLayeredError_Error(t *testing.T) {
 	}
 }
 
-// TestLayeredError_Error_WithCause 测试 error 接口实现（带原始错误）
+// TestLayeredError_Error_WithCause tests the error interface implementation (with original error)
 func TestLayeredError_Error_WithCause(t *testing.T) {
 	originalErr := errors.New("database connection failed")
 	err := New(10, 1, "user", "error.user.not_found", "User not found").Wrap(originalErr)
@@ -56,28 +56,28 @@ func TestLayeredError_Error_WithCause(t *testing.T) {
 	}
 }
 
-// TestLayeredError_WithMsg 测试动态消息
+// TestLayeredError_WithMsg Test dynamic messages
 func TestLayeredError_WithMsg(t *testing.T) {
 	original := New(10, 1, "user", "error.user.not_found", "User not found")
 	modified := original.WithMsg("用户未找到")
 
-	// 原实例不变
+	// The original instance remains unchanged
 	if original.Message() != "User not found" {
 		t.Errorf("original message should not change, got %s", original.Message())
 	}
 
-	// 新实例消息已改变
+	// New instance message has changed
 	if modified.Message() != "用户未找到" {
 		t.Errorf("expected modified message '用户未找到', got %s", modified.Message())
 	}
 
-	// 错误码不变
+	// Error code remains unchanged
 	if modified.Code() != 100001 {
 		t.Errorf("code should not change, got %d", modified.Code())
 	}
 }
 
-// TestLayeredError_WithMsgf 测试格式化动态消息
+// TestLayeredError_WithMsgf Test formatted dynamic messages
 func TestLayeredError_WithMsgf(t *testing.T) {
 	err := New(10, 1, "user", "error.user.not_found", "User not found")
 	modified := err.WithMsgf("用户 %d 不存在", 123)
@@ -88,17 +88,17 @@ func TestLayeredError_WithMsgf(t *testing.T) {
 	}
 }
 
-// TestLayeredError_WithData 测试添加单个上下文数据
+// TestLayeredError_WithData Test adding single context data
 func TestLayeredError_WithData(t *testing.T) {
 	original := New(10, 1, "user", "error.user.not_found", "User not found")
 	modified := original.WithData("user_id", 123)
 
-	// 原实例不变
+	// The original instance remains unchanged
 	if len(original.Data()) != 0 {
 		t.Errorf("original data should be empty, got %d items", len(original.Data()))
 	}
 
-	// 新实例有数据
+	// The new instance has data
 	if len(modified.Data()) != 1 {
 		t.Errorf("expected 1 data item, got %d", len(modified.Data()))
 	}
@@ -107,7 +107,7 @@ func TestLayeredError_WithData(t *testing.T) {
 	}
 }
 
-// TestLayeredError_WithFields 测试批量添加上下文数据
+// TestLayeredError_WithFields test batch addition of context data
 func TestLayeredError_WithFields(t *testing.T) {
 	err := New(10, 1, "user", "error.user.not_found", "User not found")
 	modified := err.WithFields(map[string]interface{}{
@@ -126,7 +126,7 @@ func TestLayeredError_WithFields(t *testing.T) {
 	}
 }
 
-// TestLayeredError_Wrap 测试包装原始错误
+// TestLayeredError_Wrap test wrapping original error
 func TestLayeredError_Wrap(t *testing.T) {
 	originalErr := errors.New("database connection failed")
 	err := New(10, 1, "user", "error.user.not_found", "User not found")
@@ -136,13 +136,13 @@ func TestLayeredError_Wrap(t *testing.T) {
 		t.Errorf("expected cause to be %v, got %v", originalErr, wrapped.Cause())
 	}
 
-	// 测试 Unwrap
+	// Test Unwrap
 	if errors.Unwrap(wrapped) != originalErr {
 		t.Errorf("expected Unwrap to return %v, got %v", originalErr, errors.Unwrap(wrapped))
 	}
 }
 
-// TestLayeredError_Wrap_Nil 测试包装 nil 错误
+// TestLayeredError_Wrap_Nil test wrapping nil error
 func TestLayeredError_Wrap_Nil(t *testing.T) {
 	err := New(10, 1, "user", "error.user.not_found", "User not found")
 	wrapped := err.Wrap(nil)
@@ -152,7 +152,7 @@ func TestLayeredError_Wrap_Nil(t *testing.T) {
 	}
 }
 
-// TestLayeredError_Wrapf 测试包装错误并格式化消息
+// TestLayeredError_Wrapf test wrapped errors and format messages
 func TestLayeredError_Wrapf(t *testing.T) {
 	originalErr := errors.New("database connection failed")
 	err := New(10, 1, "user", "error.user.not_found", "User not found")
@@ -168,46 +168,46 @@ func TestLayeredError_Wrapf(t *testing.T) {
 	}
 }
 
-// TestLayeredError_Is 测试 errors.Is() 支持
+// TestLayeredError_Is tests support for errors.Is()
 func TestLayeredError_Is(t *testing.T) {
 	err1 := New(10, 1, "user", "error.user.not_found", "User not found")
 	err2 := New(10, 1, "user", "error.user.not_found", "User not found")
 	err3 := New(10, 2, "user", "error.user.exists", "用户已存在")
 
-	// 相同错误码
+	// Same error code
 	if !errors.Is(err1, err2) {
 		t.Errorf("err1 and err2 should be equal")
 	}
 
-	// 不同错误码
+	// Different error codes
 	if errors.Is(err1, err3) {
 		t.Errorf("err1 and err3 should not be equal")
 	}
 
-	// 动态消息不影响相等性
+	// Dynamic updates do not affect equality
 	err4 := err1.WithMsg("用户未找到")
 	if !errors.Is(err1, err4) {
 		t.Errorf("err1 and err4 should be equal (code is the same)")
 	}
 }
 
-// TestLayeredError_Is_WithCause 测试错误链中的 errors.Is()
+// TestLayeredError_Is_WithCause tests errors.Is() in error chain
 func TestLayeredError_Is_WithCause(t *testing.T) {
 	originalErr := errors.New("database connection failed")
 	err := New(10, 1, "user", "error.user.not_found", "User not found").Wrap(originalErr)
 
-	// 错误码相等
+	// Error codes are equal
 	if !errors.Is(err, New(10, 1, "user", "error.user.not_found", "User not found")) {
 		t.Errorf("should match by error code")
 	}
 
-	// 原始错误
+	// Original error
 	if !errors.Is(err, originalErr) {
 		t.Errorf("should match original error in chain")
 	}
 }
 
-// TestLayeredError_WithHTTPStatus 测试设置 HTTP 状态码
+// TestLayeredError_WithHTTPStatus tests setting HTTP status code
 func TestLayeredError_WithHTTPStatus(t *testing.T) {
 	err := New(10, 1, "user", "error.user.not_found", "User not found")
 	modified := err.WithHTTPStatus(http.StatusNotFound)
@@ -221,7 +221,7 @@ func TestLayeredError_WithHTTPStatus(t *testing.T) {
 	}
 }
 
-// TestLayeredError_String 测试 String() 方法
+// TestLayeredError_String test String() method
 func TestLayeredError_String(t *testing.T) {
 	err := New(10, 1, "user", "error.user.not_found", "User not found")
 	str := err.String()
@@ -232,7 +232,7 @@ func TestLayeredError_String(t *testing.T) {
 	}
 }
 
-// TestLayeredError_String_WithCause 测试 String() 方法（带原始错误）
+// TestLayeredError_String_WithCause tests the String() method (with original error)
 func TestLayeredError_String_WithCause(t *testing.T) {
 	originalErr := errors.New("database connection failed")
 	err := New(10, 1, "user", "error.user.not_found", "User not found").Wrap(originalErr)
@@ -244,7 +244,7 @@ func TestLayeredError_String_WithCause(t *testing.T) {
 	}
 }
 
-// TestLayeredError_ChainOperations 测试链式操作
+// TestLayeredError_ChainOperations test chained operations
 func TestLayeredError_ChainOperations(t *testing.T) {
 	err := New(10, 1, "user", "error.user.not_found", "User not found").
 		WithMsgf("用户 %d 不存在", 123).
@@ -263,20 +263,20 @@ func TestLayeredError_ChainOperations(t *testing.T) {
 	}
 }
 
-// TestLayeredError_ImmutableOriginal 测试原实例不可变性
+// TestLayeredError_ImmutableOriginal test original instance immutability
 func TestLayeredError_ImmutableOriginal(t *testing.T) {
 	original := New(10, 1, "user", "error.user.not_found", "User not found")
 	originalCode := original.Code()
 	originalMsg := original.Message()
 	originalDataLen := len(original.Data())
 
-	// 各种修改操作
+	// Various modification operations
 	_ = original.WithMsg("新消息")
 	_ = original.WithData("key", "value")
 	_ = original.WithHTTPStatus(http.StatusNotFound)
 	_ = original.Wrap(errors.New("cause"))
 
-	// 验证原实例未改变
+	// Verify that the original instance has not been altered
 	if original.Code() != originalCode {
 		t.Errorf("original code changed")
 	}

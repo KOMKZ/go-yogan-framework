@@ -8,7 +8,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// 获取测试用 Redis 客户端
+// Get test Redis client
 func getTestRedisClient(t *testing.T) *redis.Client {
 	client := redis.NewClient(&redis.Options{
 		Addr:     "localhost:6379",
@@ -16,7 +16,7 @@ func getTestRedisClient(t *testing.T) *redis.Client {
 		DB:       0,
 	})
 
-	// 检查连接
+	// Check connection
 	ctx := context.Background()
 	if err := client.Ping(ctx).Err(); err != nil {
 		t.Skipf("Redis not available: %v", err)
@@ -32,7 +32,7 @@ func TestRedisStore_Basic(t *testing.T) {
 	store := NewRedisStore("test-redis", client, "cache:test:")
 	ctx := context.Background()
 
-	// 清理测试数据
+	// Clean up test data
 	defer store.DeleteByPrefix(ctx, "")
 
 	t.Run("Name", func(t *testing.T) {

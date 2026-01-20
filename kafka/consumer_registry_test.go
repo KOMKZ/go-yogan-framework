@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// mockHandler 测试用 Handler
+// mockHandler test handler
 type mockHandler struct {
 	name   string
 	topics []string
@@ -25,7 +25,7 @@ func TestConsumerRegistry_Register(t *testing.T) {
 	err := registry.Register(handler)
 	require.NoError(t, err)
 
-	// 验证注册成功
+	// Verify registration success
 	h, ok := registry.Get("test-handler")
 	assert.True(t, ok)
 	assert.Equal(t, handler, h)
@@ -122,7 +122,7 @@ func TestConsumerRegistry_Unregister(t *testing.T) {
 	assert.True(t, removed)
 	assert.Equal(t, 0, registry.Count())
 
-	// 再次移除不存在的
+	// Remove non-existent again
 	removed = registry.Unregister("test")
 	assert.False(t, removed)
 }

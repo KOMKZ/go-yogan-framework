@@ -1,4 +1,4 @@
-// Package httpx 提供 HTTP 请求/响应的统一处理
+// The package httpx provides unified handling of HTTP requests/responses
 package httpx
 
 import (
@@ -12,14 +12,14 @@ import (
 	"go.uber.org/zap"
 )
 
-// Response 统一响应格式
+// Unified response format
 type Response struct {
 	Code int         `json:"code"`
 	Msg  string      `json:"msg,omitempty"`
 	Data interface{} `json:"data,omitempty"`
 }
 
-// OkJson 成功响应
+// OkJson successful response
 func OkJson(c *gin.Context, data interface{}) {
 	c.JSON(http.StatusOK, Response{
 		Code: 0,
@@ -28,7 +28,7 @@ func OkJson(c *gin.Context, data interface{}) {
 	})
 }
 
-// ErrorJson 错误响应（400 Bad Request）
+// ErrorJson error response (400 Bad Request)
 func ErrorJson(c *gin.Context, msg string) {
 	c.JSON(http.StatusBadRequest, Response{
 		Code: 400,
@@ -36,7 +36,7 @@ func ErrorJson(c *gin.Context, msg string) {
 	})
 }
 
-// BadRequestJson 400 错误响应
+// BadRequestJson 400 error response
 func BadRequestJson(c *gin.Context, err error) {
 	c.JSON(http.StatusBadRequest, Response{
 		Code: 400,
@@ -44,7 +44,7 @@ func BadRequestJson(c *gin.Context, err error) {
 	})
 }
 
-// NotFoundJson 404 错误响应
+// NotFoundJson 404 error response
 func NotFoundJson(c *gin.Context, msg string) {
 	c.JSON(http.StatusNotFound, Response{
 		Code: 404,
@@ -52,7 +52,7 @@ func NotFoundJson(c *gin.Context, msg string) {
 	})
 }
 
-// InternalErrorJson 500 错误响应
+// InternalErrorJson 500 error response
 func InternalErrorJson(c *gin.Context, msg string) {
 	c.JSON(http.StatusInternalServerError, Response{
 		Code: 500,
@@ -60,8 +60,8 @@ func InternalErrorJson(c *gin.Context, msg string) {
 	})
 }
 
-// NoRouteHandler 404 路由不存在处理器
-// 用于 engine.NoRoute() 注册，返回统一格式的 JSON 响应
+// NoRouteHandler 404 route not found handler
+// For registering engine.NoRoute(), returns a unified JSON response format
 func NoRouteHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.JSON(http.StatusNotFound, Response{
@@ -71,8 +71,8 @@ func NoRouteHandler() gin.HandlerFunc {
 	}
 }
 
-// NoMethodHandler 405 方法不允许处理器
-// 用于 engine.NoMethod() 注册，返回统一格式的 JSON 响应
+// NoMethodHandler 405 Method Not Allowed Handler
+// Used for engine.NoMethod() registration, returns a uniformly formatted JSON response
 func NoMethodHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.JSON(http.StatusMethodNotAllowed, Response{
@@ -82,38 +82,38 @@ func NoMethodHandler() gin.HandlerFunc {
 	}
 }
 
-// HandleError 智能处理错误（根据错误类型返回不同状态码）
-// 根据文章039最佳实践 + 文章041配置化日志：
-// 1. 提取 LayeredError 的错误码和消息返回给前端
-// 2. 根据配置决定是否记录完整错误链到后端日志（默认不记录）
-// 3. 使用 errors.Is 判断业务错误码
+// HandleError intelligently handles errors (returning different status codes based on error type)
+// According to Best Practices Article 039 + Configuration Logging Article 041:
+// Return the error code and message of LayeredError to the frontend
+// 2. Decide based on configuration whether to log the full error chain to backend logs (default is not to log)
+// 3. Use errors.Is to check for business error codes
 func HandleError(c *gin.Context, err error) {
 	if err == nil {
 		return
 	}
 
 	ctx := c.Request.Context()
-	cfg := getErrorLoggingConfig(c) // 从 Context 读取配置
+	cfg := getErrorLoggingConfig(c) // Read configuration from Context
 
-	// 1. 尝试提取 LayeredError
+	// Try to extract LayeredError
 	var layeredErr *errcode.LayeredError
 	if errors.As(err, &layeredErr) {
-		// 1.1 根据配置决定是否记录日志
+		// 1.1 Decide whether to log based on configuration
 		if shouldLogError(cfg, layeredErr) {
 			fields := []zap.Field{
 				zap.Int("error_code", layeredErr.Code()),
 				zap.String("error_msg", layeredErr.Message()),
 			}
 
-			// 如果配置了记录完整错误链，则添加详细信息
+			// If the full error chain recording is configured, add details
 			if cfg.FullErrorChain {
 				fields = append(fields,
-					zap.String("error_chain", layeredErr.String()), // 完整错误链
+					zap.String("error_chain", layeredErr.String()), // complete error chain
 					zap.Error(err), // 原始错误（支持 errors.Unwrap）
 				)
 			}
 
-			// 根据配置的日志级别记录
+			// Log according to the configured log level
 			logMessage := "业务错误"
 			switch cfg.LogLevel {
 			case "warn":
@@ -125,16 +125,16 @@ func HandleError(c *gin.Context, err error) {
 			}
 		}
 
-		// 1.2 返回 LayeredError 的 HTTP 状态码、错误码、消息
+		// 1.2 Returns the HTTP status code, error code, and message of a LayeredError
 		c.JSON(layeredErr.HTTPStatus(), Response{
 			Code: layeredErr.Code(),
-			Msg:  layeredErr.Message(), // 使用动态修改后的消息（WithMsgf）
-			Data: layeredErr.Data(),    // 可选：返回附加数据
+			Msg:  layeredErr.Message(), // Use dynamically modified message (WithMsgf)
+			Data: layeredErr.Data(),    // Optional: return additional data
 		})
 		return
 	}
 
-	// 2. 兼容旧的错误类型：数据库记录不存在 → 404
+	// 2. Compatibility for old error types: database record does not exist -> 404
 	if errors.Is(err, database.ErrRecordNotFound) {
 		if cfg.Enable {
 			logger.WarnCtx(ctx, "httpx", "资源不存在", zap.Error(err))
@@ -143,7 +143,7 @@ func HandleError(c *gin.Context, err error) {
 		return
 	}
 
-	// 3. 未知错误（默认） → 500（避免泄露内部信息）
+	// 3. Unknown error (default) -> 500 (to avoid leaking internal information)
 	if cfg.Enable {
 		logger.ErrorCtx(ctx, "httpx", "未知错误",
 			zap.Error(err),
@@ -153,14 +153,14 @@ func HandleError(c *gin.Context, err error) {
 	InternalErrorJson(c, "内部服务器错误")
 }
 
-// shouldLogError 根据配置判断是否应该记录日志
+// determine whether logging should occur based on configuration
 func shouldLogError(cfg errorLoggingConfigInternal, err *errcode.LayeredError) bool {
-	// 1. 检查总开关
+	// Check master switch
 	if !cfg.Enable {
 		return false
 	}
 
-	// 2. 检查是否在忽略列表中
+	// Check if in ignore list
 	if cfg.IgnoreStatusMap[err.HTTPStatus()] {
 		return false
 	}

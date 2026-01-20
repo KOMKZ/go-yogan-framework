@@ -1,12 +1,12 @@
-// Package limiter 提供限流器功能
+// Package limiter provides rate limiting functionality
 //
-// 设计理念：
-//   - 独立包，不依赖其他 yogan 组件（除 logger）
-//   - 事件驱动，应用层可订阅所有事件
-//   - 指标开放，应用层可访问实时数据
-//   - 可选启用，未配置时不生效
-//   - 支持多种算法：令牌桶、滑动窗口、并发限流、自适应
-//   - 支持多种存储：内存、Redis
+// Design philosophy:
+// - Standalone package, depends only on the logger component of yogan
+// - Event-driven, the application layer can subscribe to all events
+// - Metrics exposed, application layer can access real-time data
+// - Optional enablement, does not take effect if not configured
+// - Supports multiple algorithms: token bucket, sliding window, concurrent rate limiting, adaptive
+// - Support multiple storages: memory, Redis
 package limiter
 
 import (
@@ -14,51 +14,51 @@ import (
 	"time"
 )
 
-// Limiter 限流器核心接口
+// Limiter core interface
 type Limiter interface {
-	// Allow 检查是否允许请求（快速检查）
+	// Allow check if the request is permitted (quick check)
 	Allow(ctx context.Context, resource string) (bool, error)
 
-	// AllowN 检查是否允许N个请求
+	// AllowN checks if N requests are permitted
 	AllowN(ctx context.Context, resource string, n int64) (bool, error)
 
-	// Wait 等待获取许可（阻塞等待，支持超时）
+	// Wait for permission acquisition (blocking wait, supports timeout)
 	Wait(ctx context.Context, resource string) error
 
-	// WaitN 等待获取N个许可
+	// Wait for N licenses to be available
 	WaitN(ctx context.Context, resource string, n int64) error
 
-	// GetMetrics 获取指标快照
+	// GetMetrics获取指标快照
 	GetMetrics(resource string) *MetricsSnapshot
 
-	// GetEventBus 获取事件总线（用于订阅事件）
+	// GetEventBus Obtain the event bus (for subscribing to events)
 	GetEventBus() EventBus
 
-	// Reset 重置限流器状态
+	// Reset rate limiter state
 	Reset(resource string)
 
-	// Close 关闭限流器（清理资源）
+	// Close the rate limiter (clean up resources)
 	Close() error
 
-	// IsEnabled 检查限流器是否启用
+	// Check if the rate limiter is enabled
 	IsEnabled() bool
 }
 
-// Response 限流响应
+// Rate limiting response
 type Response struct {
-	// Allowed 是否允许
+	// Allowed 是否允许: Is allowed
 	Allowed bool
 
-	// RetryAfter 建议重试时间（Allowed=false时有效）
+	// RetryAfter suggests retry time (valid when Allowed=false)
 	RetryAfter time.Duration
 
-	// Remaining 剩余配额（令牌桶/滑动窗口）
+	// Remaining quota (token bucket/sliding window)
 	Remaining int64
 
-	// Limit 总限额
+	// Limit total quota
 	Limit int64
 
-	// ResetAt 配额重置时间
+	// ResetTime quota reset time
 	ResetAt time.Time
 }
 

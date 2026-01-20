@@ -12,7 +12,7 @@ import (
 )
 
 func newTestRedisClient(t *testing.T) *redis.Client {
-	// 使用 miniredis 模拟 Redis
+	// Use miniredis to simulate Redis
 	mr := miniredis.RunT(t)
 
 	client := redis.NewClient(&redis.Options{
@@ -36,16 +36,16 @@ func TestRedisTokenStore_IsBlacklisted(t *testing.T) {
 	ctx := context.Background()
 	token := "test-token"
 
-	// 未加入黑名单
+	// not added to blacklist
 	blacklisted, err := store.IsBlacklisted(ctx, token)
 	assert.NoError(t, err)
 	assert.False(t, blacklisted)
 
-	// 加入黑名单
+	// Add to blacklist
 	err = store.AddToBlacklist(ctx, token, 1*time.Hour)
 	assert.NoError(t, err)
 
-	// 已加入黑名单
+	// Added to blacklist
 	blacklisted, err = store.IsBlacklisted(ctx, token)
 	assert.NoError(t, err)
 	assert.True(t, blacklisted)
@@ -77,15 +77,15 @@ func TestRedisTokenStore_RemoveFromBlacklist(t *testing.T) {
 	ctx := context.Background()
 	token := "test-token"
 
-	// 加入黑名单
+	// Add to blacklist
 	err := store.AddToBlacklist(ctx, token, 1*time.Hour)
 	assert.NoError(t, err)
 
-	// 移除黑名单
+	// Remove blacklisted entries
 	err = store.RemoveFromBlacklist(ctx, token)
 	assert.NoError(t, err)
 
-	// 已移除
+	// removed
 	blacklisted, err := store.IsBlacklisted(ctx, token)
 	assert.NoError(t, err)
 	assert.False(t, blacklisted)
@@ -100,17 +100,17 @@ func TestRedisTokenStore_BlacklistUserTokens(t *testing.T) {
 	ctx := context.Background()
 	subject := "user123"
 
-	// 拉黑用户
+	// block user
 	err := store.BlacklistUserTokens(ctx, subject, 1*time.Hour)
 	assert.NoError(t, err)
 
-	// 检查旧 Token（签发时间早于拉黑时间）
+	// Check old token (issued time is earlier than blacklist time)
 	oldIssuedAt := time.Now().Add(-1 * time.Hour)
 	blacklisted, err := store.IsUserBlacklisted(ctx, subject, oldIssuedAt)
 	assert.NoError(t, err)
 	assert.True(t, blacklisted)
 
-	// 检查新 Token（签发时间晚于拉黑时间）
+	// Check for new token (issuance time is later than blacklist time)
 	time.Sleep(10 * time.Millisecond)
 	newIssuedAt := time.Now()
 	blacklisted, err = store.IsUserBlacklisted(ctx, subject, newIssuedAt)
@@ -127,16 +127,16 @@ func TestRedisTokenStore_IsUserBlacklisted(t *testing.T) {
 	ctx := context.Background()
 	subject := "user123"
 
-	// 未拉黑
+	// not blacklisted
 	blacklisted, err := store.IsUserBlacklisted(ctx, subject, time.Now())
 	assert.NoError(t, err)
 	assert.False(t, blacklisted)
 
-	// 拉黑用户
+	// blacklist user
 	err = store.BlacklistUserTokens(ctx, subject, 1*time.Hour)
 	assert.NoError(t, err)
 
-	// 旧 Token 被拉黑
+	// Old Token is blacklisted
 	oldIssuedAt := time.Now().Add(-1 * time.Hour)
 	blacklisted, err = store.IsUserBlacklisted(ctx, subject, oldIssuedAt)
 	assert.NoError(t, err)

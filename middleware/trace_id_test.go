@@ -12,15 +12,15 @@ import (
 func TestTraceID_GenerateNew(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	// 创建测试路由
+	// Create test route
 	router := gin.New()
 	router.Use(TraceID(DefaultTraceConfig()))
 	router.GET("/test", func(c *gin.Context) {
-		// 从 gin.Context 获取 TraceID
+		// Retrieve TraceID from gin.Context
 		traceID := GetTraceID(c)
 		assert.NotEmpty(t, traceID, "TraceID 不应为空")
 
-		// 从 context.Context 获取 TraceID
+		// Get TraceID from context.Context
 		ctxTraceID := c.Request.Context().Value(TraceIDKeyDefault)
 		assert.NotNil(t, ctxTraceID, "Context 中应包含 TraceID")
 		assert.Equal(t, traceID, ctxTraceID, "gin.Context 和 context.Context 中的 TraceID 应一致")
@@ -28,12 +28,12 @@ func TestTraceID_GenerateNew(t *testing.T) {
 		c.JSON(200, gin.H{"trace_id": traceID})
 	})
 
-	// 发起请求（不携带 TraceID Header）
+	// Initiate request (without TraceID header)
 	req := httptest.NewRequest("GET", "/test", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	// 验证响应
+	// Validate response
 	assert.Equal(t, 200, w.Code)
 	assert.NotEmpty(t, w.Header().Get(TraceIDHeaderDefault), "Response Header 应包含 TraceID")
 }
@@ -41,7 +41,7 @@ func TestTraceID_GenerateNew(t *testing.T) {
 func TestTraceID_FromHeader(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	// 创建测试路由
+	// Create test routes
 	router := gin.New()
 	router.Use(TraceID(DefaultTraceConfig()))
 	router.GET("/test", func(c *gin.Context) {
@@ -49,14 +49,14 @@ func TestTraceID_FromHeader(t *testing.T) {
 		c.JSON(200, gin.H{"trace_id": traceID})
 	})
 
-	// 发起请求（携带自定义 TraceID）
+	// Initiate request (with custom TraceID)
 	customTraceID := "custom-trace-id-12345"
 	req := httptest.NewRequest("GET", "/test", nil)
 	req.Header.Set(TraceIDHeaderDefault, customTraceID)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	// 验证响应
+	// Verify response
 	assert.Equal(t, 200, w.Code)
 	assert.Equal(t, customTraceID, w.Header().Get(TraceIDHeaderDefault), "应使用客户端传入的 TraceID")
 }
@@ -64,7 +64,7 @@ func TestTraceID_FromHeader(t *testing.T) {
 func TestTraceID_DisableResponseHeader(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	// 创建测试路由（禁用 Response Header）
+	// Create test route (disable Response Header)
 	cfg := DefaultTraceConfig()
 	cfg.EnableResponseHeader = false
 
@@ -75,12 +75,12 @@ func TestTraceID_DisableResponseHeader(t *testing.T) {
 		c.JSON(200, gin.H{"trace_id": traceID})
 	})
 
-	// 发起请求
+	// Initiate request
 	req := httptest.NewRequest("GET", "/test", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	// 验证响应（不应包含 TraceID Header）
+	// Verify response (should not contain TraceID header)
 	assert.Equal(t, 200, w.Code)
 	assert.Empty(t, w.Header().Get(TraceIDHeaderDefault), "Response Header 不应包含 TraceID")
 }
@@ -88,7 +88,7 @@ func TestTraceID_DisableResponseHeader(t *testing.T) {
 func TestTraceID_CustomGenerator(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	// 自定义生成器
+	// Custom generator
 	customID := "custom-generated-id"
 	cfg := DefaultTraceConfig()
 	cfg.Generator = func() string {
@@ -103,7 +103,7 @@ func TestTraceID_CustomGenerator(t *testing.T) {
 		c.JSON(200, gin.H{"trace_id": traceID})
 	})
 
-	// 发起请求
+	// Initiate request
 	req := httptest.NewRequest("GET", "/test", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -115,7 +115,7 @@ func TestTraceID_CustomGenerator(t *testing.T) {
 func TestTraceID_CustomKeys(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	// 自定义 Key
+	// Custom Key
 	customKey := "request_id"
 	customHeader := "X-Request-ID"
 	cfg := DefaultTraceConfig()
@@ -130,7 +130,7 @@ func TestTraceID_CustomKeys(t *testing.T) {
 		c.JSON(200, gin.H{"trace_id": traceID})
 	})
 
-	// 发起请求
+	// Initiate request
 	req := httptest.NewRequest("GET", "/test", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -142,7 +142,7 @@ func TestTraceID_CustomKeys(t *testing.T) {
 func TestGetTraceID_NotExists(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	// 创建未使用 TraceID 中间件的路由
+	// Create a route without using the TraceID middleware
 	router := gin.New()
 	router.GET("/test", func(c *gin.Context) {
 		traceID := GetTraceID(c)
@@ -166,7 +166,7 @@ func TestTraceID_ContextPropagation(t *testing.T) {
 	var capturedTraceID string
 
 	router.GET("/test", func(c *gin.Context) {
-		// 从 Context 获取
+		// Retrieve from Context
 		ctx := c.Request.Context()
 		if val := ctx.Value(TraceIDKeyDefault); val != nil {
 			capturedTraceID = val.(string)

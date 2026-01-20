@@ -8,7 +8,7 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-// TestExtractTraceIDFromContext 测试从 Context 提取 TraceID
+// TestExtractTraceIDFromContext test extracting TraceID from Context
 func TestExtractTraceIDFromContext(t *testing.T) {
 	t.Run("有TraceID", func(t *testing.T) {
 		ctx := context.WithValue(context.Background(), TraceIDKey, "test-trace-123")
@@ -29,7 +29,7 @@ func TestExtractTraceIDFromContext(t *testing.T) {
 	})
 }
 
-// TestInjectTraceIDToMetadata 测试将 TraceID 注入到 metadata
+// TestInjectTraceIDToMetadata test inject TraceID into metadata
 func TestInjectTraceIDToMetadata(t *testing.T) {
 	t.Run("新建metadata", func(t *testing.T) {
 		ctx := context.Background()
@@ -42,11 +42,11 @@ func TestInjectTraceIDToMetadata(t *testing.T) {
 	})
 
 	t.Run("追加到已有metadata", func(t *testing.T) {
-		// 创建已有 metadata
+		// Create existing metadata
 		md := metadata.New(map[string]string{"existing-key": "existing-value"})
 		ctx := metadata.NewOutgoingContext(context.Background(), md)
 
-		// 注入 TraceID
+		// Inject TraceID
 		ctx = injectTraceIDToMetadata(ctx, "test-trace-789")
 
 		newMd, ok := metadata.FromOutgoingContext(ctx)
@@ -57,7 +57,7 @@ func TestInjectTraceIDToMetadata(t *testing.T) {
 	})
 }
 
-// TestExtractTraceIDFromMetadata 测试从 metadata 提取 TraceID
+// TestExtractTraceIDFromMetadata test extracting TraceID from metadata
 func TestExtractTraceIDFromMetadata(t *testing.T) {
 	t.Run("有TraceID", func(t *testing.T) {
 		md := metadata.New(map[string]string{TraceIDMetadataKey: "test-trace-abc"})
@@ -82,33 +82,33 @@ func TestExtractTraceIDFromMetadata(t *testing.T) {
 	})
 }
 
-// TestTraceIDPropagation 测试 TraceID 完整传播流程
+// TestTraceIDPropagation test complete TraceID propagation flow
 func TestTraceIDPropagation(t *testing.T) {
-	// 模拟完整流程：
-	// 1. HTTP 请求生成 TraceID 并注入到 Context
-	// 2. 客户端拦截器提取并注入到 metadata
-	// 3. 服务端拦截器从 metadata 提取并注入到 Context
+	// Simulate complete process:
+	// 1. Generate TraceID for HTTP request and inject into Context
+	// 2. The client interceptor extracts and injects into metadata
+	// 3. The server interceptor extracts metadata and injects it into the context
 
 	t.Run("客户端到服务端的TraceID传播", func(t *testing.T) {
-		// ① 模拟 HTTP 请求生成的 TraceID
+		// Generate a TraceID for simulated HTTP requests
 		originalTraceID := "http-req-trace-001"
 		clientCtx := context.WithValue(context.Background(), TraceIDKey, originalTraceID)
 
-		// ② 客户端拦截器：提取 TraceID 并注入到 metadata
+		// Client interceptor: extract TraceID and inject into metadata
 		clientCtx = injectTraceIDToMetadata(clientCtx, originalTraceID)
 
-		// ③ 模拟 gRPC 传输（将 outgoing metadata 转为 incoming metadata）
+		// Simulate gRPC transmission (convert outgoing metadata to incoming metadata)
 		outgoingMd, _ := metadata.FromOutgoingContext(clientCtx)
 		serverCtx := metadata.NewIncomingContext(context.Background(), outgoingMd)
 
-		// ④ 服务端拦截器：从 metadata 提取 TraceID
+		// English: ④ Server interceptor: Extract TraceID from metadata
 		extractedTraceID := extractTraceIDFromMetadata(serverCtx)
 		assert.Equal(t, originalTraceID, extractedTraceID)
 
-		// ⑤ 注入到服务端 Context
+		// ⑤ Inject into server-side Context
 		serverCtx = context.WithValue(serverCtx, TraceIDKey, extractedTraceID)
 
-		// ⑥ 验证服务端 Context 中的 TraceID
+		// Verify the TraceID in the server-side Context
 		finalTraceID := extractTraceIDFromContext(serverCtx)
 		assert.Equal(t, originalTraceID, finalTraceID)
 	})

@@ -8,26 +8,26 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
-// HTTPMetricsConfig HTTP 指标配置
+// HTTP Metrics Config HTTP metric configuration
 type HTTPMetricsConfig struct {
 	Enabled            bool
 	RecordRequestSize  bool
 	RecordResponseSize bool
 }
 
-// HTTPMetrics HTTP 层指标收集器
+// HTTPMetrics HTTP layer metric collector
 // Implements component.MetricsProvider interface
 type HTTPMetrics struct {
 	config           HTTPMetricsConfig
-	requestsTotal    metric.Int64Counter       // 请求总数
-	requestDuration  metric.Float64Histogram   // 请求耗时
-	requestsInFlight metric.Int64UpDownCounter // 正在处理的请求数
-	requestSize      metric.Int64Histogram     // 请求大小（可选）
-	responseSize     metric.Int64Histogram     // 响应大小（可选）
+	requestsTotal    metric.Int64Counter       // total request count
+	requestDuration  metric.Float64Histogram   // request duration
+	requestsInFlight metric.Int64UpDownCounter // The number of requests being processed
+	requestSize      metric.Int64Histogram     // request size (optional)
+	responseSize     metric.Int64Histogram     // Response size (optional)
 	registered       bool
 }
 
-// NewHTTPMetrics 创建 HTTP 指标收集器
+// Create new HTTP metrics collector
 func NewHTTPMetrics(cfg HTTPMetricsConfig) *HTTPMetrics {
 	return &HTTPMetrics{
 		config: cfg,
@@ -182,7 +182,7 @@ func (m *HTTPMetrics) Handler() gin.HandlerFunc {
 	}
 }
 
-// getStatusClass 获取状态码类别（降低基数）
+// Get status category (reduce cardinality)
 func getStatusClass(statusCode int) string {
 	switch {
 	case statusCode >= 200 && statusCode < 300:
@@ -198,6 +198,6 @@ func getStatusClass(statusCode int) string {
 	}
 }
 
-// CalculateQPS 辅助函数：通过 rate(http_requests_total[1m]) 计算 QPS（在查询侧使用）
-// CalculateErrorRate 辅助函数：错误率 = rate(http_requests_total{status_code=~"5.."}[5m]) / rate(http_requests_total[5m])
+// Helper function CalculateQPS: calculates QPS using rate(http_requests_total[1m]) (used in the query side)
+// CalculateErrorRate helper function: error_rate = rate(http_requests_total{status_code=~"5.."}[5m]) / rate(http_requests_total[5m])
 

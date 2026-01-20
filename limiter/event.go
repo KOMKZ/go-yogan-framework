@@ -5,30 +5,30 @@ import (
 	"time"
 )
 
-// EventType 事件类型
+// Event Type
 type EventType string
 
 const (
-	// EventAllowed 允许通过
+	// EventAllowed permission granted
 	EventAllowed EventType = "allowed"
 
-	// EventRejected 拒绝请求
+	// EventRejected reject request
 	EventRejected EventType = "rejected"
 
-	// EventWaitStart 开始等待
+	// EventWaitStart Start waiting
 	EventWaitStart EventType = "wait_start"
 
-	// EventWaitSuccess 等待成功
+	// EventWaitSuccess wait successful
 	EventWaitSuccess EventType = "wait_success"
 
-	// EventWaitTimeout 等待超时
+	// EventWaitTimeout wait timeout
 	EventWaitTimeout EventType = "wait_timeout"
 
-	// EventLimitChanged 限流阈值变化（自适应）
+	// EventLimitChanged Threshold change for rate limiting (adaptive)
 	EventLimitChanged EventType = "limit_changed"
 )
 
-// Event 事件接口
+// Event interface
 type Event interface {
 	Type() EventType
 	Resource() string
@@ -36,7 +36,7 @@ type Event interface {
 	Timestamp() time.Time
 }
 
-// BaseEvent 基础事件
+// BaseEvent basic event
 type BaseEvent struct {
 	eventType EventType
 	resource  string
@@ -44,7 +44,7 @@ type BaseEvent struct {
 	timestamp time.Time
 }
 
-// NewBaseEvent 创建基础事件
+// NewBaseEvent creates a base event
 func NewBaseEvent(eventType EventType, resource string, ctx context.Context) BaseEvent {
 	return BaseEvent{
 		eventType: eventType,
@@ -54,48 +54,48 @@ func NewBaseEvent(eventType EventType, resource string, ctx context.Context) Bas
 	}
 }
 
-// Type 返回事件类型
+// Type Return event type
 func (e *BaseEvent) Type() EventType {
 	return e.eventType
 }
 
-// Resource 返回资源
+// Resource returns resource
 func (e *BaseEvent) Resource() string {
 	return e.resource
 }
 
-// Context 返回上下文
+// Context returns the context
 func (e *BaseEvent) Context() context.Context {
 	return e.ctx
 }
 
-// Timestamp 返回时间戳
+// Return timestamp
 func (e *BaseEvent) Timestamp() time.Time {
 	return e.timestamp
 }
 
-// AllowedEvent 允许事件
+// AllowedEvent permitted events
 type AllowedEvent struct {
 	BaseEvent
 	Remaining int64
 	Limit     int64
 }
 
-// RejectedEvent 拒绝事件
+// RejectedEvent rejected event
 type RejectedEvent struct {
 	BaseEvent
 	RetryAfter time.Duration
 	Reason     string
 }
 
-// WaitEvent 等待事件
+// WaitEvent waiting event
 type WaitEvent struct {
 	BaseEvent
 	Success bool
 	Waited  time.Duration
 }
 
-// LimitChangedEvent 限流阈值变化事件（自适应）
+// LimitChangedEvent Throttling threshold change event (adaptive)
 type LimitChangedEvent struct {
 	BaseEvent
 	OldLimit    int64
@@ -105,28 +105,28 @@ type LimitChangedEvent struct {
 	SystemLoad  float64
 }
 
-// EventListener 事件监听器接口
+// EventListener event listener interface
 type EventListener interface {
 	OnEvent(event Event)
 }
 
-// EventListenerFunc 事件监听器函数类型
+// EventListenerFunc event listener function type
 type EventListenerFunc func(event Event)
 
-// OnEvent 实现EventListener接口
+// OnEvent implements EventListener interface
 func (f EventListenerFunc) OnEvent(event Event) {
 	f(event)
 }
 
-// EventBus 事件总线接口
+// EventBus event bus interface
 type EventBus interface {
-	// Subscribe 订阅事件
+	// Subscribe to event
 	Subscribe(listener EventListener)
 
-	// Publish 发布事件
+	// Publish event
 	Publish(event Event)
 
-	// Close 关闭事件总线
+	// Close event bus
 	Close()
 }
 

@@ -2,88 +2,88 @@ package grpc
 
 import "fmt"
 
-// Config gRPC 组件配置（第一阶段：基础功能）
+// Configure gRPC component configuration (Phase One: Basic Functionality)
 type Config struct {
 	Server  ServerConfig            `mapstructure:"server"`
 	Clients map[string]ClientConfig `mapstructure:"clients"`
 }
 
-// ServerConfig gRPC 服务端配置
+// ServerConfig gRPC server configuration
 type ServerConfig struct {
-	Enabled       bool            `mapstructure:"enabled"`        // 是否启用 gRPC Server
-	Port          int             `mapstructure:"port"`           // 监听端口
-	MaxRecvSize   int             `mapstructure:"max_recv_size"`  // 最大接收大小（MB）
-	MaxSendSize   int             `mapstructure:"max_send_size"`  // 最大发送大小（MB）
-	EnableReflect bool            `mapstructure:"enable_reflect"` // 启用反射（方便调试）
-	EnableLog     *bool           `mapstructure:"enable_log"`     // 启用拦截器日志（nil=默认true，false=禁用）
-	Registry      RegistryConfig  `mapstructure:"registry"`       // 服务注册配置
+	Enabled       bool            `mapstructure:"enabled"`        // Whether to enable gRPC Server
+	Port          int             `mapstructure:"port"`           // Listen for port
+	MaxRecvSize   int             `mapstructure:"max_recv_size"`  // Maximum receive size (MB)
+	MaxSendSize   int             `mapstructure:"max_send_size"`  // Maximum send size (MB)
+	EnableReflect bool            `mapstructure:"enable_reflect"` // Enable reflection (for convenient debugging)
+	EnableLog     *bool           `mapstructure:"enable_log"`     // Enable interceptor logging (nil=default true, false=disable)
+	Registry      RegistryConfig  `mapstructure:"registry"`       // Service registration configuration
 }
 
-// IsLogEnabled 返回是否启用日志（默认 true）
+// Returns whether logging is enabled (default true)
 func (c *ServerConfig) IsLogEnabled() bool {
 	if c.EnableLog == nil {
-		return true // 默认启用
+		return true // Default enabled
 	}
 	return *c.EnableLog
 }
 
-// RegistryConfig 服务注册配置
+// RegistryConfig service registration configuration
 type RegistryConfig struct {
-	Enabled     bool     `mapstructure:"enabled"`      // 是否启用服务注册
-	ServiceName string   `mapstructure:"service_name"` // 服务名称
-	TTL         int64    `mapstructure:"ttl"`          // 租约TTL（秒）
-	Endpoints   []string `mapstructure:"endpoints"`    // etcd 节点地址（如 ["127.0.0.1:2379"]）
-	Address     string   `mapstructure:"address"`      // 服务注册地址（可选，默认自动获取本机IP）
+	Enabled     bool     `mapstructure:"enabled"`      // Whether service registration is enabled
+	ServiceName string   `mapstructure:"service_name"` // service name
+	TTL         int64    `mapstructure:"ttl"`          // lease TTL (seconds)
+	Endpoints   []string `mapstructure:"endpoints"`    // etcd node address (e.g., ["127.0.0.1:2379"])
+	Address     string   `mapstructure:"address"`      // Service registration address (optional, defaults to automatically obtaining the local IP)
 }
 
-// ClientConfig gRPC 客户端配置
+// ClientConfig gRPC client configuration
 type ClientConfig struct {
-	// 模式1：直连模式（向下兼容）
-	Target  string `mapstructure:"target"`  // 直连地址（如 127.0.0.1:9000）
-	Timeout int    `mapstructure:"timeout"` // 超时时间（秒，默认5秒）
+	// Mode 1: Direct Connection Mode (Backward Compatible)
+	Target  string `mapstructure:"target"`  // Direct connection address (e.g., 127.0.0.1:9000)
+	Timeout int    `mapstructure:"timeout"` // Timeout duration in seconds (default 5 seconds)
 	
-	// 模式2：服务发现模式
-	DiscoveryMode string `mapstructure:"discovery_mode"` // 发现模式: "direct" | "etcd"
-	ServiceName   string `mapstructure:"service_name"`   // 服务名（用于etcd服务发现）
-	LoadBalance   string `mapstructure:"load_balance"`   // 负载均衡: "round_robin" | "random"
+	// Mode 2: Service Discovery Mode
+	DiscoveryMode string `mapstructure:"discovery_mode"` // Discover pattern: "direct" | "etcd"
+	ServiceName   string `mapstructure:"service_name"`   // Service name (for etcd service discovery)
+	LoadBalance   string `mapstructure:"load_balance"`   // Load balancing: "round_robin" | "random"
 	
-	// 日志配置
-	EnableLog *bool `mapstructure:"enable_log"` // 启用拦截器日志（nil=默认true，false=禁用）
+	// log configuration
+	EnableLog *bool `mapstructure:"enable_log"` // Enable interceptor logs (nil=default true, false=disable)
 }
 
-// GetTimeout 返回超时时间（秒，默认5秒）
+// GetTimeout returns the timeout duration in seconds (default 5 seconds)
 func (c *ClientConfig) GetTimeout() int {
 	if c.Timeout <= 0 {
-		return 5 // 默认5秒
+		return 5 // Default 5 seconds
 	}
 	return c.Timeout
 }
 
-// IsLogEnabled 返回是否启用日志（默认 true）
+// Returns whether logging is enabled (default true)
 func (c *ClientConfig) IsLogEnabled() bool {
 	if c.EnableLog == nil {
-		return true // 默认启用
+		return true // Enable by default
 	}
 	return *c.EnableLog
 }
 
-// GetMode 获取连接模式（兼容旧配置）
+// Get connection mode (compatible with old configuration)
 func (c *ClientConfig) GetMode() string {
 	if c.DiscoveryMode != "" {
 		return c.DiscoveryMode
 	}
-	// 如果配置了 Target，默认为直连模式
+	// If Target is configured, default to direct connection mode
 	if c.Target != "" {
 		return "direct"
 	}
-	// 如果配置了 ServiceName，默认为 etcd 模式
+	// If ServiceName is configured, default to etcd mode
 	if c.ServiceName != "" {
 		return "etcd"
 	}
 	return "direct"
 }
 
-// Validate 验证配置
+// Validate configuration
 func (c *ClientConfig) Validate() error {
 	mode := c.GetMode()
 	

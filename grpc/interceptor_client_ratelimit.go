@@ -10,35 +10,35 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// UnaryClientRateLimitInterceptor 客户端限速拦截器
+// UnaryClientRateLimitInterceptor client rate limiting interceptor
 //
-// 资源名称：{serviceName}:{method} (如 "auth-app:/auth.AuthService/Login")
+// Resource name: {serviceName}:{method} (e.g., "auth-app:/auth.AuthService/Login")
 //
-// 限速策略：
-// 1. 如果方法级配置了限流规则，使用方法级规则
-// 2. 如果方法级未配置，使用 default 配置（如果 default 有效）
-// 3. 如果 default 无效或未配置，直接放行
+// Speed limit strategy:
+// If rate limiting rules are configured at the method level, use the method-level rules
+// If method-level configuration is not set, use the default configuration (if default is valid)
+// 3. If default is invalid or not configured, allow directly
 //
-// 参数：
-//   - clientMgr: 客户端管理器（用于获取限速管理器）
-//   - serviceName: 服务名称（在 grpc.clients 中配置的名称）
+// Parameters:
+// - clientMgr: Client manager (used to obtain rate limiting manager)
+// - serviceName: service name (name configured in grpc.clients)
 func UnaryClientRateLimitInterceptor(clientMgr *ClientManager, serviceName string) grpc.UnaryClientInterceptor {
 	return func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-		// 获取限速管理器
+		// Get rate limiter manager
 		limiterMgr := clientMgr.GetLimiter()
 		if limiterMgr == nil || !limiterMgr.IsEnabled() {
-			// 未启用限速，直接透传
+			// No speed limit enabled, pass through directly
 			return invoker(ctx, method, req, reply, cc, opts...)
 		}
 
-		// 🎯 检查限流（资源名称：serviceName:method）
-		// 如果方法级未配置，会自动使用 default 配置（如果 default 有效）
+		// 🎯 Check rate limiting (resource name: serviceName:method)
+		// If not configured at the method level, the default configuration will be used automatically (if the default is valid)
 		methodResource := fmt.Sprintf("%s:%s", serviceName, method)
 
 		allowed, err := limiterMgr.Allow(ctx, methodResource)
 		if err != nil {
-			// 限速检查失败（可能是配置错误），记录日志但不阻断
-			// 这样可以避免限速组件异常影响正常调用
+			// Speed limit check failed (possibly due to configuration error), log but do not block
+			// This can prevent abnormalities in the rate limiting component from affecting normal calls
 			clientMgr.logger.WarnCtx(ctx, "⚠️  Rate limit check failed, allowing request",
 				zap.String("service", serviceName),
 				zap.String("method", method),
@@ -48,7 +48,7 @@ func UnaryClientRateLimitInterceptor(clientMgr *ClientManager, serviceName strin
 		}
 
 		if !allowed {
-			// 限流触发
+			// rate limiting triggered
 			clientMgr.logger.WarnCtx(ctx, "🚫 Request rate limited",
 				zap.String("service", serviceName),
 				zap.String("method", method),
@@ -57,7 +57,7 @@ func UnaryClientRateLimitInterceptor(clientMgr *ClientManager, serviceName strin
 				"rate limit exceeded for %s", method)
 		}
 
-		// 限速通过，执行请求
+		// Speed limit enforcement, execute request
 		return invoker(ctx, method, req, reply, cc, opts...)
 	}
 }

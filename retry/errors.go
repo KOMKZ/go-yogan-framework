@@ -6,23 +6,23 @@ import (
 	"strings"
 )
 
-// MultiError 多次重试失败的错误聚合
+// MultiError aggregation of failures from multiple retry attempts
 type MultiError struct {
-	Errors   []error // 所有尝试的错误
-	Attempts int     // 尝试次数
+	Errors   []error // All attempted errors
+	Attempts int     // attempt count
 }
 
-// Error 实现 error 接口
+// Implement error interface
 func (e *MultiError) Error() string {
 	if len(e.Errors) == 0 {
 		return "retry failed: no errors"
 	}
 	
-	// 返回最后一次的错误
+	// Return the last error
 	return e.Errors[len(e.Errors)-1].Error()
 }
 
-// Unwrap 实现 errors.Unwrap 接口（返回最后一次错误）
+// Unwrap implements the errors.Unwrap interface (returns the innermost error)
 func (e *MultiError) Unwrap() error {
 	if len(e.Errors) == 0 {
 		return nil
@@ -30,7 +30,7 @@ func (e *MultiError) Unwrap() error {
 	return e.Errors[len(e.Errors)-1]
 }
 
-// AllErrors 返回所有错误的字符串表示
+// Returns the string representation of all errors
 func (e *MultiError) AllErrors() string {
 	if len(e.Errors) == 0 {
 		return ""
@@ -45,7 +45,7 @@ func (e *MultiError) AllErrors() string {
 	return b.String()
 }
 
-// LastError 返回最后一次的错误
+// Returns the last error
 func (e *MultiError) LastError() error {
 	if len(e.Errors) == 0 {
 		return nil
@@ -53,7 +53,7 @@ func (e *MultiError) LastError() error {
 	return e.Errors[len(e.Errors)-1]
 }
 
-// FirstError 返回第一次的错误
+// Returns the first error
 func (e *MultiError) FirstError() error {
 	if len(e.Errors) == 0 {
 		return nil
@@ -62,14 +62,14 @@ func (e *MultiError) FirstError() error {
 }
 
 // ============================================================
-// 预定义错误
+// Predefined error
 // ============================================================
 
 var (
-	// ErrMaxAttemptsExceeded 超过最大重试次数
+	// ErrMaxAttemptsExceeded Maximum retry attempts exceeded
 	ErrMaxAttemptsExceeded = errors.New("retry: max attempts exceeded")
 	
-	// ErrBudgetExhausted 重试预算耗尽
+	// ErrBudgetExhausted retry budget exhausted
 	ErrBudgetExhausted = errors.New("retry: budget exhausted")
 )
 

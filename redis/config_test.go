@@ -121,7 +121,7 @@ func TestConfig_ApplyDefaults_PreservesExisting(t *testing.T) {
 
 	cfg.ApplyDefaults()
 
-	// 已设置的值不应被覆盖
+	// The set value should not be overwritten
 	assert.Equal(t, "cluster", cfg.Mode)
 	assert.Equal(t, 20, cfg.PoolSize)
 	assert.Equal(t, 10, cfg.MinIdleConns)

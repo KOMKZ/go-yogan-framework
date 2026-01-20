@@ -10,14 +10,14 @@ import (
 	"go.uber.org/zap"
 )
 
-// RedisTokenStore Redis Token 存储（生产环境）
+// RedisTokenStore Redis token storage (production environment)
 type RedisTokenStore struct {
 	client    *redis.Client
 	keyPrefix string
 	logger    *logger.CtxZapLogger
 }
 
-// NewRedisTokenStore 创建 Redis Token 存储
+// NewRedisTokenStore creates Redis Token storage
 func NewRedisTokenStore(client *redis.Client, keyPrefix string, log *logger.CtxZapLogger) *RedisTokenStore {
 	return &RedisTokenStore{
 		client:    client,
@@ -26,7 +26,7 @@ func NewRedisTokenStore(client *redis.Client, keyPrefix string, log *logger.CtxZ
 	}
 }
 
-// IsBlacklisted 检查 Token 是否在黑名单
+// Check if Token is in blacklist
 func (s *RedisTokenStore) IsBlacklisted(ctx context.Context, token string) (bool, error) {
 	key := s.tokenKey(token)
 	exists, err := s.client.Exists(ctx, key).Result()
@@ -41,7 +41,7 @@ func (s *RedisTokenStore) IsBlacklisted(ctx context.Context, token string) (bool
 	return exists > 0, nil
 }
 
-// AddToBlacklist 添加到黑名单
+// AddToBlacklist Add to blacklist
 func (s *RedisTokenStore) AddToBlacklist(ctx context.Context, token string, ttl time.Duration) error {
 	key := s.tokenKey(token)
 	err := s.client.Set(ctx, key, "1", ttl).Err()
@@ -62,7 +62,7 @@ func (s *RedisTokenStore) AddToBlacklist(ctx context.Context, token string, ttl 
 	return nil
 }
 
-// RemoveFromBlacklist 从黑名单移除
+// RemoveFromBlacklist Remove from blacklist
 func (s *RedisTokenStore) RemoveFromBlacklist(ctx context.Context, token string) error {
 	key := s.tokenKey(token)
 	err := s.client.Del(ctx, key).Err()
@@ -81,7 +81,7 @@ func (s *RedisTokenStore) RemoveFromBlacklist(ctx context.Context, token string)
 	return nil
 }
 
-// BlacklistUserTokens 添加用户所有 Token 到黑名单
+// Add all user tokens to the blacklist
 func (s *RedisTokenStore) BlacklistUserTokens(ctx context.Context, subject string, ttl time.Duration) error {
 	key := s.userKey(subject)
 	timestamp := time.Now().Unix()
@@ -103,7 +103,7 @@ func (s *RedisTokenStore) BlacklistUserTokens(ctx context.Context, subject strin
 	return nil
 }
 
-// IsUserBlacklisted 检查用户是否被全局拉黑
+// Check if user is globally blacklisted
 func (s *RedisTokenStore) IsUserBlacklisted(ctx context.Context, subject string, issuedAt time.Time) (bool, error) {
 	key := s.userKey(subject)
 	result, err := s.client.Get(ctx, key).Result()
@@ -118,29 +118,29 @@ func (s *RedisTokenStore) IsUserBlacklisted(ctx context.Context, subject string,
 		return false, fmt.Errorf("check user blacklist failed: %w", err)
 	}
 
-	// 解析拉黑时间戳
+	// Parse blocklist timestamp
 	var blacklistTime int64
 	_, err = fmt.Sscanf(result, "%d", &blacklistTime)
 	if err != nil {
 		return false, fmt.Errorf("parse blacklist time failed: %w", err)
 	}
 
-	// 如果 Token 签发时间早于拉黑时间，则认为被拉黑
+	// If the token issuance time is earlier than the blacklist time, it is considered blacklisted
 	return issuedAt.Unix() < blacklistTime, nil
 }
 
-// Close 关闭连接
+// Close connection
 func (s *RedisTokenStore) Close() error {
-	// Redis client 由外部管理，不在此关闭
+	// The Redis client is managed externally and is not closed here
 	return nil
 }
 
-// tokenKey 生成 Token 黑名单 key
+// tokenKey generates the Token blacklist key
 func (s *RedisTokenStore) tokenKey(token string) string {
 	return s.keyPrefix + "token:" + token
 }
 
-// userKey 生成用户黑名单 key
+// generate user blacklist key
 func (s *RedisTokenStore) userKey(subject string) string {
 	return s.keyPrefix + "user:" + subject
 }

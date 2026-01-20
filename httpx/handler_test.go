@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestWrap_Success 测试成功响应
+// TestWrap_Success test successful response
 func TestWrap_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -51,7 +51,7 @@ func TestWrap_Success(t *testing.T) {
 	assert.Equal(t, "Hello, World", resp.Data.Greeting)
 }
 
-// TestWrap_ParseError 测试解析错误
+// TestParseError test parsing errors
 func TestWrap_ParseError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -67,7 +67,7 @@ func TestWrap_ParseError(t *testing.T) {
 	engine := gin.New()
 	engine.POST("/test", Wrap(handler))
 
-	// 发送无效 JSON
+	// Send invalid JSON
 	body := `{"count": "not a number"}`
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("POST", "/test", bytes.NewBufferString(body))
@@ -75,11 +75,11 @@ func TestWrap_ParseError(t *testing.T) {
 	req.ContentLength = int64(len(body))
 	engine.ServeHTTP(w, req)
 
-	// 应该返回错误
+	// Should return an error
 	assert.NotEqual(t, http.StatusOK, w.Code)
 }
 
-// TestWrap_BusinessError 测试业务错误
+// TestWrap_BusinessError test business error
 func TestWrap_BusinessError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -109,7 +109,7 @@ func TestWrap_BusinessError(t *testing.T) {
 	assert.Equal(t, "业务错误", resp.Msg)
 }
 
-// TestWrap_UnknownError 测试未知错误
+// TestWrap_UnknownError test for unknown error
 func TestWrap_UnknownError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -138,7 +138,7 @@ func TestWrap_UnknownError(t *testing.T) {
 	assert.Equal(t, 500, resp.Code)
 }
 
-// TestWrap_QueryParams 测试 Query 参数
+// TestWrap_QueryParams test query parameters
 func TestWrap_QueryParams(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -175,7 +175,7 @@ func TestWrap_QueryParams(t *testing.T) {
 	assert.Equal(t, 20, resp.Data.PageSize)
 }
 
-// TestWrap_URIParams 测试 URI 参数
+// TestWrap_URIParams test URI parameters
 func TestWrap_URIParams(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -209,7 +209,7 @@ func TestWrap_URIParams(t *testing.T) {
 	assert.Equal(t, 123, resp.Data.ID)
 }
 
-// TestWrap_NilResponse 测试 nil 响应
+// TestWrap_NilResponse test for nil response
 func TestWrap_NilResponse(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

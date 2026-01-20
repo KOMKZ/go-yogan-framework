@@ -11,32 +11,32 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// LoginAttemptStore 登录尝试存储接口
+// LoginAttemptStore login attempt storage interface
 type LoginAttemptStore interface {
-	// GetAttempts 获取登录尝试次数
+	// GetAttempts Get login attempt count
 	GetAttempts(ctx context.Context, username string) (int, error)
 	
-	// IncrementAttempts 增加登录尝试次数
+	// Increment login attempt count
 	IncrementAttempts(ctx context.Context, username string, ttl time.Duration) error
 	
-	// ResetAttempts 重置登录尝试次数
+	// Reset login attempt count
 	ResetAttempts(ctx context.Context, username string) error
 	
-	// IsLocked 检查账户是否被锁定
+	// Check if the account is locked
 	IsLocked(ctx context.Context, username string, maxAttempts int) (bool, error)
 	
-	// Close 关闭存储
+	// Close storage
 	Close() error
 }
 
-// RedisLoginAttemptStore Redis 登录尝试存储
+// RedisLoginAttemptStore Redis login attempt storage
 type RedisLoginAttemptStore struct {
 	client *redis.Client
 	prefix string
 	logger *logger.CtxZapLogger
 }
 
-// NewRedisLoginAttemptStore 创建 Redis 登录尝试存储
+// Create new Redis login attempt store
 func NewRedisLoginAttemptStore(client *redis.Client, prefix string, logger *logger.CtxZapLogger) *RedisLoginAttemptStore {
 	return &RedisLoginAttemptStore{
 		client: client,
@@ -45,7 +45,7 @@ func NewRedisLoginAttemptStore(client *redis.Client, prefix string, logger *logg
 	}
 }
 
-// GetAttempts 获取登录尝试次数
+// GetAttempts Get login attempt count
 func (s *RedisLoginAttemptStore) GetAttempts(ctx context.Context, username string) (int, error) {
 	key := s.prefix + username
 	val, err := s.client.Get(ctx, key).Result()
@@ -64,7 +64,7 @@ func (s *RedisLoginAttemptStore) GetAttempts(ctx context.Context, username strin
 	return attempts, nil
 }
 
-// IncrementAttempts 增加登录尝试次数
+// Increment login attempt count
 func (s *RedisLoginAttemptStore) IncrementAttempts(ctx context.Context, username string, ttl time.Duration) error {
 	key := s.prefix + username
 	pipe := s.client.Pipeline()
@@ -74,13 +74,13 @@ func (s *RedisLoginAttemptStore) IncrementAttempts(ctx context.Context, username
 	return err
 }
 
-// ResetAttempts 重置登录尝试次数
+// Reset login attempt count
 func (s *RedisLoginAttemptStore) ResetAttempts(ctx context.Context, username string) error {
 	key := s.prefix + username
 	return s.client.Del(ctx, key).Err()
 }
 
-// IsLocked 检查账户是否被锁定
+// Check if the account is locked
 func (s *RedisLoginAttemptStore) IsLocked(ctx context.Context, username string, maxAttempts int) (bool, error) {
 	attempts, err := s.GetAttempts(ctx, username)
 	if err != nil {
@@ -89,13 +89,13 @@ func (s *RedisLoginAttemptStore) IsLocked(ctx context.Context, username string, 
 	return attempts >= maxAttempts, nil
 }
 
-// Close 关闭存储
+// Close storage
 func (s *RedisLoginAttemptStore) Close() error {
-	// Redis 连接由 Redis 组件管理，这里不需要关闭
+	// Redis connection is managed by the Redis component, so there is no need to close it here
 	return nil
 }
 
-// MemoryLoginAttemptStore 内存登录尝试存储（用于测试）
+// MemoryLoginAttemptStore In-memory login attempt storage (for testing)
 type MemoryLoginAttemptStore struct {
 	mu       sync.RWMutex
 	attempts map[string]*attemptRecord
@@ -107,20 +107,20 @@ type attemptRecord struct {
 	expiresAt time.Time
 }
 
-// NewMemoryLoginAttemptStore 创建内存登录尝试存储
+// Create memory login attempt store
 func NewMemoryLoginAttemptStore(logger *logger.CtxZapLogger) *MemoryLoginAttemptStore {
 	store := &MemoryLoginAttemptStore{
 		attempts: make(map[string]*attemptRecord),
 		logger:   logger,
 	}
 	
-	// 启动清理 goroutine
+	// Start cleanup goroutine
 	go store.cleanup()
 	
 	return store
 }
 
-// GetAttempts 获取登录尝试次数
+// GetAttempts Get login attempt count
 func (s *MemoryLoginAttemptStore) GetAttempts(ctx context.Context, username string) (int, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -130,7 +130,7 @@ func (s *MemoryLoginAttemptStore) GetAttempts(ctx context.Context, username stri
 		return 0, nil
 	}
 
-	// 检查是否过期
+	// Check if expired
 	if time.Now().After(record.expiresAt) {
 		return 0, nil
 	}
@@ -138,7 +138,7 @@ func (s *MemoryLoginAttemptStore) GetAttempts(ctx context.Context, username stri
 	return record.count, nil
 }
 
-// IncrementAttempts 增加登录尝试次数
+// Increment login attempt count
 func (s *MemoryLoginAttemptStore) IncrementAttempts(ctx context.Context, username string, ttl time.Duration) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -157,7 +157,7 @@ func (s *MemoryLoginAttemptStore) IncrementAttempts(ctx context.Context, usernam
 	return nil
 }
 
-// ResetAttempts 重置登录尝试次数
+// Reset login attempt count
 func (s *MemoryLoginAttemptStore) ResetAttempts(ctx context.Context, username string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -166,7 +166,7 @@ func (s *MemoryLoginAttemptStore) ResetAttempts(ctx context.Context, username st
 	return nil
 }
 
-// IsLocked 检查账户是否被锁定
+// Check if the account is locked
 func (s *MemoryLoginAttemptStore) IsLocked(ctx context.Context, username string, maxAttempts int) (bool, error) {
 	attempts, err := s.GetAttempts(ctx, username)
 	if err != nil {
@@ -175,12 +175,12 @@ func (s *MemoryLoginAttemptStore) IsLocked(ctx context.Context, username string,
 	return attempts >= maxAttempts, nil
 }
 
-// Close 关闭存储
+// Close storage
 func (s *MemoryLoginAttemptStore) Close() error {
 	return nil
 }
 
-// cleanup 清理过期记录
+// cleanup Remove expired records
 func (s *MemoryLoginAttemptStore) cleanup() {
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
@@ -197,7 +197,7 @@ func (s *MemoryLoginAttemptStore) cleanup() {
 	}
 }
 
-// createLoginAttemptStore 创建登录尝试存储（工厂函数）
+// createLoginAttemptStore Create login attempt store (factory function)
 func createLoginAttemptStore(
 	config LoginAttemptConfig,
 	redisClient *redis.Client,

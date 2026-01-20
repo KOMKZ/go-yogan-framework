@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// stateManager 状态管理器
+// stateManager state manager
 type stateManager struct {
 	state           State
 	lastStateChange time.Time
@@ -15,7 +15,7 @@ type stateManager struct {
 	mu              sync.RWMutex
 }
 
-// newStateManager 创建状态管理器
+// create state manager
 func newStateManager() *stateManager {
 	return &stateManager{
 		state:           StateClosed,
@@ -23,35 +23,35 @@ func newStateManager() *stateManager {
 	}
 }
 
-// GetState 获取当前状态（线程安全）
+// GetState Get current state (thread-safe)
 func (sm *stateManager) GetState() State {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
 	return sm.state
 }
 
-// CanAttempt 判断是否允许尝试（根据当前状态和配置）
+// CanAttempt checks if attempting is allowed (based on current state and configuration)
 func (sm *stateManager) CanAttempt(config ResourceConfig) bool {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 	
 	switch sm.state {
 	case StateClosed:
-		// 关闭状态，允许所有请求
+		// closed state, allow all requests
 		return true
 		
 	case StateOpen:
-		// 打开状态，检查是否超时（可以切换到半开）
+		// Open state, check for timeout (can switch to half-open)
 		if time.Since(sm.lastStateChange) >= config.Timeout {
 			sm.transitionTo(StateHalfOpen, "timeout expired")
 			sm.halfOpenAttempts = 0
 			return true
 		}
-		// 未超时，拒绝请求
+		// request has not timed out, reject request
 		return false
 		
 	case StateHalfOpen:
-		// 半开状态，限制请求数
+		// half-open state, limit request count
 		if sm.halfOpenAttempts < config.HalfOpenRequests {
 			sm.halfOpenAttempts++
 			return true
@@ -63,21 +63,21 @@ func (sm *stateManager) CanAttempt(config ResourceConfig) bool {
 	}
 }
 
-// RecordSuccess 记录成功
+// RecordSuccess Recording successful
 func (sm *stateManager) RecordSuccess(config ResourceConfig) (stateChanged bool, fromState, toState State) {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 	
 	switch sm.state {
 	case StateClosed:
-		// 关闭状态，重置失败计数
+		// close state, reset failure count
 		sm.failureCount = 0
 		
 	case StateHalfOpen:
-		// 半开状态，增加成功计数
+		// Half-open state, increase success count
 		sm.successCount++
 		if sm.successCount >= config.HalfOpenRequests {
-			// 达到阈值，恢复到关闭状态
+			// Reach threshold, revert to closed state
 			fromState = sm.state
 			sm.transitionTo(StateClosed, "success threshold reached")
 			sm.successCount = 0
@@ -90,18 +90,18 @@ func (sm *stateManager) RecordSuccess(config ResourceConfig) (stateChanged bool,
 	return false, sm.state, sm.state
 }
 
-// RecordFailure 记录失败
+// RecordFailure record failure
 func (sm *stateManager) RecordFailure() (stateChanged bool, fromState, toState State) {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 	
 	switch sm.state {
 	case StateClosed:
-		// 关闭状态，增加失败计数
+		// close state, increment failure count
 		sm.failureCount++
 		
 	case StateHalfOpen:
-		// 半开状态失败，直接切换到打开状态
+		// Half-open state failure, switch directly to open state
 		fromState = sm.state
 		sm.transitionTo(StateOpen, "failed in half-open state")
 		sm.successCount = 0
@@ -113,7 +113,7 @@ func (sm *stateManager) RecordFailure() (stateChanged bool, fromState, toState S
 	return false, sm.state, sm.state
 }
 
-// ShouldOpen 判断是否应该熔断（需要外部传入策略判断结果）
+// ShouldOpen determines whether circuit breaking should be applied (requires external strategy judgment results)
 func (sm *stateManager) ShouldOpen(shouldOpen bool) (stateChanged bool, fromState, toState State) {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
@@ -128,7 +128,7 @@ func (sm *stateManager) ShouldOpen(shouldOpen bool) (stateChanged bool, fromStat
 	return false, sm.state, sm.state
 }
 
-// Reset 重置状态
+// Reset reset status
 func (sm *stateManager) Reset() (stateChanged bool, fromState, toState State) {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
@@ -146,27 +146,27 @@ func (sm *stateManager) Reset() (stateChanged bool, fromState, toState State) {
 	return false, sm.state, sm.state
 }
 
-// transitionTo 切换状态（内部方法，需要持有锁）
+// transitionTo Switch state (internal method, lock required)
 func (sm *stateManager) transitionTo(newState State, reason string) {
 	sm.state = newState
 	sm.lastStateChange = time.Now()
 }
 
-// GetFailureCount 获取失败次数
+// GetFailureCount得失败计数
 func (sm *stateManager) GetFailureCount() int {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
 	return sm.failureCount
 }
 
-// GetSuccessCount 获取成功次数
+// GetSuccessCount Get successful count
 func (sm *stateManager) GetSuccessCount() int {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
 	return sm.successCount
 }
 
-// GetLastStateChange 获取最后状态变化时间
+// GetLastStateChange 获取最后状态变更时间
 func (sm *stateManager) GetLastStateChange() time.Time {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()

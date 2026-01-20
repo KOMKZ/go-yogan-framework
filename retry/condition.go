@@ -10,23 +10,23 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// RetryCondition 重试条件接口
+// RetryCondition retry condition interface
 type RetryCondition interface {
-	// ShouldRetry 判断是否应该重试
-	// err: 当前错误
-	// attempt: 当前是第几次尝试（从 1 开始）
-	// 返回 true 表示应该重试，false 表示不应该重试
+	// ShouldRetry determines whether a retry should be performed
+	// err: current error
+	// attempt: current retry count (starting from 1)
+	// return true to indicate a retry should be performed, false otherwise
 	ShouldRetry(err error, attempt int) bool
 }
 
 // ============================================================
-// 基础条件
+// Basic conditions
 // ============================================================
 
-// alwaysRetry 总是重试
+// alwaysRetry Always retry
 type alwaysRetry struct{}
 
-// AlwaysRetry 创建总是重试的条件
+// AlwaysRetry creates the condition for always retrying
 func AlwaysRetry() RetryCondition {
 	return &alwaysRetry{}
 }
@@ -35,10 +35,10 @@ func (c *alwaysRetry) ShouldRetry(err error, attempt int) bool {
 	return err != nil
 }
 
-// neverRetry 从不重试
+// neverRetry never retry
 type neverRetry struct{}
 
-// NeverRetry 创建从不重试的条件
+// NeverRetry creates conditions for never retrying
 func NeverRetry() RetryCondition {
 	return &neverRetry{}
 }
@@ -48,15 +48,15 @@ func (c *neverRetry) ShouldRetry(err error, attempt int) bool {
 }
 
 // ============================================================
-// 错误匹配条件
+// Error matching conditions
 // ============================================================
 
-// retryOnError 特定错误重试
+// retryOnSpecificError
 type retryOnError struct {
 	target error
 }
 
-// RetryOnError 创建特定错误重试条件（使用 errors.Is 判断）
+// Create specific error retry conditions (use errors.Is to check)
 func RetryOnError(target error) RetryCondition {
 	return &retryOnError{target: target}
 }
@@ -68,12 +68,12 @@ func (c *retryOnError) ShouldRetry(err error, attempt int) bool {
 	return errors.Is(err, c.target)
 }
 
-// retryOnErrors 多个错误重试
+// retryOnErrors retry on multiple errors
 type retryOnErrors struct {
 	targets []error
 }
 
-// RetryOnErrors 创建多个错误重试条件
+// Create multiple error retry conditions
 func RetryOnErrors(targets ...error) RetryCondition {
 	return &retryOnErrors{targets: targets}
 }
@@ -93,15 +93,15 @@ func (c *retryOnErrors) ShouldRetry(err error, attempt int) bool {
 }
 
 // ============================================================
-// 自定义条件
+// Custom condition
 // ============================================================
 
-// retryOnCondition 自定义条件
+// custom condition for retrying
 type retryOnCondition struct {
 	fn func(error) bool
 }
 
-// RetryOnCondition 创建自定义条件
+// Create custom condition for retry
 func RetryOnCondition(fn func(error) bool) RetryCondition {
 	return &retryOnCondition{fn: fn}
 }
@@ -114,15 +114,15 @@ func (c *retryOnCondition) ShouldRetry(err error, attempt int) bool {
 }
 
 // ============================================================
-// gRPC 条件
+// gRPC condition
 // ============================================================
 
-// retryOnGRPCCodes gRPC 状态码条件
+// retryOnGRPCCodes gRPC status code conditions
 type retryOnGRPCCodes struct {
 	codes map[codes.Code]struct{}
 }
 
-// RetryOnGRPCCodes 创建 gRPC 状态码重试条件
+// Create gRPC status code retry conditions
 func RetryOnGRPCCodes(targetCodes ...codes.Code) RetryCondition {
 	codesMap := make(map[codes.Code]struct{}, len(targetCodes))
 	for _, code := range targetCodes {
@@ -137,7 +137,7 @@ func (c *retryOnGRPCCodes) ShouldRetry(err error, attempt int) bool {
 		return false
 	}
 	
-	// 尝试从错误中提取 gRPC 状态码
+	// Try to extract gRPC status code from error
 	st, ok := status.FromError(err)
 	if !ok {
 		return false
@@ -148,21 +148,21 @@ func (c *retryOnGRPCCodes) ShouldRetry(err error, attempt int) bool {
 }
 
 // ============================================================
-// HTTP 条件
+// HTTP conditions
 // ============================================================
 
-// HTTPError HTTP 错误（需要应用层定义）
+// HTTPError HTTP error (requires definition at the application layer)
 type HTTPError interface {
 	error
 	StatusCode() int
 }
 
-// retryOnHTTPStatus HTTP 状态码条件
+// retry on HTTP status code condition
 type retryOnHTTPStatus struct {
 	statuses map[int]struct{}
 }
 
-// RetryOnHTTPStatus 创建 HTTP 状态码重试条件
+// Create HTTP status code retry conditions
 func RetryOnHTTPStatus(statuses ...int) RetryCondition {
 	statusMap := make(map[int]struct{}, len(statuses))
 	for _, status := range statuses {
@@ -177,7 +177,7 @@ func (c *retryOnHTTPStatus) ShouldRetry(err error, attempt int) bool {
 		return false
 	}
 	
-	// 尝试转换为 HTTPError
+	// Try to convert to HTTPError
 	httpErr, ok := err.(HTTPError)
 	if !ok {
 		return false
@@ -188,22 +188,22 @@ func (c *retryOnHTTPStatus) ShouldRetry(err error, attempt int) bool {
 }
 
 // ============================================================
-// 临时错误条件
+// temporary error condition
 // ============================================================
 
-// temporaryError 临时错误接口（标准库）
+// temporaryError Temporary error interface (standard library)
 type temporaryError interface {
 	Temporary() bool
 }
 
-// retryOnTemporaryError 临时错误条件
+// retryOnTemporaryError temporary error condition
 type retryOnTemporaryError struct{}
 
-// RetryOnTemporaryError 创建临时错误重试条件
-// 包括：
-// - 网络错误（net.Error 的 Temporary() 为 true）
-// - Context 超时/取消
-// - 连接拒绝/重置
+// RetryOnTemporaryError Create retry condition for temporary errors
+// Includes:
+// - Network error (net.Error's Temporary() is true)
+// - Timeout/Cancellation Context
+// - connection refused/reset
 func RetryOnTemporaryError() RetryCondition {
 	return &retryOnTemporaryError{}
 }
@@ -213,23 +213,23 @@ func (c *retryOnTemporaryError) ShouldRetry(err error, attempt int) bool {
 		return false
 	}
 	
-	// 1. 检查是否实现了 Temporary() 接口
+	// Check if the Temporary() interface is implemented
 	if te, ok := err.(temporaryError); ok && te.Temporary() {
 		return true
 	}
 	
-	// 2. Context 错误（超时/取消）- 认为是临时错误
+	// 2. Context errors (timeout/cancel) - considered transient errors
 	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 		return true
 	}
 	
-	// 3. 网络连接错误
+	// Network connection error
 	var netErr net.Error
 	if errors.As(err, &netErr) {
 		return netErr.Temporary() || netErr.Timeout()
 	}
 	
-	// 4. 常见的系统调用错误（wrapped in net.OpError）
+	// 4. Common system call errors (wrapped in net.OpError)
 	var opErr *net.OpError
 	if errors.As(err, &opErr) {
 		if opErr.Err != nil {
@@ -242,7 +242,7 @@ func (c *retryOnTemporaryError) ShouldRetry(err error, attempt int) bool {
 		}
 	}
 	
-	// 5. 直接的系统调用错误
+	// 5. Direct system call errors
 	if errors.Is(err, syscall.ECONNREFUSED) ||
 		errors.Is(err, syscall.ECONNRESET) ||
 		errors.Is(err, syscall.ETIMEDOUT) ||
@@ -254,15 +254,15 @@ func (c *retryOnTemporaryError) ShouldRetry(err error, attempt int) bool {
 }
 
 // ============================================================
-// 组合条件
+// Combination condition
 // ============================================================
 
-// andCondition AND 组合条件（所有条件都满足才重试）
+// andCondition AND combine conditions (all conditions must be met to retry)
 type andCondition struct {
 	conditions []RetryCondition
 }
 
-// And 创建 AND 组合条件
+// And create AND combination conditions
 func And(conditions ...RetryCondition) RetryCondition {
 	return &andCondition{conditions: conditions}
 }
@@ -276,12 +276,12 @@ func (c *andCondition) ShouldRetry(err error, attempt int) bool {
 	return true
 }
 
-// orCondition OR 组合条件（任一条件满足就重试）
+// orCondition OR combined condition (retry if any condition is met)
 type orCondition struct {
 	conditions []RetryCondition
 }
 
-// Or 创建 OR 组合条件
+// Or create OR combined conditions
 func Or(conditions ...RetryCondition) RetryCondition {
 	return &orCondition{conditions: conditions}
 }
@@ -295,12 +295,12 @@ func (c *orCondition) ShouldRetry(err error, attempt int) bool {
 	return false
 }
 
-// notCondition NOT 条件（取反）
+// notCondition NOT condition (negate)
 type notCondition struct {
 	condition RetryCondition
 }
 
-// Not 创建 NOT 条件
+// Do not create NOT conditions
 func Not(condition RetryCondition) RetryCondition {
 	return &notCondition{condition: condition}
 }

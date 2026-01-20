@@ -17,7 +17,7 @@ func setupRateLimiterTest() (*gin.Engine, *limiter.Manager) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	// 创建限流器配置
+	// Create rate limiter configuration
 	cfg := limiter.Config{
 		Enabled:   true,
 		StoreType: "memory",
@@ -30,8 +30,8 @@ func setupRateLimiterTest() (*gin.Engine, *limiter.Manager) {
 			"GET:/api/limited": {
 				Algorithm:  "token_bucket",
 				Rate:       2, // 2 req/s
-				Capacity:   2, // 最多2个请求
-				InitTokens: 2, // 初始2个令牌
+				Capacity:   2, // Up to 2 requests
+				InitTokens: 2, // Initial 2 tokens
 			},
 		},
 	}
@@ -46,21 +46,21 @@ func TestRateLimiter_Basic(t *testing.T) {
 	router, manager := setupRateLimiterTest()
 	defer manager.Close()
 
-	// 添加中间件
+	// Add middleware
 	router.Use(RateLimiter(manager))
 
-	// 添加测试路由
+	// Add test route
 	router.GET("/api/test", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "success"})
 	})
 
-	// 第一个请求应该成功
+	// The first request should succeed
 	req := httptest.NewRequest("GET", "/api/test", nil)
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
 	assert.Equal(t, http.StatusOK, resp.Code)
 
-	// 后续请求也应该成功（默认配置限额较大）
+	// Subsequent requests should also succeed (default configuration limit is higher)
 	for i := 0; i < 5; i++ {
 		req := httptest.NewRequest("GET", "/api/test", nil)
 		resp := httptest.NewRecorder()
@@ -73,15 +73,15 @@ func TestRateLimiter_RateLimited(t *testing.T) {
 	router, manager := setupRateLimiterTest()
 	defer manager.Close()
 
-	// 添加中间件
+	// Add middleware
 	router.Use(RateLimiter(manager))
 
-	// 添加测试路由
+	// Add test route
 	router.GET("/api/limited", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "success"})
 	})
 
-	// 前2个请求应该成功
+	// The first two requests should succeed
 	for i := 0; i < 2; i++ {
 		req := httptest.NewRequest("GET", "/api/limited", nil)
 		resp := httptest.NewRecorder()
@@ -89,7 +89,7 @@ func TestRateLimiter_RateLimited(t *testing.T) {
 		require.Equal(t, http.StatusOK, resp.Code, "第%d个请求应该成功", i+1)
 	}
 
-	// 第3个请求应该被限流
+	// The third request should be rate-limited
 	req := httptest.NewRequest("GET", "/api/limited", nil)
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
@@ -101,7 +101,7 @@ func TestRateLimiter_Disabled(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	// 创建禁用的限流器
+	// Create disabled rate limiter
 	cfg := limiter.Config{
 		Enabled:   false,
 		StoreType: "memory",
@@ -111,15 +111,15 @@ func TestRateLimiter_Disabled(t *testing.T) {
 	manager, _ := limiter.NewManagerWithLogger(cfg, log, nil)
 	defer manager.Close()
 
-	// 添加中间件
+	// Add middleware
 	router.Use(RateLimiter(manager))
 
-	// 添加测试路由
+	// Add test route
 	router.GET("/api/test", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "success"})
 	})
 
-	// 所有请求都应该成功（限流器已禁用）
+	// All requests should succeed (rate limiter is disabled)
 	for i := 0; i < 100; i++ {
 		req := httptest.NewRequest("GET", "/api/test", nil)
 		resp := httptest.NewRecorder()
@@ -132,7 +132,7 @@ func TestRateLimiter_WithConfig(t *testing.T) {
 	router, manager := setupRateLimiterTest()
 	defer manager.Close()
 
-	// 自定义配置
+	// Custom configuration
 	cfg := DefaultRateLimiterConfig(manager)
 	cfg.KeyFunc = RateLimiterKeyByIP
 	cfg.SkipPaths = []string{"/health"}
@@ -143,7 +143,7 @@ func TestRateLimiter_WithConfig(t *testing.T) {
 
 	router.Use(RateLimiterWithConfig(cfg))
 
-	// 添加测试路由
+	// Add test route
 	router.GET("/api/test", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "success"})
 	})
@@ -151,13 +151,13 @@ func TestRateLimiter_WithConfig(t *testing.T) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
-	// 测试跳过路径
+	// Test skip path
 	req := httptest.NewRequest("GET", "/health", nil)
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
 	assert.Equal(t, http.StatusOK, resp.Code)
 
-	// 测试正常路径
+	// Test normal path
 	req = httptest.NewRequest("GET", "/api/test", nil)
 	resp = httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
@@ -170,7 +170,7 @@ func TestRateLimiter_SkipFunc(t *testing.T) {
 
 	skipCalled := false
 
-	// 配置跳过函数
+	// Configure skip function
 	cfg := DefaultRateLimiterConfig(manager)
 	cfg.SkipFunc = func(c *gin.Context) bool {
 		if c.GetHeader("X-Skip-Rate-Limit") == "true" {
@@ -186,7 +186,7 @@ func TestRateLimiter_SkipFunc(t *testing.T) {
 		c.JSON(http.StatusOK, gin.H{"message": "success"})
 	})
 
-	// 测试跳过
+	// test skip
 	req := httptest.NewRequest("GET", "/api/test", nil)
 	req.Header.Set("X-Skip-Rate-Limit", "true")
 	resp := httptest.NewRecorder()
@@ -199,7 +199,7 @@ func TestRateLimiter_KeyByIP(t *testing.T) {
 	router, manager := setupRateLimiterTest()
 	defer manager.Close()
 
-	// 使用按IP限流
+	// Use IP rate limiting
 	cfg := DefaultRateLimiterConfig(manager)
 	cfg.KeyFunc = RateLimiterKeyByIP
 	router.Use(RateLimiterWithConfig(cfg))
@@ -208,7 +208,7 @@ func TestRateLimiter_KeyByIP(t *testing.T) {
 		c.JSON(http.StatusOK, gin.H{"message": "success"})
 	})
 
-	// 不同IP应该有独立的限额
+	// Different IPs should have independent limits
 	ips := []string{"192.168.1.1:12345", "192.168.1.2:12345", "192.168.1.3:12345"}
 	for _, ip := range ips {
 		req := httptest.NewRequest("GET", "/api/test", nil)
@@ -223,11 +223,11 @@ func TestRateLimiter_KeyByUser(t *testing.T) {
 	router, manager := setupRateLimiterTest()
 	defer manager.Close()
 
-	// 配置按用户限流
+	// Configure user rate limiting
 	cfg := DefaultRateLimiterConfig(manager)
 	cfg.KeyFunc = RateLimiterKeyByUser("user_id")
 
-	// 先设置用户ID
+	// Set user ID first
 	router.Use(func(c *gin.Context) {
 		c.Set("user_id", "user123")
 		c.Next()
@@ -248,7 +248,7 @@ func TestRateLimiter_KeyByUser_Anonymous(t *testing.T) {
 	router, manager := setupRateLimiterTest()
 	defer manager.Close()
 
-	// 配置按用户限流（但不设置用户ID）
+	// Configure rate limiting per user (but do not set user ID)
 	cfg := DefaultRateLimiterConfig(manager)
 	cfg.KeyFunc = RateLimiterKeyByUser("user_id")
 	router.Use(RateLimiterWithConfig(cfg))
@@ -267,7 +267,7 @@ func TestRateLimiter_KeyByPathAndIP(t *testing.T) {
 	router, manager := setupRateLimiterTest()
 	defer manager.Close()
 
-	// 使用路径+IP的键函数
+	// Use key function of path + IP
 	cfg := DefaultRateLimiterConfig(manager)
 	cfg.KeyFunc = RateLimiterKeyByPathAndIP
 	router.Use(RateLimiterWithConfig(cfg))
@@ -276,7 +276,7 @@ func TestRateLimiter_KeyByPathAndIP(t *testing.T) {
 		c.JSON(http.StatusOK, gin.H{"message": "success"})
 	})
 
-	// 不同IP应该有独立的限额
+	// Different IPs should have independent limits
 	ips := []string{"192.168.1.1:12345", "192.168.1.2:12345", "192.168.1.3:12345"}
 	for _, ip := range ips {
 		req := httptest.NewRequest("GET", "/api/test", nil)
@@ -291,7 +291,7 @@ func TestRateLimiter_KeyByAPIKey(t *testing.T) {
 	router, manager := setupRateLimiterTest()
 	defer manager.Close()
 
-	// 配置按API Key限流
+	// Configure rate limiting by API key
 	cfg := DefaultRateLimiterConfig(manager)
 	cfg.KeyFunc = RateLimiterKeyByAPIKey("X-API-Key")
 	router.Use(RateLimiterWithConfig(cfg))
@@ -300,14 +300,14 @@ func TestRateLimiter_KeyByAPIKey(t *testing.T) {
 		c.JSON(http.StatusOK, gin.H{"message": "success"})
 	})
 
-	// 测试带API Key的请求
+	// Test request with API key
 	req := httptest.NewRequest("GET", "/api/test", nil)
 	req.Header.Set("X-API-Key", "test-key-123")
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
 	assert.Equal(t, http.StatusOK, resp.Code)
 
-	// 测试不带API Key的请求（匿名）
+	// Test request without API key (anonymous)
 	req = httptest.NewRequest("GET", "/api/test", nil)
 	resp = httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
@@ -324,7 +324,7 @@ func TestRateLimiter_RefillTokens(t *testing.T) {
 		c.JSON(http.StatusOK, gin.H{"message": "success"})
 	})
 
-	// 消耗所有令牌
+	// Consume all tokens
 	for i := 0; i < 2; i++ {
 		req := httptest.NewRequest("GET", "/api/limited", nil)
 		resp := httptest.NewRecorder()
@@ -332,16 +332,16 @@ func TestRateLimiter_RefillTokens(t *testing.T) {
 		assert.Equal(t, http.StatusOK, resp.Code)
 	}
 
-	// 第3个请求应该被限流
+	// The third request should be rate-limited
 	req := httptest.NewRequest("GET", "/api/limited", nil)
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
 	assert.Equal(t, http.StatusTooManyRequests, resp.Code)
 
-	// 等待令牌补充（2 req/s，等待600ms应该补充至少1个）
+	// wait for token replenishment (2 req/s, waiting 600ms should replenish at least 1)
 	time.Sleep(600 * time.Millisecond)
 
-	// 现在应该可以再次请求
+	// Now it should be able to make the request again
 	req = httptest.NewRequest("GET", "/api/limited", nil)
 	resp = httptest.NewRecorder()
 	router.ServeHTTP(resp, req)

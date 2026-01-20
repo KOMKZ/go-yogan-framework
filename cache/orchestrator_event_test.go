@@ -63,7 +63,7 @@ func TestOrchestrator_WithEventDispatcher(t *testing.T) {
 	}
 }
 
-// testEvent 测试用事件
+// testEvent test event
 type testEvent struct {
 	name string
 }
@@ -76,7 +76,7 @@ func (e *testEvent) Payload() any {
 	return nil
 }
 
-// testEventWithCacheArgs 实现 CacheInvalidator 接口的测试事件
+// testEventWithCacheArgs implements the CacheInvalidator interface for testing
 type testEventWithCacheArgs struct {
 	name      string
 	articleID uint
@@ -128,7 +128,7 @@ func TestOrchestrator_CacheInvalidatorInterface(t *testing.T) {
 		t.Errorf("loadCount = %d, want 1 (cached)", loadCount)
 	}
 
-	// Dispatch event with CacheInvalidator interface (精确失效)
+	// Dispatch event with CacheInvalidator interface (precise invalidation)
 	dispatcher.Dispatch(ctx, &testEventWithCacheArgs{
 		name:      "article.content.updated",
 		articleID: 123,
@@ -180,7 +180,7 @@ func TestOrchestrator_CreateInvalidationHandler(t *testing.T) {
 		},
 		InvalidationRules: []InvalidationRule{
 			{Event: "test.event", Invalidate: []string{"test"}, Pattern: "test:"},
-			{Event: "test.event2", Invalidate: []string{"test"}}, // 使用 CacheInvalidator 接口
+			{Event: "test.event2", Invalidate: []string{"test"}}, // Use the CacheInvalidator interface
 		},
 	}
 

@@ -12,34 +12,34 @@ import (
 	"go.uber.org/zap"
 )
 
-// ConsumerRunnerConfig 运行器配置
+// ConsumerRunnerConfig runner configuration
 type ConsumerRunnerConfig struct {
-	// GroupID 消费者组（可选，默认使用 handler.Name()）
+	// GroupID consumer group (optional, defaults to handler.Name())
 	GroupID string
 
-	// Workers 并发消费者数量（默认 1）
+	// Number of concurrent consumer workers (default 1)
 	Workers int
 
-	// OffsetInitial 初始 Offset：-1=Newest, -2=Oldest（默认 -1）
+	// OffsetInitial Initial Offset: -1=Newest, -2=Oldest (default -1)
 	OffsetInitial int64
 
-	// AutoCommit 是否自动提交（默认 true）
+	// Whether to auto-commit (default true)
 	AutoCommit bool
 
-	// AutoCommitInterval 自动提交间隔（默认 1s）
+	// AutoCommitInterval Automatic commit interval (default 1s)
 	AutoCommitInterval time.Duration
 
-	// MaxProcessingTime 单条消息最大处理时间（默认 30s）
+	// MaxProcessingTime Maximum processing time for a single message (default 30s)
 	MaxProcessingTime time.Duration
 
-	// SessionTimeout 会话超时（默认 10s）
+	// Session timeout (default 10 seconds)
 	SessionTimeout time.Duration
 
-	// HeartbeatInterval 心跳间隔（默认 3s）
+	// HeartbeatInterval heartbeat interval (default 3s)
 	HeartbeatInterval time.Duration
 }
 
-// applyDefaults 应用默认值
+// Apply default values
 func (c *ConsumerRunnerConfig) applyDefaults(handlerName string) {
 	if c.GroupID == "" {
 		c.GroupID = handlerName + "-group"
@@ -64,8 +64,8 @@ func (c *ConsumerRunnerConfig) applyDefaults(handlerName string) {
 	}
 }
 
-// ConsumerRunner 消费者运行器
-// 封装信号处理、Worker 管理、生命周期控制
+// ConsumerRunner consumer runner
+// Encapsulate signal handling, worker management, lifecycle control
 type ConsumerRunner struct {
 	manager *Manager
 	handler ConsumerHandler
@@ -79,7 +79,7 @@ type ConsumerRunner struct {
 	running   bool
 }
 
-// NewConsumerRunner 创建消费者运行器
+// Create consumer runner
 func NewConsumerRunner(manager *Manager, handler ConsumerHandler, cfg ConsumerRunnerConfig) *ConsumerRunner {
 	cfg.applyDefaults(handler.Name())
 
@@ -91,15 +91,15 @@ func NewConsumerRunner(manager *Manager, handler ConsumerHandler, cfg ConsumerRu
 	}
 }
 
-// Run 阻塞运行（内部处理信号）
-// 会阻塞直到收到 SIGINT/SIGTERM 信号
+// Run blocking execution (internal signal handling)
+// will block until a SIGINT/SIGTERM signal is received
 func (r *ConsumerRunner) Run(ctx context.Context) error {
-	// 启动消费者
+	// Start consumer
 	if err := r.Start(ctx); err != nil {
 		return err
 	}
 
-	// 设置信号处理
+	// Set signal handling
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
@@ -108,7 +108,7 @@ func (r *ConsumerRunner) Run(ctx context.Context) error {
 		zap.Strings("topics", r.handler.Topics()),
 		zap.Int("workers", r.config.Workers))
 
-	// 等待信号或上下文取消
+	// wait for signal or context cancellation
 	select {
 	case sig := <-sigCh:
 		r.logger.Info("🛑 收到退出信号", zap.String("signal", sig.String()))
@@ -116,11 +116,11 @@ func (r *ConsumerRunner) Run(ctx context.Context) error {
 		r.logger.Info("🛑 上下文已取消")
 	}
 
-	// 停止消费者
+	// Stop consumer
 	return r.Stop()
 }
 
-// Start 非阻塞启动
+// Start Non-blocking startup
 func (r *ConsumerRunner) Start(ctx context.Context) error {
 	r.mu.Lock()
 	if r.running {
@@ -130,11 +130,11 @@ func (r *ConsumerRunner) Start(ctx context.Context) error {
 	r.running = true
 	r.mu.Unlock()
 
-	// 创建可取消的上下文
+	// Create cancellable context
 	runCtx, cancel := context.WithCancel(ctx)
 	r.cancel = cancel
 
-	// 构建消费者配置
+	// Build consumer configuration
 	consumerCfg := ConsumerConfig{
 		GroupID:            r.config.GroupID,
 		Topics:             r.handler.Topics(),
@@ -146,7 +146,7 @@ func (r *ConsumerRunner) Start(ctx context.Context) error {
 		HeartbeatInterval:  r.config.HeartbeatInterval,
 	}
 
-	// 启动多个 Worker
+	// Start multiple Workers
 	r.consumers = make([]*ConsumerGroup, r.config.Workers)
 	for i := 0; i < r.config.Workers; i++ {
 		workerID := i + 1
@@ -154,7 +154,7 @@ func (r *ConsumerRunner) Start(ctx context.Context) error {
 
 		consumer, err := r.manager.CreateConsumer(consumerName, consumerCfg)
 		if err != nil {
-			// 清理已创建的消费者
+			// Clean up created consumers
 			r.cleanupConsumers()
 			return fmt.Errorf("create consumer %s failed: %w", consumerName, err)
 		}
@@ -178,11 +178,11 @@ func (r *ConsumerRunner) Start(ctx context.Context) error {
 	return nil
 }
 
-// runWorker 运行单个 Worker
+// runWorker runs a single Worker
 func (r *ConsumerRunner) runWorker(ctx context.Context, workerID int, consumer *ConsumerGroup) {
 	defer r.wg.Done()
 
-	// 包装 handler，添加 workerID 到日志
+	// Wrap handler, add workerID to log
 	wrappedHandler := func(ctx context.Context, msg *ConsumedMessage) error {
 		return r.handler.Handle(ctx, msg)
 	}
@@ -195,7 +195,7 @@ func (r *ConsumerRunner) runWorker(ctx context.Context, workerID int, consumer *
 	}
 }
 
-// Stop 优雅停止
+// Graceful shutdown
 func (r *ConsumerRunner) Stop() error {
 	r.mu.Lock()
 	if !r.running {
@@ -207,22 +207,22 @@ func (r *ConsumerRunner) Stop() error {
 
 	r.logger.Info("🛑 正在停止消费者...")
 
-	// 取消上下文
+	// Cancel context
 	if r.cancel != nil {
 		r.cancel()
 	}
 
-	// 停止所有消费者
+	// Stop all consumers
 	r.cleanupConsumers()
 
-	// 等待所有 Worker 完成
+	// wait for all workers to complete
 	r.wg.Wait()
 
 	r.logger.Info("✅ 消费者运行器已停止", zap.String("name", r.handler.Name()))
 	return nil
 }
 
-// cleanupConsumers 清理所有消费者
+// cleanupConsumers Clean up all consumers
 func (r *ConsumerRunner) cleanupConsumers() {
 	for i, consumer := range r.consumers {
 		if consumer != nil {
@@ -235,14 +235,14 @@ func (r *ConsumerRunner) cleanupConsumers() {
 	}
 }
 
-// IsRunning 检查是否运行中
+// Check if running
 func (r *ConsumerRunner) IsRunning() bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.running
 }
 
-// GetConfig 获取配置
+// GetConfig Retrieve configuration
 func (r *ConsumerRunner) GetConfig() ConsumerRunnerConfig {
 	return r.config
 }

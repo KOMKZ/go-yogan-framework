@@ -38,8 +38,8 @@ func TestPublishJSON_Serialization(t *testing.T) {
 	assert.Equal(t, payload, decoded)
 }
 
-// 注意：完整的 Publish 测试需要 mock Manager 和 Producer
-// 这里测试辅助函数和数据结构
+// Note: Full Publish testing requires mocking Manager and Producer
+// Here tests auxiliary functions and data structures
 
 func TestPublishMessage_EmptyHeaders(t *testing.T) {
 	msg := &PublishMessage{
@@ -51,12 +51,12 @@ func TestPublishMessage_EmptyHeaders(t *testing.T) {
 }
 
 func TestPublishMessage_WithContext(t *testing.T) {
-	// 验证 context 可以正常传递
+	// Verify that the context can be passed normally
 	ctx := context.WithValue(context.Background(), "trace_id", "123")
 	assert.Equal(t, "123", ctx.Value("trace_id"))
 }
 
-// MockProducer 用于测试
+// MockProducer for testing
 type mockProducerForPublish struct {
 	sentMessages []*Message
 }

@@ -2,12 +2,12 @@ package event
 
 import "errors"
 
-// ErrStopPropagation 停止事件传播（不视为错误）
-// 监听器返回此错误时，后续监听器不再执行，但 Dispatch 不返回错误
+// ErrStopPropagation stops event propagation (not considered an error)
+// When the listener returns this error, subsequent listeners do not execute, but Dispatch does not return an error
 var ErrStopPropagation = errors.New("stop propagation")
 
-// ErrKafkaNotAvailable Kafka 发布者未配置
+// ErrKafkaNotAvailable Kafka publisher not configured
 var ErrKafkaNotAvailable = errors.New("kafka publisher not available")
 
-// ErrKafkaTopicRequired Kafka topic 未指定
+// ErrKafkaTopicRequired Kafka topic not specified
 var ErrKafkaTopicRequired = errors.New("kafka topic is required")

@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// MemoryStore 内存缓存存储
+// MemoryStore memory cache storage
 type MemoryStore struct {
 	name    string
 	data    map[string]*memoryItem
@@ -15,13 +15,13 @@ type MemoryStore struct {
 	maxSize int
 }
 
-// memoryItem 缓存项
+// memoryItem cache item
 type memoryItem struct {
 	value     []byte
 	expiresAt time.Time
 }
 
-// NewMemoryStore 创建内存存储
+// Create memory store
 func NewMemoryStore(name string, maxSize int) *MemoryStore {
 	if maxSize <= 0 {
 		maxSize = 10000
@@ -31,17 +31,17 @@ func NewMemoryStore(name string, maxSize int) *MemoryStore {
 		data:    make(map[string]*memoryItem),
 		maxSize: maxSize,
 	}
-	// 启动过期清理协程
+	// Start expired item cleanup coroutine
 	go store.cleanupLoop()
 	return store
 }
 
-// Name 返回存储名称
+// Name Returns the storage name
 func (s *MemoryStore) Name() string {
 	return s.name
 }
 
-// Get 获取缓存值
+// Get cached value
 func (s *MemoryStore) Get(ctx context.Context, key string) ([]byte, error) {
 	s.mu.RLock()
 	item, ok := s.data[key]
@@ -51,7 +51,7 @@ func (s *MemoryStore) Get(ctx context.Context, key string) ([]byte, error) {
 		return nil, ErrCacheMiss
 	}
 
-	// 检查过期
+	// Check expiration
 	if !item.expiresAt.IsZero() && time.Now().After(item.expiresAt) {
 		s.Delete(ctx, key)
 		return nil, ErrCacheMiss
@@ -60,12 +60,12 @@ func (s *MemoryStore) Get(ctx context.Context, key string) ([]byte, error) {
 	return item.value, nil
 }
 
-// Set 设置缓存值
+// Set cache value
 func (s *MemoryStore) Set(ctx context.Context, key string, value []byte, ttl time.Duration) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// 检查容量，超出时删除最旧的
+	// Check capacity, delete oldest when exceeded
 	if len(s.data) >= s.maxSize {
 		s.evictOne()
 	}
@@ -83,7 +83,7 @@ func (s *MemoryStore) Set(ctx context.Context, key string, value []byte, ttl tim
 	return nil
 }
 
-// Delete 删除缓存
+// Delete cache
 func (s *MemoryStore) Delete(ctx context.Context, key string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -91,7 +91,7 @@ func (s *MemoryStore) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
-// DeleteByPrefix 按前缀删除
+// DeleteByPrefix delete by prefix
 func (s *MemoryStore) DeleteByPrefix(ctx context.Context, prefix string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -104,7 +104,7 @@ func (s *MemoryStore) DeleteByPrefix(ctx context.Context, prefix string) error {
 	return nil
 }
 
-// Exists 检查 Key 是否存在
+// Exists check if Key exists
 func (s *MemoryStore) Exists(ctx context.Context, key string) bool {
 	s.mu.RLock()
 	item, ok := s.data[key]
@@ -114,7 +114,7 @@ func (s *MemoryStore) Exists(ctx context.Context, key string) bool {
 		return false
 	}
 
-	// 检查过期
+	// Check expiration
 	if !item.expiresAt.IsZero() && time.Now().After(item.expiresAt) {
 		return false
 	}
@@ -122,7 +122,7 @@ func (s *MemoryStore) Exists(ctx context.Context, key string) bool {
 	return true
 }
 
-// Close 关闭存储
+// Close storage connection
 func (s *MemoryStore) Close() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -130,16 +130,16 @@ func (s *MemoryStore) Close() error {
 	return nil
 }
 
-// Size 返回当前缓存大小
+// Returns the current cache size
 func (s *MemoryStore) Size() int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return len(s.data)
 }
 
-// evictOne 淘汰一个条目（简单 FIFO）
+// evictOne Evict one entry (simple FIFO)
 func (s *MemoryStore) evictOne() {
-	// 找到最早过期的，或者第一个
+	// find the earliest expiration or the first one
 	var oldest string
 	var oldestTime time.Time
 
@@ -155,7 +155,7 @@ func (s *MemoryStore) evictOne() {
 	}
 }
 
-// cleanupLoop 定期清理过期条目
+// cleanupLoop periodically cleans up expired entries
 func (s *MemoryStore) cleanupLoop() {
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
@@ -165,7 +165,7 @@ func (s *MemoryStore) cleanupLoop() {
 	}
 }
 
-// cleanup 清理过期条目
+// cleanup Remove expired entries
 func (s *MemoryStore) cleanup() {
 	s.mu.Lock()
 	defer s.mu.Unlock()

@@ -5,24 +5,24 @@ import (
 	"sync"
 )
 
-// ConsumerRegistryKey 注册表在 Registry 中的 Key
+// ConsumerRegistryKey registry key in the Registry
 const ConsumerRegistryKey = "kafka.consumer.registry"
 
-// ConsumerRegistry 消费者注册表
-// 用于集中管理所有消费者 Handler
+// ConsumerRegistry consumer registry table
+// For centralized management of all consumer Handlers
 type ConsumerRegistry struct {
 	handlers map[string]ConsumerHandler
 	mu       sync.RWMutex
 }
 
-// NewConsumerRegistry 创建消费者注册表
+// Create consumer registry
 func NewConsumerRegistry() *ConsumerRegistry {
 	return &ConsumerRegistry{
 		handlers: make(map[string]ConsumerHandler),
 	}
 }
 
-// Register 注册消费者
+// Register consumer
 func (r *ConsumerRegistry) Register(handler ConsumerHandler) error {
 	if handler == nil {
 		return fmt.Errorf("handler cannot be nil")
@@ -42,14 +42,14 @@ func (r *ConsumerRegistry) Register(handler ConsumerHandler) error {
 	return nil
 }
 
-// MustRegister 注册消费者（失败时 panic）
+// MustRegister register consumer (panic on failure)
 func (r *ConsumerRegistry) MustRegister(handler ConsumerHandler) {
 	if err := r.Register(handler); err != nil {
 		panic(err)
 	}
 }
 
-// Get 获取消费者
+// Get consumer
 func (r *ConsumerRegistry) Get(name string) (ConsumerHandler, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -58,7 +58,7 @@ func (r *ConsumerRegistry) Get(name string) (ConsumerHandler, bool) {
 	return handler, ok
 }
 
-// All 获取所有消费者
+// Get all consumers
 func (r *ConsumerRegistry) All() []ConsumerHandler {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -70,7 +70,7 @@ func (r *ConsumerRegistry) All() []ConsumerHandler {
 	return handlers
 }
 
-// Names 获取所有消费者名称
+// Get all consumer names
 func (r *ConsumerRegistry) Names() []string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -82,14 +82,14 @@ func (r *ConsumerRegistry) Names() []string {
 	return names
 }
 
-// Count 获取消费者数量
+// Count Get consumer quantity
 func (r *ConsumerRegistry) Count() int {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return len(r.handlers)
 }
 
-// Unregister 取消注册消费者
+// Unregister deregister consumer
 func (r *ConsumerRegistry) Unregister(name string) bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()

@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestNewBase 测试创建基础应用实例
+// TestNewBase test creating a base application instance
 func TestNewBase(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -29,9 +29,9 @@ func TestNewBase(t *testing.T) {
 	assert.NotNil(t, app.GetConfigLoader())
 }
 
-// TestNewBaseWithDefaults 测试使用默认配置创建应用
+// TestNewBaseWithDefaults test creating an application using default configuration
 func TestNewBaseWithDefaults(t *testing.T) {
-	// 创建临时配置目录
+	// Create temporary configuration directory
 	tmpDir := t.TempDir()
 	appDir := filepath.Join(tmpDir, "configs", "test-app")
 	err := os.MkdirAll(appDir, 0755)
@@ -41,7 +41,7 @@ func TestNewBaseWithDefaults(t *testing.T) {
 	err = os.WriteFile(configFile, []byte("server:\n  port: 8080\n"), 0644)
 	require.NoError(t, err)
 
-	// 切换工作目录
+	// Switch working directory
 	oldWd, _ := os.Getwd()
 	os.Chdir(tmpDir)
 	defer os.Chdir(oldWd)
@@ -50,7 +50,7 @@ func TestNewBaseWithDefaults(t *testing.T) {
 	assert.NotNil(t, app)
 }
 
-// TestBaseApplication_WithVersion 测试版本设置
+// TestBaseApplication_WithVersion test version settings
 func TestBaseApplication_WithVersion(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -62,7 +62,7 @@ func TestBaseApplication_WithVersion(t *testing.T) {
 	assert.Equal(t, "v1.2.3", app.GetVersion())
 }
 
-// TestBaseApplication_GetStartDuration 测试启动耗时
+// TestBaseApplication_GetStartDuration test startup duration
 func TestBaseApplication_GetStartDuration(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -75,7 +75,7 @@ func TestBaseApplication_GetStartDuration(t *testing.T) {
 	assert.Greater(t, duration.Milliseconds(), int64(9))
 }
 
-// TestBaseApplication_Setup 测试 Setup 流程
+// TestBaseApplication_Setup test setup process
 func TestBaseApplication_Setup(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -95,7 +95,7 @@ func TestBaseApplication_Setup(t *testing.T) {
 	assert.Equal(t, StateSetup, app.GetState())
 }
 
-// TestBaseApplication_Shutdown 测试 Shutdown 流程
+// TestBaseApplication_Shutdown test shutdown process
 func TestBaseApplication_Shutdown(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -115,7 +115,7 @@ func TestBaseApplication_Shutdown(t *testing.T) {
 	assert.Equal(t, StateStopped, app.GetState())
 }
 
-// TestBaseApplication_Cancel 测试手动取消
+// TestBaseApplication_Cancel test manual cancellation
 func TestBaseApplication_Cancel(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -134,13 +134,13 @@ func TestBaseApplication_Cancel(t *testing.T) {
 
 	select {
 	case <-ctx.Done():
-		// 预期行为
+		// Expected behavior
 	case <-time.After(1 * time.Second):
 		t.Fatal("context should be done after cancel")
 	}
 }
 
-// TestBaseApplication_Callbacks 测试回调注册
+// TestBaseApplication_Callbacks test callback registration
 func TestBaseApplication_Callbacks(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -148,7 +148,7 @@ func TestBaseApplication_Callbacks(t *testing.T) {
 
 	app := NewBase(tmpDir, "TEST", "http", nil)
 
-	// 测试链式调用
+	// Test chain call
 	result := app.
 		OnSetup(func(b *BaseApplication) error { return nil }).
 		OnReady(func(b *BaseApplication) error { return nil }).
@@ -162,7 +162,7 @@ func TestBaseApplication_Callbacks(t *testing.T) {
 	assert.NotNil(t, app.onShutdown)
 }
 
-// TestBaseApplication_LoadAppConfig 测试加载应用配置
+// TestBaseApplication_LoadAppConfig test to load application configuration
 func TestBaseApplication_LoadAppConfig(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -175,7 +175,7 @@ func TestBaseApplication_LoadAppConfig(t *testing.T) {
 	assert.NotNil(t, appCfg)
 }
 
-// TestAppState_String 测试状态字符串表示
+// TestAppState_String test state string representation
 func TestAppState_String_Base(t *testing.T) {
 	tests := []struct {
 		state    AppState
@@ -196,7 +196,7 @@ func TestAppState_String_Base(t *testing.T) {
 	}
 }
 
-// TestBaseApplication_WaitShutdown 测试等待关闭信号
+// TestBaseApplication_WaitShutdown test waiting for shutdown signal
 func TestBaseApplication_WaitShutdown(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -206,13 +206,13 @@ func TestBaseApplication_WaitShutdown(t *testing.T) {
 	err := app.Setup()
 	require.NoError(t, err)
 
-	// 在另一个 goroutine 中调用 Cancel 来触发 context 取消
+	// Call Cancel in another goroutine to trigger context cancellation
 	go func() {
 		time.Sleep(50 * time.Millisecond)
 		app.Cancel()
 	}()
 
-	// WaitShutdown 应该在 Cancel 后返回
+	// WaitShutdown should return after Cancel
 	done := make(chan struct{})
 	go func() {
 		app.WaitShutdown()
@@ -221,15 +221,15 @@ func TestBaseApplication_WaitShutdown(t *testing.T) {
 
 	select {
 	case <-done:
-		// 预期行为
+		// Expected behavior
 	case <-time.After(2 * time.Second):
 		t.Fatal("WaitShutdown should complete after cancel")
 	}
 }
 
-// TestBaseApplication_MustGetLogger_Panic 测试未初始化时获取日志 panic
+// TestBaseApplication_MustGetLogger_Panic Test for panic when getting logger before initialization
 func TestBaseApplication_MustGetLogger_Panic(t *testing.T) {
-	// 创建一个未完全初始化的 app（跳过正常初始化流程）
+	// Create an uninitialized app (skip normal initialization process)
 	app := &BaseApplication{}
 
 	assert.Panics(t, func() {
@@ -237,9 +237,9 @@ func TestBaseApplication_MustGetLogger_Panic(t *testing.T) {
 	})
 }
 
-// TestBaseApplication_GetConfigLoader_Panic 测试未初始化时获取配置加载器 panic
+// TestBaseApplication_GetConfigLoader_Panic test for config loader panic when not initialized
 func TestBaseApplication_GetConfigLoader_Panic(t *testing.T) {
-	// 创建一个未完全初始化的 app
+	// Create an uninitialized app
 	app := &BaseApplication{}
 
 	assert.Panics(t, func() {
@@ -247,9 +247,9 @@ func TestBaseApplication_GetConfigLoader_Panic(t *testing.T) {
 	})
 }
 
-// TestBaseApplication_LoadAppConfig_NotInitialized 测试 AppConfig 未初始化
+// TestBaseApplication_LoadAppConfig_NotInitialized tests AppConfig is not initialized
 func TestBaseApplication_LoadAppConfig_NotInitialized(t *testing.T) {
-	// 创建一个未完全初始化的 app
+	// Create an uninitialized app
 	app := &BaseApplication{}
 
 	cfg, err := app.LoadAppConfig()
@@ -258,7 +258,7 @@ func TestBaseApplication_LoadAppConfig_NotInitialized(t *testing.T) {
 	assert.Contains(t, err.Error(), "AppConfig 未初始化")
 }
 
-// TestBaseApplication_Setup_Error 测试 Setup 回调返回错误
+// TestBaseApplication_Setup_Error setup callback returns error
 func TestBaseApplication_Setup_Error(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -275,7 +275,7 @@ func TestBaseApplication_Setup_Error(t *testing.T) {
 	assert.Contains(t, err.Error(), "onSetup failed")
 }
 
-// TestBaseApplication_Shutdown_CallsCallback 测试 Shutdown 调用回调
+// TestBaseApplication_Shutdown_CallsCallback Tests that Shutdown calls callback
 func TestBaseApplication_Shutdown_CallsCallback(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -294,7 +294,7 @@ func TestBaseApplication_Shutdown_CallsCallback(t *testing.T) {
 	assert.True(t, called)
 }
 
-// TestBaseApplication_SetState 测试状态设置
+// TestBaseApplication_SetState test state settings
 func TestBaseApplication_SetState(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -302,14 +302,14 @@ func TestBaseApplication_SetState(t *testing.T) {
 
 	app := NewBase(tmpDir, "TEST", "http", nil)
 
-	// 初始状态是 Init
+	// Initial state is Init
 	assert.Equal(t, StateInit, app.GetState())
 
-	// 设置为 Running
+	// Set to Running
 	app.setState(StateRunning)
 	assert.Equal(t, StateRunning, app.GetState())
 
-	// 设置为 Stopped
+	// Set to Stopped
 	app.setState(StateStopped)
 	assert.Equal(t, StateStopped, app.GetState())
 }

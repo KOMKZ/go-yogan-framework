@@ -6,19 +6,19 @@ import (
 	"fmt"
 )
 
-// PublishMessage 发布消息的便捷结构
+// PublishMessage Convenient structure for publishing messages
 type PublishMessage struct {
-	// Key 消息键（可选）
+	// Key message key (optional)
 	Key string
 
-	// Value 消息值
+	// Message value
 	Value []byte
 
-	// Headers 消息头（可选）
+	// Headers (optional)
 	Headers map[string]string
 }
 
-// Publish 发布消息到指定 Topic
+// Publish message to specified topic
 func (m *Manager) Publish(ctx context.Context, topic string, msg *PublishMessage) error {
 	producer := m.GetProducer()
 	if producer == nil {
@@ -36,7 +36,7 @@ func (m *Manager) Publish(ctx context.Context, topic string, msg *PublishMessage
 	return err
 }
 
-// PublishJSON 发布 JSON 消息到指定 Topic
+// PublishJSON publishes JSON messages to a specified topic
 func (m *Manager) PublishJSON(ctx context.Context, topic string, key string, payload any) error {
 	data, err := json.Marshal(payload)
 	if err != nil {
@@ -49,7 +49,7 @@ func (m *Manager) PublishJSON(ctx context.Context, topic string, key string, pay
 	})
 }
 
-// PublishBytes 发布字节消息到指定 Topic
+// PublishBytes publish byte message to specified Topic
 func (m *Manager) PublishBytes(ctx context.Context, topic string, key string, value []byte) error {
 	return m.Publish(ctx, topic, &PublishMessage{
 		Key:   key,
@@ -57,7 +57,7 @@ func (m *Manager) PublishBytes(ctx context.Context, topic string, key string, va
 	})
 }
 
-// PublishString 发布字符串消息到指定 Topic
+// PublishString Publish string message to specified Topic
 func (m *Manager) PublishString(ctx context.Context, topic string, key string, value string) error {
 	return m.Publish(ctx, topic, &PublishMessage{
 		Key:   key,
@@ -65,7 +65,7 @@ func (m *Manager) PublishString(ctx context.Context, topic string, key string, v
 	})
 }
 
-// PublishWithHeaders 发布带 Headers 的消息
+// PublishWithHeaders publish messages with headers
 func (m *Manager) PublishWithHeaders(ctx context.Context, topic string, key string, value []byte, headers map[string]string) error {
 	return m.Publish(ctx, topic, &PublishMessage{
 		Key:     key,

@@ -6,23 +6,23 @@ import (
 	"time"
 )
 
-// BackoffStrategy 退避策略接口
+// BackoffStrategy retreat strategy interface
 type BackoffStrategy interface {
-	// Next 返回第 N 次重试的延迟时间（attempt 从 1 开始）
+	// Returns the delay time for the Nth retry (with attempt starting at 1)
 	Next(attempt int) time.Duration
 }
 
-// BackoffOption 退避策略选项
+// BackoffOption back-off strategy option
 type BackoffOption func(*backoffConfig)
 
-// backoffConfig 退避策略配置
+// backoffConfig backoff strategy configuration
 type backoffConfig struct {
-	multiplier float64       // 指数倍数（默认 2.0）
-	maxDelay   time.Duration // 最大延迟（默认 30s）
-	jitter     float64       // 抖动比例（默认 0.2，即 20%）
+	multiplier float64       // Exponential factor (default 2.0)
+	maxDelay   time.Duration // Maximum delay (default 30s)
+	jitter     float64       // Jitter ratio (default 0.2, i.e., 20%)
 }
 
-// defaultBackoffConfig 默认退避配置
+// default backoff configuration
 func defaultBackoffConfig() *backoffConfig {
 	return &backoffConfig{
 		multiplier: 2.0,
@@ -31,7 +31,7 @@ func defaultBackoffConfig() *backoffConfig {
 	}
 }
 
-// WithMultiplier 设置指数倍数
+// WithMultiplier sets the exponential multiplier
 func WithMultiplier(m float64) BackoffOption {
 	return func(c *backoffConfig) {
 		if m > 0 {
@@ -40,7 +40,7 @@ func WithMultiplier(m float64) BackoffOption {
 	}
 }
 
-// WithMaxDelay 设置最大延迟
+// SetMaximumDelay
 func WithMaxDelay(d time.Duration) BackoffOption {
 	return func(c *backoffConfig) {
 		if d > 0 {
@@ -49,7 +49,7 @@ func WithMaxDelay(d time.Duration) BackoffOption {
 	}
 }
 
-// WithJitter 设置抖动比例（0.0 - 1.0）
+// WithJitter sets the jitter ratio (0.0 - 1.0)
 func WithJitter(ratio float64) BackoffOption {
 	return func(c *backoffConfig) {
 		if ratio >= 0 && ratio <= 1.0 {
@@ -59,18 +59,18 @@ func WithJitter(ratio float64) BackoffOption {
 }
 
 // ============================================================
-// 指数退避策略
+// Exponential backoff strategy
 // ============================================================
 
-// exponentialBackoff 指数退避策略
+// exponential backoff strategy
 type exponentialBackoff struct {
 	base   time.Duration
 	config *backoffConfig
 }
 
-// ExponentialBackoff 创建指数退避策略
+// Create an exponential backoff strategy
 // delay = base * (multiplier ^ (attempt - 1))
-// 例如：base=1s, multiplier=2.0
+// For example: base=1s, multiplier=2.0
 //   attempt 1: 1s
 //   attempt 2: 2s
 //   attempt 3: 4s
@@ -87,21 +87,21 @@ func ExponentialBackoff(base time.Duration, opts ...BackoffOption) BackoffStrate
 	}
 }
 
-// Next 实现 BackoffStrategy 接口
+// Next implement the BackoffStrategy interface
 func (b *exponentialBackoff) Next(attempt int) time.Duration {
 	if attempt <= 0 {
 		return 0
 	}
 	
-	// 计算基础延迟：base * (multiplier ^ (attempt - 1))
+	// Calculate base latency: base * (multiplier ^ (attempt - 1))
 	delay := float64(b.base) * math.Pow(b.config.multiplier, float64(attempt-1))
 	
-	// 限制最大延迟
+	// Limit maximum delay
 	if delay > float64(b.config.maxDelay) {
 		delay = float64(b.config.maxDelay)
 	}
 	
-	// 应用抖动（随机 ±jitter%）
+	// Apply jitter (random ±jitter%)
 	if b.config.jitter > 0 {
 		delay = applyJitter(delay, b.config.jitter)
 	}
@@ -110,18 +110,18 @@ func (b *exponentialBackoff) Next(attempt int) time.Duration {
 }
 
 // ============================================================
-// 线性退避策略
+// linear backoff strategy
 // ============================================================
 
-// linearBackoff 线性退避策略
+// linear backoff strategy
 type linearBackoff struct {
 	base   time.Duration
 	config *backoffConfig
 }
 
-// LinearBackoff 创建线性退避策略
+// Create linear backoff strategy
 // delay = base * attempt
-// 例如：base=1s
+// For example: base=1s
 //   attempt 1: 1s
 //   attempt 2: 2s
 //   attempt 3: 3s
@@ -138,21 +138,21 @@ func LinearBackoff(base time.Duration, opts ...BackoffOption) BackoffStrategy {
 	}
 }
 
-// Next 实现 BackoffStrategy 接口
+// Next implement the BackoffStrategy interface
 func (b *linearBackoff) Next(attempt int) time.Duration {
 	if attempt <= 0 {
 		return 0
 	}
 	
-	// 计算基础延迟：base * attempt
+	// Calculate base latency: base * attempt
 	delay := float64(b.base) * float64(attempt)
 	
-	// 限制最大延迟
+	// Limit maximum latency
 	if delay > float64(b.config.maxDelay) {
 		delay = float64(b.config.maxDelay)
 	}
 	
-	// 应用抖动
+	// Apply jitter
 	if b.config.jitter > 0 {
 		delay = applyJitter(delay, b.config.jitter)
 	}
@@ -161,18 +161,18 @@ func (b *linearBackoff) Next(attempt int) time.Duration {
 }
 
 // ============================================================
-// 固定退避策略
+// Fixed backoff strategy
 // ============================================================
 
-// constantBackoff 固定退避策略
+// constantBackoff fixed backoff strategy
 type constantBackoff struct {
 	delay  time.Duration
 	config *backoffConfig
 }
 
-// ConstantBackoff 创建固定退避策略
-// delay = 固定值
-// 例如：delay=2s
+// Create fixed backoff strategy
+// delay = fixed value
+// For example: delay=2s
 //   attempt 1: 2s
 //   attempt 2: 2s
 //   attempt 3: 2s
@@ -188,7 +188,7 @@ func ConstantBackoff(delay time.Duration, opts ...BackoffOption) BackoffStrategy
 	}
 }
 
-// Next 实现 BackoffStrategy 接口
+// Next implement the BackoffStrategy interface
 func (b *constantBackoff) Next(attempt int) time.Duration {
 	if attempt <= 0 {
 		return 0
@@ -196,7 +196,7 @@ func (b *constantBackoff) Next(attempt int) time.Duration {
 	
 	delay := float64(b.delay)
 	
-	// 应用抖动
+	// Apply jitter
 	if b.config.jitter > 0 {
 		delay = applyJitter(delay, b.config.jitter)
 	}
@@ -205,38 +205,38 @@ func (b *constantBackoff) Next(attempt int) time.Duration {
 }
 
 // ============================================================
-// 无退避策略
+// No backoff strategy
 // ============================================================
 
-// noBackoff 无退避策略
+// noBackoff no backoff strategy
 type noBackoff struct{}
 
-// NoBackoff 创建无退避策略（立即重试）
+// NoBackoff creates a no-backoff policy (immediate retry)
 func NoBackoff() BackoffStrategy {
 	return &noBackoff{}
 }
 
-// Next 实现 BackoffStrategy 接口
+// Next implement the BackoffStrategy interface
 func (b *noBackoff) Next(attempt int) time.Duration {
 	return 0
 }
 
 // ============================================================
-// 工具函数
+// utility function
 // ============================================================
 
-// applyJitter 应用抖动
-// 在 [delay * (1 - jitter), delay * (1 + jitter)] 范围内随机
+// Apply jitter
+// Randomly within the range [delay * (1 - jitter), delay * (1 + jitter)]
 func applyJitter(delay float64, jitter float64) float64 {
-	// 计算抖动范围
+	// Calculate jitter range
 	delta := delay * jitter
 	
-	// 随机偏移：[-delta, +delta]
+	// Random offset: [-delta, +delta]
 	offset := (rand.Float64()*2 - 1) * delta
 	
 	result := delay + offset
 	
-	// 确保不为负数
+	// Ensure not negative
 	if result < 0 {
 		return 0
 	}

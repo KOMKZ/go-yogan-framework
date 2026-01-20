@@ -1,5 +1,5 @@
-// Package cache 提供缓存编排层实现
-// 支持多存储后端、事件驱动失效、集中配置管理
+// Package cache provides a caching orchestration layer implementation
+// Supports multi-storage backend, event-driven failure, centralized configuration management
 package cache
 
 import (
@@ -7,77 +7,77 @@ import (
 	"time"
 )
 
-// Store 缓存存储接口
-// 所有存储后端必须实现此接口
+// Store cache storage interface
+// All storage backends must implement this interface
 type Store interface {
-	// Name 返回存储后端名称
+	// Name Returns the storage backend name
 	Name() string
 
-	// Get 获取缓存值
-	// 返回 ErrCacheMiss 表示未命中
+	// Get cache value
+	// Return ErrCacheMiss indicates a cache miss
 	Get(ctx context.Context, key string) ([]byte, error)
 
-	// Set 设置缓存值
+	// Set cache value
 	Set(ctx context.Context, key string, value []byte, ttl time.Duration) error
 
-	// Delete 删除缓存
+	// Delete cache
 	Delete(ctx context.Context, key string) error
 
-	// DeleteByPrefix 按前缀删除
+	// DeleteByPrefix delete by prefix
 	DeleteByPrefix(ctx context.Context, prefix string) error
 
-	// Exists 检查 Key 是否存在
+	// Exists check if Key exists
 	Exists(ctx context.Context, key string) bool
 
-	// Close 关闭存储连接
+	// Close storage connection
 	Close() error
 }
 
-// Serializer 序列化接口
+// Serializer serialization interface
 type Serializer interface {
-	// Serialize 序列化对象为字节数组
+	// Serialize object to byte array
 	Serialize(v any) ([]byte, error)
 
-	// Deserialize 反序列化字节数组为对象
+	// Deserialize byte array to object
 	Deserialize(data []byte, v any) error
 
-	// Name 返回序列化器名称
+	// Return serializer name
 	Name() string
 }
 
-// LoaderFunc 数据加载函数
-// 当缓存未命中时调用此函数获取数据
+// Loader function for data loading
+// Call this function to retrieve data when cache miss occurs
 type LoaderFunc func(ctx context.Context, args ...any) (any, error)
 
-// KeyBuilderFunc Key 生成函数
+// KeyBuilderFunc Key generation function
 type KeyBuilderFunc func(args ...any) string
 
-// Orchestrator 缓存编排中心接口
+// Orchestrator caching orchestration center interface
 type Orchestrator interface {
-	// RegisterLoader 注册数据加载器
+	// RegisterLoader register data loader
 	RegisterLoader(name string, loader LoaderFunc)
 
-	// Call 执行缓存调用
-	// 自动处理缓存读取、未命中加载、写入缓存
+	// Call execute cache call
+	// Automatically handle cache reads, cache misses loading, and cache writes
 	Call(ctx context.Context, name string, args ...any) (any, error)
 
-	// Invalidate 手动失效指定缓存
+	// Invalidate specified cache manually
 	Invalidate(ctx context.Context, name string, args ...any) error
 
-	// InvalidateByPattern 按模式失效
+	// InvalidateByPattern invalidate by pattern
 	InvalidateByPattern(ctx context.Context, name string, pattern string) error
 
-	// GetStore 获取存储后端
+	// GetStore Retrieve storage backend
 	GetStore(name string) (Store, error)
 
-	// RegisterStore 注册存储后端
+	// RegisterStore register storage backend
 	RegisterStore(name string, store Store)
 
-	// Stats 获取缓存统计信息
+	// Get cache statistics
 	Stats() *CacheStats
 }
 
-// CacheStats 缓存统计信息
+// CacheStats cache statistics
 type CacheStats struct {
 	Hits        int64            `json:"hits"`
 	Misses      int64            `json:"misses"`

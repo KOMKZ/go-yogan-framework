@@ -5,64 +5,64 @@ import (
 	"time"
 )
 
-// Config Redis 配置
+// Configure Redis settings
 type Config struct {
-	// Mode 模式："standalone"（单机）或 "cluster"（集群）
+	// Mode: "standalone" (single machine) or "cluster" (cluster)
 	Mode string `mapstructure:"mode"`
 
-	// Addrs 地址列表
-	// 单机模式：使用第一个地址
-	// 集群模式：使用所有地址
+	// Address list
+	// Single-machine mode: use the first address
+	// Cluster mode: use all addresses
 	Addrs []string `mapstructure:"addrs"`
 
-	// Addr 单个地址（向后兼容，优先使用 Addrs）
+	// Addr single address (backward compatibility, prefer using Addrs)
 	Addr string `mapstructure:"addr"`
 
-	// Password 密码（可选）
+	// Password (optional)
 	Password string `mapstructure:"password"`
 
-	// DB 数据库编号（0-15，仅单机模式有效）
+	// Database number (0-15, valid only in single-machine mode)
 	DB int `mapstructure:"db"`
 
-	// PoolSize 连接池大小（默认 10）
+	// PoolSize connection pool size (default 10)
 	PoolSize int `mapstructure:"pool_size"`
 
-	// MinIdleConns 最小空闲连接数（默认 5）
+	// Minimum idle connections (default 5)
 	MinIdleConns int `mapstructure:"min_idle_conns"`
 
-	// MaxRetries 最大重试次数（默认 3）
+	// Maximum number of retries (default 3)
 	MaxRetries int `mapstructure:"max_retries"`
 
-	// DialTimeout 连接超时（默认 5s）
+	// DialTimeout connection timeout (default 5s)
 	DialTimeout time.Duration `mapstructure:"dial_timeout"`
 
-	// ReadTimeout 读取超时（默认 3s）
+	// Read timeout (default 3s)
 	ReadTimeout time.Duration `mapstructure:"read_timeout"`
 
-	// WriteTimeout 写入超时（默认 3s）
+	// WriteTimeout Write timeout (default 3s)
 	WriteTimeout time.Duration `mapstructure:"write_timeout"`
 }
 
-// Validate 验证配置
+// Validate configuration
 func (c *Config) Validate() error {
-	// 验证模式
+	// Validate mode
 	if c.Mode != "standalone" && c.Mode != "cluster" {
 		return fmt.Errorf("invalid mode: %s (must be standalone or cluster)", c.Mode)
 	}
 
-	// 验证地址
+	// Validate address
 	if len(c.Addrs) == 0 {
 		return fmt.Errorf("addrs cannot be empty")
 	}
 
-	// 单机模式验证
+	// Single-machine mode verification
 	if c.Mode == "standalone" {
 		if c.DB < 0 || c.DB > 15 {
 			return fmt.Errorf("db must be between 0 and 15, got: %d", c.DB)
 		}
 	}
 
-	// 连接池验证
+	// Connection pool validation
 	if c.PoolSize < 0 {
 		return fmt.Errorf("pool_size must be >= 0, got: %d", c.PoolSize)
 	}
@@ -74,19 +74,19 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-// ApplyDefaults 应用默认值
+// Apply defaults
 func (c *Config) ApplyDefaults() {
-	// 默认单机模式
+	// Default single-machine mode
 	if c.Mode == "" {
 		c.Mode = "standalone"
 	}
 
-	// 向后兼容：如果使用了 Addr（单数），转换为 Addrs（复数）
+	// Backward compatibility: if Addr (singular) is used, convert to Addrs (plural)
 	if c.Addr != "" && len(c.Addrs) == 0 {
 		c.Addrs = []string{c.Addr}
 	}
 
-	// 连接池默认值
+	// default pool values
 	if c.PoolSize == 0 {
 		c.PoolSize = 10
 	}
@@ -99,7 +99,7 @@ func (c *Config) ApplyDefaults() {
 		c.MaxRetries = 3
 	}
 
-	// 超时默认值
+	// default timeout value
 	if c.DialTimeout == 0 {
 		c.DialTimeout = 5 * time.Second
 	}

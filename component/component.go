@@ -1,22 +1,22 @@
-// Package component 提供组件接口定义
-// 这是最底层的包，不依赖任何业务包，避免循环依赖
+// Package component provides interface definitions for components
+// This is the lowest level package, which does not depend on any business packages to avoid circular dependencies.
 package component
 
 import "context"
 
-// HealthChecker 健康检查接口
-// 组件可选实现此接口，提供健康检查能力
+// HealthChecker health check interface
+// Components optionally implement this interface to provide health check capabilities
 type HealthChecker interface {
-	// Check 执行健康检查
-	// 返回 nil 表示健康，返回 error 表示不健康
+	// Check execution health status
+	// Return nil indicates healthy, return error indicates unhealthy
 	Check(ctx context.Context) error
 
-	// Name 返回检查项名称（如 "database", "redis"）
+	// Name returns the check item name (e.g., "database", "redis")
 	Name() string
 }
 
-// HealthCheckProvider 健康检查提供者接口
-// 组件可选实现此接口，提供健康检查器
+// HealthCheckProvider health check provider interface
+// Components optionally implement this interface to provide health checkers
 type HealthCheckProvider interface {
 	GetHealthChecker() HealthChecker
 }

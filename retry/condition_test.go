@@ -12,7 +12,7 @@ import (
 )
 
 // ============================================================
-// 基础条件测试
+// Basic condition testing
 // ============================================================
 
 func TestAlwaysRetry(t *testing.T) {
@@ -64,7 +64,7 @@ func TestNeverRetry(t *testing.T) {
 }
 
 // ============================================================
-// 错误匹配条件测试
+// Error matching condition test
 // ============================================================
 
 var (
@@ -122,7 +122,7 @@ func TestRetryOnErrors(t *testing.T) {
 }
 
 // ============================================================
-// 自定义条件测试
+// Custom condition test
 // ============================================================
 
 func TestRetryOnCondition(t *testing.T) {
@@ -151,7 +151,7 @@ func TestRetryOnCondition(t *testing.T) {
 }
 
 // ============================================================
-// gRPC 条件测试
+// gRPC conditional test
 // ============================================================
 
 func TestRetryOnGRPCCodes(t *testing.T) {
@@ -200,10 +200,10 @@ func TestRetryOnGRPCCodes(t *testing.T) {
 }
 
 // ============================================================
-// HTTP 条件测试
+// HTTP condition test
 // ============================================================
 
-// mockHTTPError 模拟 HTTP 错误
+// Mock HTTP error
 type mockHTTPError struct {
 	statusCode int
 	message    string
@@ -263,10 +263,10 @@ func TestRetryOnHTTPStatus(t *testing.T) {
 }
 
 // ============================================================
-// 临时错误条件测试
+// Temporary error condition test
 // ============================================================
 
-// mockTemporaryError 模拟临时错误
+// mockTemporaryError simulate temporary error
 type mockTemporaryError struct {
 	temporary bool
 	timeout   bool
@@ -339,7 +339,7 @@ func TestRetryOnTemporaryError(t *testing.T) {
 	}
 }
 
-// mockNetError 模拟 net.Error
+// mockNetError simulate net.Error
 type mockNetError struct {
 	temporary bool
 	timeout   bool
@@ -398,7 +398,7 @@ func TestRetryOnTemporaryError_NetError(t *testing.T) {
 }
 
 // ============================================================
-// 组合条件测试
+// Composite condition test
 // ============================================================
 
 func TestAnd(t *testing.T) {
@@ -510,7 +510,7 @@ func TestNot(t *testing.T) {
 }
 
 // ============================================================
-// 复杂组合测试
+// Complex combination testing
 // ============================================================
 
 func TestComplexCondition(t *testing.T) {

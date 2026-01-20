@@ -11,28 +11,28 @@ import (
 	"go.uber.org/zap"
 )
 
-// TokenManager Token 管理接口
+// Token Manager token management interface
 type TokenManager interface {
-	// GenerateAccessToken 生成 Access Token
+	// GenerateAccessToken generates Access Token
 	GenerateAccessToken(ctx context.Context, subject string, claims map[string]interface{}) (string, error)
 
-	// GenerateRefreshToken 生成 Refresh Token
+	// GenerateRefreshToken generates Refresh Token
 	GenerateRefreshToken(ctx context.Context, subject string) (string, error)
 
-	// VerifyToken 验证并解析 Token
+	// VerifyToken validate and parse the token
 	VerifyToken(ctx context.Context, token string) (*Claims, error)
 
-	// RefreshToken 刷新 Token（使用 Refresh Token 获取新的 Access Token）
+	// RefreshToken refresh token (use refresh token to obtain a new access token)
 	RefreshToken(ctx context.Context, refreshToken string) (string, error)
 
-	// RevokeToken 撤销 Token（加入黑名单）
+	// RevokeToken Revoke Token (Add to blacklist)
 	RevokeToken(ctx context.Context, token string) error
 
-	// RevokeUserTokens 批量撤销（用户登出所有设备）
+	// RevokeUserTokens批量revoke user tokens (logout user from all devices)
 	RevokeUserTokens(ctx context.Context, subject string) error
 }
 
-// tokenManagerImpl TokenManager 实现
+// tokenManagerImpl TokenManager implementation
 type tokenManagerImpl struct {
 	config        *Config
 	signingMethod jwt.SigningMethod
@@ -42,7 +42,7 @@ type tokenManagerImpl struct {
 	logger        *logger.CtxZapLogger
 }
 
-// NewTokenManager 创建 TokenManager
+// NewTokenManager creates TokenManager
 func NewTokenManager(config *Config, tokenStore TokenStore, log *logger.CtxZapLogger) (TokenManager, error) {
 	if err := config.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid config: %w", err)
@@ -54,7 +54,7 @@ func NewTokenManager(config *Config, tokenStore TokenStore, log *logger.CtxZapLo
 		logger:     log,
 	}
 
-	// 设置签名方法和密钥
+	// Set signature method and key
 	if err := manager.setupSigningMethod(); err != nil {
 		return nil, err
 	}
@@ -62,7 +62,7 @@ func NewTokenManager(config *Config, tokenStore TokenStore, log *logger.CtxZapLo
 	return manager, nil
 }
 
-// setupSigningMethod 设置签名方法
+// set up signing method
 func (m *tokenManagerImpl) setupSigningMethod() error {
 	switch m.config.Algorithm {
 	case "HS256":
@@ -79,7 +79,7 @@ func (m *tokenManagerImpl) setupSigningMethod() error {
 		m.verifyKey = m.signingKey
 	case "RS256":
 		m.signingMethod = jwt.SigningMethodRS256
-		// TODO: 加载 RSA 私钥和公钥
+		// TODO: Load RSA private key and public key
 		return fmt.Errorf("RS256 not yet implemented")
 	default:
 		return ErrAlgorithmNotSupported
@@ -88,12 +88,12 @@ func (m *tokenManagerImpl) setupSigningMethod() error {
 	return nil
 }
 
-// GenerateAccessToken 生成 Access Token
+// GenerateAccessToken generates Access Token
 func (m *tokenManagerImpl) GenerateAccessToken(ctx context.Context, subject string, customClaims map[string]interface{}) (string, error) {
 	now := time.Now()
 	expiresAt := now.Add(m.config.AccessToken.TTL)
 
-	// 构建 Claims
+	// Construct Claims
 	claims := jwt.MapClaims{
 		"sub":        subject,
 		"iat":        now.Unix(),
@@ -102,30 +102,30 @@ func (m *tokenManagerImpl) GenerateAccessToken(ctx context.Context, subject stri
 		"token_type": "access",
 	}
 
-	// 添加 Audience
+	// Add Audience
 	if m.config.AccessToken.Audience != "" {
 		claims["aud"] = m.config.AccessToken.Audience
 	}
 
-	// 添加 JTI（防重放）
+	// Add JTI (anti-replay)
 	if m.config.Security.EnableJTI {
 		claims["jti"] = uuid.New().String()
 	}
 
-	// 添加 NotBefore
+	// Add NotBefore
 	if m.config.Security.EnableNotBefore {
 		claims["nbf"] = now.Unix()
 	}
 
-	// 合并自定义 Claims
+	// Merge custom claims
 	for k, v := range customClaims {
 		claims[k] = v
 	}
 
-	// 创建 Token
+	// Create Token
 	token := jwt.NewWithClaims(m.signingMethod, claims)
 
-	// 签名
+	// Signature
 	tokenString, err := token.SignedString(m.signingKey)
 	if err != nil {
 		m.logger.ErrorCtx(ctx, "failed to sign token",
@@ -143,7 +143,7 @@ func (m *tokenManagerImpl) GenerateAccessToken(ctx context.Context, subject stri
 	return tokenString, nil
 }
 
-// GenerateRefreshToken 生成 Refresh Token
+// GenerateRefreshToken generates Refresh Token
 func (m *tokenManagerImpl) GenerateRefreshToken(ctx context.Context, subject string) (string, error) {
 	if !m.config.RefreshToken.Enabled {
 		return "", fmt.Errorf("refresh token not enabled")
@@ -178,11 +178,11 @@ func (m *tokenManagerImpl) GenerateRefreshToken(ctx context.Context, subject str
 	return tokenString, nil
 }
 
-// VerifyToken 验证并解析 Token
+// VerifyToken validate and parse Token
 func (m *tokenManagerImpl) VerifyToken(ctx context.Context, tokenString string) (*Claims, error) {
-	// 解析 Token
+	// Parse Token
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		// 验证签名算法
+		// Verify signature algorithm
 		if token.Method != m.signingMethod {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
@@ -200,13 +200,13 @@ func (m *tokenManagerImpl) VerifyToken(ctx context.Context, tokenString string) 
 		return nil, ErrTokenInvalid
 	}
 
-	// 提取 Claims
+	// Extract claims
 	mapClaims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
 		return nil, ErrInvalidClaims
 	}
 
-	// 转换为自定义 Claims
+	// Convert to custom claims
 	claims, err := m.parseCustomClaims(mapClaims)
 	if err != nil {
 		m.logger.WarnCtx(ctx, "failed to parse claims",
@@ -215,9 +215,9 @@ func (m *tokenManagerImpl) VerifyToken(ctx context.Context, tokenString string) 
 		return nil, err
 	}
 
-	// 检查黑名单
+	// Check blacklist
 	if m.config.Blacklist.Enabled && m.tokenStore != nil {
-		// 检查 Token 黑名单
+		// Check Token blacklist
 		blacklisted, err := m.tokenStore.IsBlacklisted(ctx, tokenString)
 		if err != nil {
 			m.logger.ErrorCtx(ctx, "failed to check token blacklist",
@@ -232,7 +232,7 @@ func (m *tokenManagerImpl) VerifyToken(ctx context.Context, tokenString string) 
 			return nil, ErrTokenBlacklisted
 		}
 
-		// 检查用户黑名单
+		// Check user blacklist
 		userBlacklisted, err := m.tokenStore.IsUserBlacklisted(ctx, claims.Subject, claims.IssuedAt)
 		if err != nil {
 			m.logger.ErrorCtx(ctx, "failed to check user blacklist",
@@ -255,20 +255,20 @@ func (m *tokenManagerImpl) VerifyToken(ctx context.Context, tokenString string) 
 	return claims, nil
 }
 
-// RefreshToken 刷新 Token
+// RefreshToken refresh token
 func (m *tokenManagerImpl) RefreshToken(ctx context.Context, refreshToken string) (string, error) {
-	// 验证 Refresh Token
+	// Validate Refresh Token
 	claims, err := m.VerifyToken(ctx, refreshToken)
 	if err != nil {
 		return "", fmt.Errorf("invalid refresh token: %w", err)
 	}
 
-	// 检查 Token 类型
+	// Check token type
 	if claims.TokenType != "refresh" {
 		return "", fmt.Errorf("not a refresh token")
 	}
 
-	// 生成新的 Access Token
+	// Generate new Access Token
 	customClaims := make(map[string]interface{})
 	if claims.UserID > 0 {
 		customClaims["user_id"] = claims.UserID
@@ -295,23 +295,23 @@ func (m *tokenManagerImpl) RefreshToken(ctx context.Context, refreshToken string
 	return accessToken, nil
 }
 
-// RevokeToken 撤销 Token
+// RevokeToken revoke token
 func (m *tokenManagerImpl) RevokeToken(ctx context.Context, tokenString string) error {
 	if !m.config.Blacklist.Enabled || m.tokenStore == nil {
 		return fmt.Errorf("blacklist not enabled")
 	}
 
-	// 解析 Token 获取过期时间
+	// Parse token to get expiration time
 	claims, err := m.VerifyToken(ctx, tokenString)
 	if err != nil {
-		// Token 已失效，无需加入黑名单
+		// Token has expired, no need to add to blacklist
 		return nil
 	}
 
-	// 添加到黑名单，TTL 为剩余过期时间
+	// Add to blacklist, TTL is remaining expiry time
 	ttl := claims.TTL()
 	if ttl <= 0 {
-		return nil // 已过期
+		return nil // expired
 	}
 
 	err = m.tokenStore.AddToBlacklist(ctx, tokenString, ttl)
@@ -327,13 +327,13 @@ func (m *tokenManagerImpl) RevokeToken(ctx context.Context, tokenString string) 
 	return nil
 }
 
-// RevokeUserTokens 撤销用户所有 Token
+// RevokeUserTokens Revoke all user tokens
 func (m *tokenManagerImpl) RevokeUserTokens(ctx context.Context, subject string) error {
 	if !m.config.Blacklist.Enabled || m.tokenStore == nil {
 		return fmt.Errorf("blacklist not enabled")
 	}
 
-	// 使用 Access Token TTL 作为黑名单 TTL
+	// Use the Access Token TTL as the blacklist TTL
 	ttl := m.config.AccessToken.TTL
 
 	err := m.tokenStore.BlacklistUserTokens(ctx, subject, ttl)
@@ -348,11 +348,11 @@ func (m *tokenManagerImpl) RevokeUserTokens(ctx context.Context, subject string)
 	return nil
 }
 
-// parseCustomClaims 解析自定义 Claims
+// parseCustomClaims Parse custom claims
 func (m *tokenManagerImpl) parseCustomClaims(mapClaims jwt.MapClaims) (*Claims, error) {
 	claims := &Claims{}
 
-	// 标准 Claims
+	// Standard Claims
 	if sub, ok := mapClaims["sub"].(string); ok {
 		claims.Subject = sub
 	}
@@ -385,7 +385,7 @@ func (m *tokenManagerImpl) parseCustomClaims(mapClaims jwt.MapClaims) (*Claims, 
 		claims.TokenType = tokenType
 	}
 
-	// 自定义 Claims
+	// Custom Claims
 	if userID, ok := mapClaims["user_id"].(float64); ok {
 		claims.UserID = int64(userID)
 	}
@@ -406,7 +406,7 @@ func (m *tokenManagerImpl) parseCustomClaims(mapClaims jwt.MapClaims) (*Claims, 
 		claims.TenantID = tenantID
 	}
 
-	// 验证 Claims
+	// Validate Claims
 	if err := claims.Valid(); err != nil {
 		return nil, err
 	}
@@ -414,14 +414,14 @@ func (m *tokenManagerImpl) parseCustomClaims(mapClaims jwt.MapClaims) (*Claims, 
 	return claims, nil
 }
 
-// parseJWTError 解析 JWT 错误
+// parseJWTError Parse JWT error
 func (m *tokenManagerImpl) parseJWTError(err error) error {
-	// 使用 errors.Is 来检查错误链
+	// Use errors.Is to check the error chain
 	if err == nil {
 		return nil
 	}
 
-	// 检查具体错误类型
+	// Check specific error type
 	switch {
 	case err == jwt.ErrTokenExpired:
 		return ErrTokenExpired
@@ -431,7 +431,7 @@ func (m *tokenManagerImpl) parseJWTError(err error) error {
 		return ErrInvalidSignature
 	}
 
-	// 检查错误字符串（golang-jwt/jwt/v5 的错误可能被包装）
+	// Check for error strings (errors from golang-jwt/jwt/v5 may be wrapped)
 	errStr := err.Error()
 	switch {
 	case contains(errStr, "expired"):
@@ -445,7 +445,7 @@ func (m *tokenManagerImpl) parseJWTError(err error) error {
 	}
 }
 
-// contains 检查字符串是否包含子串
+// contains Check if the string contains a substring
 func contains(s, substr string) bool {
 	if substr == "" {
 		return true

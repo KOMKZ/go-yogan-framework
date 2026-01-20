@@ -64,8 +64,8 @@ func TestNewManager_InvalidConfig(t *testing.T) {
 	}
 }
 
-// TestManager_Client_Standalone 测试单机模式（需要 Redis 服务器）
-// 此测试标记为 short，可以使用 go test -short 跳过
+// TestManager_Client_Standalone test standalone mode (requires Redis server)
+// This test is marked as short and can be skipped using go test -short
 func TestManager_Client_Standalone(t *testing.T) {
 	if testing.Short() {
 		t.Skip("跳过需要 Redis 服务器的测试")
@@ -87,16 +87,16 @@ func TestManager_Client_Standalone(t *testing.T) {
 	}
 	defer m.Close()
 
-	// 测试获取客户端
+	// Test to obtain client
 	client := m.Client("main")
 	assert.NotNil(t, client)
 
-	// 测试 Ping
+	// Test Ping
 	ctx := context.Background()
 	err = m.Ping(ctx)
 	assert.NoError(t, err)
 
-	// 测试基本操作
+	// Test basic operations
 	err = client.Set(ctx, "test_key", "test_value", 0).Err()
 	assert.NoError(t, err)
 
@@ -104,11 +104,11 @@ func TestManager_Client_Standalone(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "test_value", val)
 
-	// 清理
+	// clean up
 	client.Del(ctx, "test_key")
 }
 
-// TestManager_WithDB 测试 DB 切换
+// TestManager_WithDB test database switch
 func TestManager_WithDB(t *testing.T) {
 	if testing.Short() {
 		t.Skip("跳过需要 Redis 服务器的测试")
@@ -130,7 +130,7 @@ func TestManager_WithDB(t *testing.T) {
 	}
 	defer m.Close()
 
-	// 切换到 DB 1
+	// Switch to DB 1
 	db1Client := m.WithDB("main", 1)
 	if db1Client == nil {
 		t.Skip("WithDB 返回 nil，可能 Redis 不支持多 DB")
@@ -139,20 +139,20 @@ func TestManager_WithDB(t *testing.T) {
 
 	ctx := context.Background()
 
-	// 在 DB 1 写入数据
+	// Write data to DB 1
 	err = db1Client.Set(ctx, "db1_key", "db1_value", 0).Err()
 	assert.NoError(t, err)
 
-	// 在 DB 0 应该读不到（miniredis 不支持多 DB，跳过此检查）
+	// In DB 0 this should not be read (miniredis does not support multiple DBs, skip this check)
 	db0Client := m.Client("main")
 	_, _ = db0Client.Get(ctx, "db1_key").Result()
 
-	// 在 DB 1 应该能读到
+	// Should be readable from DB 1
 	val2, err2 := db1Client.Get(ctx, "db1_key").Result()
 	assert.NoError(t, err2)
 	assert.Equal(t, "db1_value", val2)
 
-	// 清理
+	// Cleanup
 	db1Client.Del(ctx, "db1_key")
 }
 
@@ -204,7 +204,7 @@ func TestManager_Close(t *testing.T) {
 		logger:    logger,
 	}
 
-	// 关闭空的 Manager 应该不报错
+	// Closing an empty Manager should not result in an error
 	err := m.Close()
 	assert.NoError(t, err)
 }
@@ -300,14 +300,14 @@ func TestNewManager_MultipleInstances(t *testing.T) {
 	}
 	defer m.Close()
 
-	// 验证两个实例都存在
+	// Verify that both instances exist
 	mainClient := m.Client("main")
 	assert.NotNil(t, mainClient)
 
 	cacheClient := m.Client("cache")
 	assert.NotNil(t, cacheClient)
 
-	// 验证它们是不同的实例
+	// Verify they are different instances
 	assert.NotEqual(t, mainClient, cacheClient)
 }
 
@@ -348,12 +348,12 @@ func TestManager_Ping_EmptyManager(t *testing.T) {
 
 	ctx := context.Background()
 	err := m.Ping(ctx)
-	assert.NoError(t, err) // 空 Manager Ping 应该成功
+	assert.NoError(t, err) // An empty Manager Ping should succeed
 }
 
-// 使用 miniredis 进行完整测试
+// Use miniredis for full testing
 func TestManager_WithMiniredis(t *testing.T) {
-	// 创建 miniredis 服务器
+	// Create a mini Redis server
 	mr, err := miniredis.Run()
 	if err != nil {
 		t.Fatalf("无法启动 miniredis: %v", err)
@@ -375,11 +375,11 @@ func TestManager_WithMiniredis(t *testing.T) {
 	assert.NotNil(t, m)
 	defer m.Close()
 
-	// 测试获取客户端
+	// Test client retrieval
 	client := m.Client("main")
 	assert.NotNil(t, client)
 
-	// 测试基本操作
+	// Test basic operations
 	ctx := context.Background()
 	err = client.Set(ctx, "test_key", "test_value", 0).Err()
 	assert.NoError(t, err)
@@ -388,13 +388,13 @@ func TestManager_WithMiniredis(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "test_value", val)
 
-	// 测试 Ping
+	// Test Ping
 	err = m.Ping(ctx)
 	assert.NoError(t, err)
 }
 
 func TestManager_WithDB_Miniredis(t *testing.T) {
-	// 创建 miniredis 服务器
+	// Create a mini Redis server
 	mr, err := miniredis.Run()
 	if err != nil {
 		t.Fatalf("无法启动 miniredis: %v", err)
@@ -415,29 +415,29 @@ func TestManager_WithDB_Miniredis(t *testing.T) {
 	assert.NoError(t, err)
 	defer m.Close()
 
-	// 切换到 DB 1
+	// Switch to DB 1
 	db1Client := m.WithDB("main", 1)
 	assert.NotNil(t, db1Client)
 	defer db1Client.Close()
 
 	ctx := context.Background()
 
-	// 在 DB 1 写入数据
+	// Write data to DB 1
 	err = db1Client.Set(ctx, "db1_key", "db1_value", 0).Err()
 	assert.NoError(t, err)
 
-	// 在 DB 0 应该读不到（miniredis 不支持多 DB，跳过此检查）
+	// In DB 0 this should not be read (miniredis does not support multiple DBs, skip this check)
 	db0Client := m.Client("main")
 	_, _ = db0Client.Get(ctx, "db1_key").Result()
 
-	// 在 DB 1 应该能读到
+	// Should be readable from DB 1
 	val, err := db1Client.Get(ctx, "db1_key").Result()
 	assert.NoError(t, err)
 	assert.Equal(t, "db1_value", val)
 }
 
 func TestManager_MultipleInstances_Miniredis(t *testing.T) {
-	// 创建两个 miniredis 服务器
+	// Create two miniredis servers
 	mr1, err := miniredis.Run()
 	if err != nil {
 		t.Fatalf("无法启动 miniredis 1: %v", err)
@@ -469,23 +469,23 @@ func TestManager_MultipleInstances_Miniredis(t *testing.T) {
 	assert.NoError(t, err)
 	defer m.Close()
 
-	// 验证两个实例都存在
+	// Verify that both instances exist
 	mainClient := m.Client("main")
 	assert.NotNil(t, mainClient)
 
 	cacheClient := m.Client("cache")
 	assert.NotNil(t, cacheClient)
 
-	// 在 main 写入数据
+	// Write data in main
 	ctx := context.Background()
 	err = mainClient.Set(ctx, "key1", "value1", 0).Err()
 	assert.NoError(t, err)
 
-	// 在 cache 写入数据
+	// Write data to cache
 	err = cacheClient.Set(ctx, "key2", "value2", 0).Err()
 	assert.NoError(t, err)
 
-	// 验证数据隔离
+	// Verify data isolation
 	val1, err := mainClient.Get(ctx, "key1").Result()
 	assert.NoError(t, err)
 	assert.Equal(t, "value1", val1)
@@ -521,11 +521,11 @@ func TestManager_Close_Miniredis(t *testing.T) {
 	m, err := NewManager(configs, logger)
 	assert.NoError(t, err)
 
-	// 关闭 Manager
+	// Close Manager
 	err = m.Close()
 	assert.NoError(t, err)
 
-	// 关闭后再次关闭应该也不报错
+	// Closing again after closing should not result in an error either
 	err = m.Close()
 	assert.NoError(t, err)
 }

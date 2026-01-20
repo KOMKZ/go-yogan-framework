@@ -3,16 +3,16 @@ package database
 import "errors"
 
 var (
-	// ErrInvalidConfig 无效配置
+	// ErrInvalidConfig Invalid Configuration
 	ErrInvalidConfig = errors.New("invalid database config")
 
-	// ErrRecordNotFound 记录不存在
+	// ErrRecordNotFound Record not found
 	ErrRecordNotFound = errors.New("record not found")
 
-	// ErrDuplicateKey 主键或唯一键冲突
+	// ErrDuplicateKey Primary key or unique key conflict
 	ErrDuplicateKey = errors.New("duplicate key")
 
-	// ErrConnectionFailed 连接失败
+	// ErrConnectionFailed Connection failed
 	ErrConnectionFailed = errors.New("database connection failed")
 )
 

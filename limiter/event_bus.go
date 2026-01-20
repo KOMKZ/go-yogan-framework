@@ -4,7 +4,7 @@ import (
 	"sync"
 )
 
-// eventBus 事件总线实现
+// Event bus implementation
 type eventBus struct {
 	listeners []EventListener
 	eventChan chan Event
@@ -13,7 +13,7 @@ type eventBus struct {
 	wg        sync.WaitGroup
 }
 
-// NewEventBus 创建事件总线
+// Create event bus
 func NewEventBus(bufferSize int) EventBus {
 	if bufferSize <= 0 {
 		bufferSize = 100
@@ -24,14 +24,14 @@ func NewEventBus(bufferSize int) EventBus {
 		eventChan: make(chan Event, bufferSize),
 	}
 
-	// 启动事件分发协程
+	// Start event distribution coroutine
 	bus.wg.Add(1)
 	go bus.dispatch()
 
 	return bus
 }
 
-// Subscribe 订阅事件
+// Subscribe to event
 func (b *eventBus) Subscribe(listener EventListener) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -43,7 +43,7 @@ func (b *eventBus) Subscribe(listener EventListener) {
 	b.listeners = append(b.listeners, listener)
 }
 
-// Publish 发布事件
+// Publish event
 func (b *eventBus) Publish(event Event) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
@@ -52,15 +52,15 @@ func (b *eventBus) Publish(event Event) {
 		return
 	}
 
-	// 非阻塞发送
+	// non-blocking send
 	select {
 	case b.eventChan <- event:
 	default:
-		// 缓冲区满，丢弃事件（防止阻塞）
+		// Buffer full, discard event (prevent blocking)
 	}
 }
 
-// Close 关闭事件总线
+// Close event bus
 func (b *eventBus) Close() {
 	b.mu.Lock()
 	if b.closed {
@@ -71,11 +71,11 @@ func (b *eventBus) Close() {
 	close(b.eventChan)
 	b.mu.Unlock()
 
-	// 等待分发协程结束
+	// wait for distribution coroutine to finish
 	b.wg.Wait()
 }
 
-// dispatch 分发事件到所有监听器
+// dispatch events to all listeners
 func (b *eventBus) dispatch() {
 	defer b.wg.Done()
 
@@ -85,13 +85,13 @@ func (b *eventBus) dispatch() {
 		copy(listeners, b.listeners)
 		b.mu.RUnlock()
 
-		// 通知所有监听器
+		// Notify all listeners
 		for _, listener := range listeners {
-			// 安全调用，避免panic影响其他监听器
+			// safe call to avoid panic affecting other listeners
 			func() {
 				defer func() {
 					if r := recover(); r != nil {
-						// 忽略panic
+						// Ignore panic
 					}
 				}()
 				listener.OnEvent(event)

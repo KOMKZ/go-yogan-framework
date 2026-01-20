@@ -1,5 +1,5 @@
-// Package application 提供通用的应用启动框架
-// GRPCApplication 是 gRPC 应用的专用封装（类似 CLIApplication、CronApplication）
+// Package application provides a generic application startup framework
+// GRPCApplication is a dedicated wrapper for gRPC applications (similar to CLIApplication, CronApplication)
 package application
 
 import (
@@ -10,18 +10,18 @@ import (
 	"go.uber.org/zap"
 )
 
-// GRPCApplication gRPC 应用（组合 BaseApplication + gRPC 专有功能）
+// GRPCApplication gRPC application (combination of BaseApplication and gRPC specific features)
 type GRPCApplication struct {
-	*BaseApplication // 组合核心框架（80% 通用逻辑）
+	*BaseApplication // Combines core framework (80% generic logic)
 
-	// 🎯 服务治理管理器（可选，如果启用会自动注册/注销服务）
+	// 🎯 Service Governance Manager (optional, automatically registers/unregisters services if enabled)
 	governanceManager *governance.Manager
 }
 
-// NewGRPC 创建 gRPC 应用实例
-// configPath: 配置目录路径（如 ../configs/auth-service）
-// configPrefix: 环境变量前缀（如 "APP"）
-// flags: 命令行参数（可选，nil 表示不使用）
+// Create gRPC application instance using NewGRPC
+// configPath: Configuration directory path (e.g., ../configs/auth-service)
+// configPrefix: Configuration prefix (e.g., "APP")
+// flags: command-line arguments (optional, nil indicates not used)
 func NewGRPC(configPath, configPrefix string, flags interface{}) *GRPCApplication {
 	if configPath == "" {
 		configPath = "../configs"
@@ -37,21 +37,21 @@ func NewGRPC(configPath, configPrefix string, flags interface{}) *GRPCApplicatio
 	}
 }
 
-// NewGRPCWithDefaults 创建 gRPC 应用实例（使用默认配置）
-// appName: 应用名称（如 auth-service），用于构建默认配置路径
+// Create gRPC application instance with default configuration
+// appName: Application name (e.g., auth-service), used to construct default configuration paths
 func NewGRPCWithDefaults(appName string) *GRPCApplication {
 	return NewGRPC("../configs/"+appName, "APP", nil)
 }
 
-// NewGRPCWithFlags 创建 gRPC 应用实例（支持命令行参数）
-// configPath: 配置目录路径
-// configPrefix: 环境变量前缀
-// flags: 命令行参数（AppFlags 结构体）
+// Create gRPC application instance (supporting command-line arguments)
+// configPath: configuration directory path
+// configPrefix: environment variable prefix
+// flags: command-line arguments (AppFlags struct)
 func NewGRPCWithFlags(configPath, configPrefix string, flags interface{}) *GRPCApplication {
 	return NewGRPC(configPath, configPrefix, flags)
 }
 
-// OnSetup 注册 Setup 阶段回调（链式调用）
+// OnSetup registers the callback for the Setup phase (chained call)
 func (g *GRPCApplication) OnSetup(fn func(*GRPCApplication) error) *GRPCApplication {
 	g.BaseApplication.OnSetup(func(base *BaseApplication) error {
 		return fn(g)
@@ -59,7 +59,7 @@ func (g *GRPCApplication) OnSetup(fn func(*GRPCApplication) error) *GRPCApplicat
 	return g
 }
 
-// OnReady 注册启动完成回调（链式调用）
+// Register completion callback on ready (chained call)
 func (g *GRPCApplication) OnReady(fn func(*GRPCApplication) error) *GRPCApplication {
 	g.BaseApplication.OnReady(func(base *BaseApplication) error {
 		return fn(g)
@@ -67,7 +67,7 @@ func (g *GRPCApplication) OnReady(fn func(*GRPCApplication) error) *GRPCApplicat
 	return g
 }
 
-// OnShutdown 注册关闭前回调（链式调用）
+// OnShutdown register pre-shutdown callback (chained call)
 func (g *GRPCApplication) OnShutdown(fn func(*GRPCApplication) error) *GRPCApplication {
 	g.BaseApplication.onShutdown = func(ctx context.Context) error {
 		return fn(g)
@@ -75,17 +75,17 @@ func (g *GRPCApplication) OnShutdown(fn func(*GRPCApplication) error) *GRPCAppli
 	return g
 }
 
-// Run 启动 gRPC 应用（阻塞直到收到关闭信号）
+// Run the gRPC application (block until shutdown signal received)
 func (g *GRPCApplication) Run() {
 	logger := g.MustGetLogger()
 
-	// 1. Setup 阶段（初始化所有组件）
+	// 1. Setup phase (initialize all components)
 	if err := g.Setup(); err != nil {
 		logger.ErrorCtx(g.ctx, "Application start failed", zap.Error(err))
 		panic(err)
 	}
 
-	// 2. 🎯 自动注册服务到治理中心（如果启用）
+	// 2. 🎯 Automatically register services to the governance center (if enabled)
 	if g.governanceManager != nil {
 		if err := g.autoRegisterService(); err != nil {
 			logger.WarnCtx(g.ctx, "⚠️  Service registration failed (does not affect app startup)", zap.Error(err))
@@ -93,7 +93,7 @@ func (g *GRPCApplication) Run() {
 		}
 	}
 
-	// 3. 触发 OnReady（应用自定义初始化）
+	// 3. Trigger OnReady (application custom initialization)
 	g.BaseApplication.setState(StateRunning)
 	if g.BaseApplication.onReady != nil {
 		if err := g.BaseApplication.onReady(g.BaseApplication); err != nil {
@@ -104,47 +104,47 @@ func (g *GRPCApplication) Run() {
 
 	logger.InfoCtx(g.ctx, "✅ gRPC application started", zap.Duration("startup_time", g.GetStartDuration()))
 
-	// 4. 等待关闭信号（阻塞）
+	// wait for shutdown signal (blocking)
 	g.WaitShutdown()
 
-	// 5. 🎯 自动注销服务（如果启用）
+	// 5. 🎯 Automatically log out service (if enabled)
 	if g.governanceManager != nil {
 		if err := g.autoDeregisterService(); err != nil {
 			logger.ErrorCtx(g.ctx, "Service deregistration failed", zap.Error(err))
 		}
 	}
 
-	// 6. 优雅关闭
+	// Elegant shutdown
 	if err := g.gracefulShutdown(); err != nil {
 		logger.ErrorCtx(g.ctx, "Application close failed", zap.Error(err))
 	}
 }
 
-// gracefulShutdown gRPC 应用优雅关闭
+// graceful shutdown for gRPC application
 func (g *GRPCApplication) gracefulShutdown() error {
 	logger := g.MustGetLogger()
 	logger.DebugCtx(g.ctx, "Starting gRPC application graceful shutdown...")
 
-	// 调用 Base 的通用关闭逻辑（30秒超时）
+	// Call Base's generic shutdown logic (30-second timeout)
 	return g.BaseApplication.Shutdown(30 * time.Second)
 }
 
-// SetGovernanceManager 设置服务治理管理器（可选，用于自动服务注册/注销）
+// SetGovernanceManager set service governance manager (optional, for automatic service registration/unregistration)
 func (g *GRPCApplication) SetGovernanceManager(manager *governance.Manager) *GRPCApplication {
 	g.governanceManager = manager
 	return g
 }
 
-// autoRegisterService 自动注册服务（从 gRPC 组件获取端口信息）
+// autoRegisterService Automatically register service (retrieve port information from gRPC components)
 func (g *GRPCApplication) autoRegisterService() error {
-	// TODO: 从 gRPC 组件获取实际监听端口并注册服务
+	// TODO: Retrieve actual listening port from gRPC component and register service
 	logger := g.MustGetLogger()
 	logger.DebugCtx(g.ctx, "🎯 Service registration enabled (implementing...)")
 
 	return nil
 }
 
-// autoDeregisterService 自动注销服务
+// autoDeregisterService Automatically deregister service
 func (g *GRPCApplication) autoDeregisterService() error {
 	if g.governanceManager == nil {
 		return nil

@@ -11,12 +11,12 @@ import (
 	"go.uber.org/zap"
 )
 
-// TestCtxZapLogger_AllMethods 测试 CtxZapLogger 的所有方法
+// TestCtxZapLogger_AllMethods tests all methods of CtxZapLogger
 func TestCtxZapLogger_AllMethods(t *testing.T) {
 	tmpDir := t.TempDir()
 	logDir := filepath.Join(tmpDir, "ctx_logger")
 
-	// 重置全局 Manager
+	// Reset global Manager
 	globalManager = nil
 	managerOnce = sync.Once{}
 
@@ -39,37 +39,37 @@ func TestCtxZapLogger_AllMethods(t *testing.T) {
 	logger := GetLogger("test")
 	ctx := context.WithValue(context.Background(), "trace_id", "test-trace-123")
 
-	// 测试 InfoCtx
+	// Test InfoCtx
 	logger.InfoCtx(ctx, "Info 消息", zap.String("key", "value"))
 
-	// 测试 Info（不带 ctx）
+	// Test Info (without ctx)
 	logger.Info("Info 不带 ctx")
 
-	// 测试 DebugCtx
+	// Test DebugCtx
 	logger.DebugCtx(ctx, "Debug 消息", zap.Int("count", 10))
 
-	// 测试 Debug（不带 ctx）
+	// Test Debug (without ctx)
 	logger.Debug("Debug 不带 ctx")
 
-	// 测试 WarnCtx
+	// Test WarnCtx
 	logger.WarnCtx(ctx, "Warn 消息", zap.Bool("flag", true))
 
-	// 测试 Warn（不带 ctx）
+	// Test Warn (without ctx)
 	logger.Warn("Warn 不带 ctx")
 
-	// 测试 ErrorCtx（会自动添加堆栈）
+	// Test ErrorCtx (stack is automatically added)
 	logger.ErrorCtx(ctx, "Error 消息", zap.Error(nil))
 
-	// 测试 Error（不带 ctx）
+	// Test Error (without ctx)
 	logger.Error("Error 不带 ctx")
 
 	CloseAll()
 
-	// 验证日志文件存在
+	// Verify that the log file exists
 	assert.FileExists(t, filepath.Join(logDir, "test", "test-info.log"))
 	assert.FileExists(t, filepath.Join(logDir, "test", "test-error.log"))
 
-	// 验证 info 日志内容
+	// Verify the content of the info log
 	infoContent, _ := os.ReadFile(filepath.Join(logDir, "test", "test-info.log"))
 	infoStr := string(infoContent)
 	assert.Contains(t, infoStr, "Info 消息")
@@ -78,14 +78,14 @@ func TestCtxZapLogger_AllMethods(t *testing.T) {
 	assert.Contains(t, infoStr, "Debug 消息")
 	assert.Contains(t, infoStr, "Warn 消息")
 
-	// 验证 error 日志内容
+	// Verify error log contents
 	errorContent, _ := os.ReadFile(filepath.Join(logDir, "test", "test-error.log"))
 	errorStr := string(errorContent)
 	assert.Contains(t, errorStr, "Error 消息")
-	assert.Contains(t, errorStr, "stack") // 应该包含堆栈
+	assert.Contains(t, errorStr, "stack") // Should include stack
 }
 
-// TestCtxZapLogger_With 测试 With 方法
+// TestCtxZapLogger_With test the With method
 func TestCtxZapLogger_With(t *testing.T) {
 	tmpDir := t.TempDir()
 	logDir := filepath.Join(tmpDir, "with_logger")
@@ -105,7 +105,7 @@ func TestCtxZapLogger_With(t *testing.T) {
 
 	logger := GetLogger("order")
 
-	// 使用 With 添加预设字段
+	// Use With to add preset fields
 	orderLogger := logger.With(
 		zap.String("service", "order-service"),
 		zap.Int64("order_id", 12345),
@@ -116,7 +116,7 @@ func TestCtxZapLogger_With(t *testing.T) {
 
 	CloseAll()
 
-	// 验证预设字段存在
+	// Validate preset fields exist
 	content, _ := os.ReadFile(filepath.Join(logDir, "order", "order-info.log"))
 	contentStr := string(content)
 	assert.Contains(t, contentStr, "service")
@@ -127,7 +127,7 @@ func TestCtxZapLogger_With(t *testing.T) {
 	assert.Contains(t, contentStr, "订单支付")
 }
 
-// TestCtxZapLogger_GetZapLogger 测试 GetZapLogger 方法
+// TestCtxZapLogger_GetZapLogger test the GetZapLogger method
 func TestCtxZapLogger_GetZapLogger(t *testing.T) {
 	tmpDir := t.TempDir()
 	logDir := filepath.Join(tmpDir, "zap_logger")
@@ -147,21 +147,21 @@ func TestCtxZapLogger_GetZapLogger(t *testing.T) {
 
 	logger := GetLogger("test")
 
-	// 获取底层 zap.Logger
+	// Get the underlying zap.Logger
 	zapLogger := logger.GetZapLogger()
 	assert.NotNil(t, zapLogger)
 
-	// 使用底层 Logger 记录
+	// Use underlying Logger for logging
 	zapLogger.Info("直接使用 zap.Logger")
 
 	CloseAll()
 
-	// 验证日志文件
+	// Verify log file
 	content, _ := os.ReadFile(filepath.Join(logDir, "test", "test-info.log"))
 	assert.Contains(t, string(content), "直接使用 zap.Logger")
 }
 
-// TestCtxZapLogger_TraceIDFromDifferentKeys 测试不同的 TraceID key
+// TestCtxZapLogger_TraceIDFromDifferentKeys Test different TraceID keys
 func TestCtxZapLogger_TraceIDFromDifferentKeys(t *testing.T) {
 	tmpDir := t.TempDir()
 	logDir := filepath.Join(tmpDir, "trace_keys")
@@ -184,15 +184,15 @@ func TestCtxZapLogger_TraceIDFromDifferentKeys(t *testing.T) {
 
 	logger := GetLogger("test")
 
-	// 测试自定义 key
+	// Test custom key
 	ctx1 := context.WithValue(context.Background(), "custom_trace", "custom-trace-456")
 	logger.InfoCtx(ctx1, "自定义 key 测试")
 
-	// 测试标准 trace_id key（回退）
+	// Test for standard trace_id key (fallback)
 	ctx2 := context.WithValue(context.Background(), "trace_id", "standard-trace-789")
 	logger.InfoCtx(ctx2, "标准 key 测试")
 
-	// 测试 traceId key（兼容性回退）
+	// Test traceId key (compatibility fallback)
 	ctx3 := context.WithValue(context.Background(), "traceId", "camel-trace-000")
 	logger.InfoCtx(ctx3, "驼峰 key 测试")
 
@@ -200,13 +200,13 @@ func TestCtxZapLogger_TraceIDFromDifferentKeys(t *testing.T) {
 
 	content, _ := os.ReadFile(filepath.Join(logDir, "test", "test-info.log"))
 	contentStr := string(content)
-	assert.Contains(t, contentStr, "request_id") // 自定义字段名
+	assert.Contains(t, contentStr, "request_id") // Custom field name
 	assert.Contains(t, contentStr, "custom-trace-456")
 	assert.Contains(t, contentStr, "standard-trace-789")
 	assert.Contains(t, contentStr, "camel-trace-000")
 }
 
-// TestCtxZapLogger_NoStacktraceWhenDisabled 测试禁用堆栈时不添加堆栈
+// TestCtxZapLogger_NoStacktraceWhenDisabled Tests do not include stack traces when disabled
 func TestCtxZapLogger_NoStacktraceWhenDisabled(t *testing.T) {
 	tmpDir := t.TempDir()
 	logDir := filepath.Join(tmpDir, "no_stack")
@@ -221,7 +221,7 @@ func TestCtxZapLogger_NoStacktraceWhenDisabled(t *testing.T) {
 		EnableConsole:         false,
 		EnableLevelInFilename: true,
 		EnableDateInFilename:  false,
-		EnableStacktrace:      false, // 禁用堆栈
+		EnableStacktrace:      false, // Disable stack
 		MaxSize:               10,
 	})
 
@@ -233,10 +233,10 @@ func TestCtxZapLogger_NoStacktraceWhenDisabled(t *testing.T) {
 	content, _ := os.ReadFile(filepath.Join(logDir, "test", "test-error.log"))
 	contentStr := string(content)
 	assert.Contains(t, contentStr, "Error 无堆栈")
-	assert.NotContains(t, contentStr, "\"stack\"") // 不应该有 stack 字段
+	assert.NotContains(t, contentStr, "\"stack\"") // There should not be a stack field
 }
 
-// TestNewCtxZapLogger 测试 NewCtxZapLogger 函数
+// TestNewCtxZapLogger test the NewCtxZapLogger function
 func TestNewCtxZapLogger(t *testing.T) {
 	tmpDir := t.TempDir()
 	logDir := filepath.Join(tmpDir, "new_ctx")
@@ -254,7 +254,7 @@ func TestNewCtxZapLogger(t *testing.T) {
 		MaxSize:               10,
 	})
 
-	// 使用 NewCtxZapLogger 创建
+	// Use NewCtxZapLogger to create
 	logger := NewCtxZapLogger("new_module")
 	assert.NotNil(t, logger)
 

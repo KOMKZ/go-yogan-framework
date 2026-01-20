@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestNewDoApplication 测试创建 DoApplication
+// TestNewDoApplication test for creating DoApplication
 func TestNewDoApplication(t *testing.T) {
 	t.Run("default options", func(t *testing.T) {
 		app := NewDoApplication()
@@ -35,7 +35,7 @@ func TestNewDoApplication(t *testing.T) {
 	})
 }
 
-// TestDoApplication_Setup 测试 Setup 阶段
+// TestDoApplication_Setup test Setup phase
 func TestDoApplication_Setup(t *testing.T) {
 	t.Run("successful setup", func(t *testing.T) {
 		setupCalled := false
@@ -57,7 +57,7 @@ func TestDoApplication_Setup(t *testing.T) {
 	})
 }
 
-// TestDoApplication_Start 测试 Start 阶段
+// TestDoApplication_Start test Start phase
 func TestDoApplication_Start(t *testing.T) {
 	t.Run("successful start", func(t *testing.T) {
 		readyCalled := false
@@ -80,7 +80,7 @@ func TestDoApplication_Start(t *testing.T) {
 	})
 }
 
-// TestDoApplication_Shutdown 测试优雅关闭
+// TestDoApplication_GracefulShutdown testing graceful shutdown
 func TestDoApplication_Shutdown(t *testing.T) {
 	t.Run("successful shutdown", func(t *testing.T) {
 		shutdownCalled := false
@@ -109,7 +109,7 @@ func TestDoApplication_Shutdown(t *testing.T) {
 	})
 }
 
-// TestDoApplication_HealthCheck 测试健康检查
+// TestDoApplication_HealthCheck health check test
 func TestDoApplication_HealthCheck(t *testing.T) {
 	t.Run("healthy app", func(t *testing.T) {
 		app := NewDoApplication(
@@ -127,7 +127,7 @@ func TestDoApplication_HealthCheck(t *testing.T) {
 	})
 }
 
-// TestAppState_String 测试状态字符串
+// TestAppState_String test state string
 func TestAppState_String(t *testing.T) {
 	tests := []struct {
 		state    AppState

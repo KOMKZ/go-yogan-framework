@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestSanitizeSQL 测试 SQL 脱敏
+// TestSanitizeSQL test SQL sanitization
 func TestSanitizeSQL(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -38,7 +38,7 @@ func TestSanitizeSQL(t *testing.T) {
 	}
 }
 
-// TestSanitizePassword 测试密码脱敏
+// TestSanitizePassword test password sanitization
 func TestSanitizePassword(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -80,7 +80,7 @@ func TestSanitizePassword(t *testing.T) {
 	}
 }
 
-// TestSanitizePhone 测试手机号脱敏
+// TestSanitizePhone test phone number desensitization
 func TestSanitizePhone(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -112,10 +112,10 @@ func TestSanitizePhone(t *testing.T) {
 	}
 }
 
-// TestSanitizeIDCard 测试身份证脱敏
+// TestSanitizeIDCard test ID card desensitization
 func TestSanitizeIDCard(t *testing.T) {
-	// 注意：当前正则会匹配任何 14 位连续数字，保留前6位后4位
-	// 这对于纯身份证场景有效，但与手机号混用时可能有冲突
+	// Note: The current regex will match any consecutive 14 digits, keeping the first 6 and last 4 digits
+	// This is effective for pure ID card scenarios, but may conflict when used with phone numbers
 	tests := []struct {
 		name     string
 		input    string

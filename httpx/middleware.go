@@ -1,4 +1,4 @@
-// Package httpx 提供 HTTP 请求/响应的统一处理
+// Package httpx provides unified handling for HTTP requests/responses
 package httpx
 
 import (
@@ -7,18 +7,18 @@ import (
 
 const errorLoggingConfigKey = "httpx:error_logging_config"
 
-// errorLoggingConfigInternal 内部配置结构（优化性能）
+// internal configuration structure for error logging (to optimize performance)
 type errorLoggingConfigInternal struct {
 	Enable          bool
-	IgnoreStatusMap map[int]bool // 预处理为 map，加速查找
+	IgnoreStatusMap map[int]bool // Preprocess as map, accelerate lookup
 	FullErrorChain  bool
 	LogLevel        string
 }
 
-// ErrorLoggingMiddleware 注入错误日志配置到 Context
-// 使用此中间件后，HandleError 将根据配置决定是否记录日志
+// Inject error logging configuration into Context
+// After using this middleware, HandleError will decide whether to log based on the configuration.
 func ErrorLoggingMiddleware(cfg ErrorLoggingConfig) gin.HandlerFunc {
-	// 预处理配置（避免每次请求重复处理）
+	// Preprocess configuration (avoid redundant processing for each request)
 	ignoreStatusMap := make(map[int]bool, len(cfg.IgnoreHTTPStatus))
 	for _, status := range cfg.IgnoreHTTPStatus {
 		ignoreStatusMap[status] = true
@@ -32,13 +32,13 @@ func ErrorLoggingMiddleware(cfg ErrorLoggingConfig) gin.HandlerFunc {
 	}
 
 	return func(c *gin.Context) {
-		// 将预处理后的配置注入 Context
+		// Inject the preprocessed configuration into the Context
 		c.Set(errorLoggingConfigKey, internalCfg)
 		c.Next()
 	}
 }
 
-// getErrorLoggingConfig 从 Context 读取配置
+// get error logging config from context
 func getErrorLoggingConfig(c *gin.Context) errorLoggingConfigInternal {
 	if val, exists := c.Get(errorLoggingConfigKey); exists {
 		if cfg, ok := val.(errorLoggingConfigInternal); ok {
@@ -46,7 +46,7 @@ func getErrorLoggingConfig(c *gin.Context) errorLoggingConfigInternal {
 		}
 	}
 
-	// 默认配置：不记录日志
+	// Default configuration: do not log
 	return errorLoggingConfigInternal{
 		Enable:          false,
 		IgnoreStatusMap: make(map[int]bool),

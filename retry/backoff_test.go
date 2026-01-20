@@ -6,11 +6,11 @@ import (
 )
 
 // ============================================================
-// 指数退避测试
+// Exponential backoff test
 // ============================================================
 
 func TestExponentialBackoff_Basic(t *testing.T) {
-	backoff := ExponentialBackoff(time.Second, WithJitter(0)) // 禁用抖动，方便测试
+	backoff := ExponentialBackoff(time.Second, WithJitter(0)) // Disable jitter, convenient for testing
 	
 	tests := []struct {
 		attempt  int
@@ -36,7 +36,7 @@ func TestExponentialBackoff_Basic(t *testing.T) {
 func TestExponentialBackoff_WithMultiplier(t *testing.T) {
 	backoff := ExponentialBackoff(
 		time.Second,
-		WithMultiplier(3.0), // 3 倍增长
+		WithMultiplier(3.0), // 3 times growth
 		WithJitter(0),
 	)
 	
@@ -63,7 +63,7 @@ func TestExponentialBackoff_WithMultiplier(t *testing.T) {
 func TestExponentialBackoff_WithMaxDelay(t *testing.T) {
 	backoff := ExponentialBackoff(
 		time.Second,
-		WithMaxDelay(5*time.Second), // 最大 5s
+		WithMaxDelay(5*time.Second), // Maximum 5 seconds
 		WithJitter(0),
 	)
 	
@@ -74,8 +74,8 @@ func TestExponentialBackoff_WithMaxDelay(t *testing.T) {
 		{1, 1 * time.Second}, // 1s
 		{2, 2 * time.Second}, // 2s
 		{3, 4 * time.Second}, // 4s
-		{4, 5 * time.Second}, // 8s -> 限制为 5s
-		{5, 5 * time.Second}, // 16s -> 限制为 5s
+		{4, 5 * time.Second}, // limit to 5s
+		{5, 5 * time.Second}, // limit to 5s
 	}
 	
 	for _, tt := range tests {
@@ -91,15 +91,15 @@ func TestExponentialBackoff_WithMaxDelay(t *testing.T) {
 func TestExponentialBackoff_WithJitter(t *testing.T) {
 	backoff := ExponentialBackoff(
 		time.Second,
-		WithJitter(0.2), // 20% 抖动
+		WithJitter(0.2), // 20% jitter
 	)
 	
-	// 测试抖动范围
+	// Test jitter range
 	base := time.Second
 	minDelay := time.Duration(float64(base) * 0.8) // 0.8s
 	maxDelay := time.Duration(float64(base) * 1.2) // 1.2s
 	
-	// 多次测试，验证抖动范围
+	// Multiple tests to verify jitter range
 	for i := 0; i < 100; i++ {
 		delay := backoff.Next(1)
 		if delay < minDelay || delay > maxDelay {
@@ -127,7 +127,7 @@ func TestExponentialBackoff_NegativeAttempt(t *testing.T) {
 }
 
 // ============================================================
-// 线性退避测试
+// linear backoff test
 // ============================================================
 
 func TestLinearBackoff_Basic(t *testing.T) {
@@ -168,8 +168,8 @@ func TestLinearBackoff_WithMaxDelay(t *testing.T) {
 		{1, 1 * time.Second},
 		{2, 2 * time.Second},
 		{3, 3 * time.Second},
-		{4, 3 * time.Second}, // 限制为 3s
-		{5, 3 * time.Second}, // 限制为 3s
+		{4, 3 * time.Second}, // Limit to 3 seconds
+		{5, 3 * time.Second}, // Limit to 3 seconds
 	}
 	
 	for _, tt := range tests {
@@ -192,13 +192,13 @@ func TestLinearBackoff_ZeroAttempt(t *testing.T) {
 }
 
 // ============================================================
-// 固定退避测试
+// Fixed backoff test
 // ============================================================
 
 func TestConstantBackoff_Basic(t *testing.T) {
 	backoff := ConstantBackoff(2*time.Second, WithJitter(0))
 	
-	// 所有尝试都应该返回相同的延迟
+	// All attempts should return the same latency
 	for attempt := 1; attempt <= 5; attempt++ {
 		got := backoff.Next(attempt)
 		expected := 2 * time.Second
@@ -235,7 +235,7 @@ func TestConstantBackoff_ZeroAttempt(t *testing.T) {
 }
 
 // ============================================================
-// 无退避测试
+// No-backoff test
 // ============================================================
 
 func TestNoBackoff(t *testing.T) {
@@ -250,7 +250,7 @@ func TestNoBackoff(t *testing.T) {
 }
 
 // ============================================================
-// 抖动测试
+// jitter test
 // ============================================================
 
 func TestApplyJitter(t *testing.T) {
@@ -286,7 +286,7 @@ func TestApplyJitter(t *testing.T) {
 	
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// 多次测试，验证随机范围
+			// Multiple tests to verify random range
 			for i := 0; i < 100; i++ {
 				result := applyJitter(tt.delay, tt.jitter)
 				if result < tt.min || result > tt.max {
@@ -306,7 +306,7 @@ func TestApplyJitter_ZeroJitter(t *testing.T) {
 }
 
 func TestApplyJitter_NegativeResult(t *testing.T) {
-	// 极端情况：小延迟 + 大抖动可能导致负数
+	// Extreme case: small latency + large jitter may result in negative values
 	delay := 10.0
 	jitter := 1.0
 	
@@ -319,20 +319,20 @@ func TestApplyJitter_NegativeResult(t *testing.T) {
 }
 
 // ============================================================
-// 选项测试
+// option test
 // ============================================================
 
 func TestBackoffOptions_InvalidValues(t *testing.T) {
-	// 测试无效的选项值不会导致 panic
+	// Testing invalid option values does not cause a panic
 	backoff := ExponentialBackoff(
 		time.Second,
-		WithMultiplier(-1.0),     // 无效，应该被忽略
-		WithMaxDelay(-1),          // 无效，应该被忽略
-		WithJitter(-0.1),          // 无效，应该被忽略
-		WithJitter(1.5),           // 无效，应该被忽略
+		WithMultiplier(-1.0),     // invalid, should be ignored
+		WithMaxDelay(-1),          // invalid, should be ignored
+		WithJitter(-0.1),          // invalid, should be ignored
+		WithJitter(1.5),           // invalid, should be ignored
 	)
 	
-	// 应该使用默认值
+	// Should use default value
 	delay := backoff.Next(1)
 	if delay <= 0 {
 		t.Errorf("delay should be positive, got %v", delay)

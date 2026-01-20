@@ -23,7 +23,7 @@ func TestNewManager_NilLogger(t *testing.T) {
 func TestNewManager_InvalidConfig(t *testing.T) {
 	logger := zap.NewNop()
 	cfg := Config{
-		Brokers: []string{}, // 空 brokers
+		Brokers: []string{}, // empty brokers
 	}
 
 	_, err := NewManager(cfg, logger)
@@ -59,14 +59,14 @@ func TestManager_GetProducer_Nil(t *testing.T) {
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 		Producer: ProducerConfig{
-			Enabled: false, // 禁用生产者
+			Enabled: false, // Disable producer
 		},
 	}
 
 	manager, err := NewManager(cfg, logger)
 	assert.NoError(t, err)
 
-	// 未连接时，producer 为 nil
+	// When not connected, producer is nil
 	assert.Nil(t, manager.GetProducer())
 }
 
@@ -79,7 +79,7 @@ func TestManager_GetConsumer_NotExists(t *testing.T) {
 	manager, err := NewManager(cfg, logger)
 	assert.NoError(t, err)
 
-	// 不存在的消费者
+	// nonexistent consumer
 	assert.Nil(t, manager.GetConsumer("nonexistent"))
 }
 
@@ -92,10 +92,10 @@ func TestManager_CreateConsumer_Closed(t *testing.T) {
 	manager, err := NewManager(cfg, logger)
 	assert.NoError(t, err)
 
-	// 关闭管理器
+	// Close manager
 	manager.closed = true
 
-	// 创建消费者应该失败
+	// Creating the consumer should fail
 	_, err = manager.CreateConsumer("test", ConsumerConfig{
 		GroupID: "test-group",
 		Topics:  []string{"test-topic"},
@@ -118,10 +118,10 @@ func TestManager_CreateConsumer_AlreadyExists(t *testing.T) {
 	manager, err := NewManager(cfg, logger)
 	assert.NoError(t, err)
 
-	// 模拟已存在的消费者
+	// Simulate existing consumer
 	manager.consumers["test"] = &ConsumerGroup{}
 
-	// 创建同名消费者应该失败
+	// Creating a consumer with the same name should fail
 	_, err = manager.CreateConsumer("test", ConsumerConfig{
 		GroupID: "test-group",
 		Topics:  []string{"test-topic"},
@@ -139,9 +139,9 @@ func TestManager_CreateConsumer_InvalidConfig(t *testing.T) {
 	manager, err := NewManager(cfg, logger)
 	assert.NoError(t, err)
 
-	// 无效的消费者配置
+	// invalid consumer configuration
 	_, err = manager.CreateConsumer("test", ConsumerConfig{
-		GroupID: "", // 空 group id
+		GroupID: "", // empty group id
 		Topics:  []string{"test-topic"},
 	})
 	assert.Error(t, err)
@@ -189,11 +189,11 @@ func TestManager_Close_Idempotent(t *testing.T) {
 	manager, err := NewManager(cfg, logger)
 	assert.NoError(t, err)
 
-	// 第一次关闭
+	// First shutdown
 	err = manager.Close()
 	assert.NoError(t, err)
 
-	// 第二次关闭（幂等）
+	// Second shutdown (idempotent)
 	err = manager.Close()
 	assert.NoError(t, err)
 }
@@ -386,14 +386,14 @@ func TestManager_GetAsyncProducer_Closed(t *testing.T) {
 	manager, err := NewManager(cfg, logger)
 	assert.NoError(t, err)
 
-	// 模拟已有异步生产者
+	// Simulate existing asynchronous producer
 	manager.asyncProducer = &AsyncProducer{
 		logger:    logger,
 		successCh: make(chan *ProducerResult, 10),
 		errorCh:   make(chan error, 10),
 	}
 
-	// 再次获取应该返回已有的
+	// Retrieve again should return the existing one
 	ap, err := manager.GetAsyncProducer()
 	assert.NoError(t, err)
 	assert.Equal(t, manager.asyncProducer, ap)
@@ -408,12 +408,12 @@ func TestManager_Ping_Timeout(t *testing.T) {
 	manager, err := NewManager(cfg, logger)
 	assert.NoError(t, err)
 
-	// 使用已取消的 context
+	// Use canceled context
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
 	err = manager.Ping(ctx)
-	// 应该立即返回 context 错误或连接错误
+	// Should immediately return a context error or connection error
 	assert.Error(t, err)
 }
 
@@ -426,16 +426,16 @@ func TestManager_ListTopics(t *testing.T) {
 	manager, err := NewManager(cfg, logger)
 	assert.NoError(t, err)
 
-	// ListTopics 会尝试连接
-	// 如果有真实 Kafka，会返回 topics 列表
+	// ListTopics will attempt to connect
+	// If there is a real Kafka, return the list of topics
 	topics, err := manager.ListTopics(context.Background())
-	// 不管成功还是失败，只测试方法可调用
+	// Whether successful or not, only test that the method is callable
 	if err == nil {
 		assert.NotNil(t, topics)
 	}
 }
 
-// 测试 Ping 超时场景
+// Test Ping timeout scenario
 func TestManager_Ping_ContextTimeout(t *testing.T) {
 	logger := zap.NewNop()
 	cfg := Config{
@@ -445,16 +445,16 @@ func TestManager_Ping_ContextTimeout(t *testing.T) {
 	manager, err := NewManager(cfg, logger)
 	assert.NoError(t, err)
 
-	// 创建一个已超时的 context
+	// Create a timed-out context
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
 	defer cancel()
-	time.Sleep(1 * time.Millisecond) // 确保超时
+	time.Sleep(1 * time.Millisecond) // Ensure timeout
 
 	err = manager.Ping(ctx)
 	assert.Error(t, err)
 }
 
-// 测试真实连接场景（需要 Kafka 运行）
+// Test real connection scenarios (requires Kafka to be running)
 func TestManager_Connect_WithKafka(t *testing.T) {
 	logger := zap.NewNop()
 	cfg := Config{
@@ -471,7 +471,7 @@ func TestManager_Connect_WithKafka(t *testing.T) {
 	defer manager.Close()
 
 	err = manager.Connect(context.Background())
-	// 如果 Kafka 运行，应该成功
+	// If Kafka is running, it should succeed
 	if err == nil {
 		assert.NotNil(t, manager.GetProducer())
 	}
@@ -498,7 +498,7 @@ func TestManager_CreateConsumer_WithKafka(t *testing.T) {
 		Topics:  []string{"test-topic"},
 	})
 	
-	// 如果 Kafka 运行，应该成功
+	// If Kafka is running, it should succeed
 	if err == nil {
 		assert.NotNil(t, consumer)
 		assert.Equal(t, consumer, manager.GetConsumer("my-consumer"))
@@ -520,13 +520,13 @@ func TestManager_GetAsyncProducer_Create(t *testing.T) {
 	assert.NoError(t, err)
 	defer manager.Close()
 
-	// 首次获取异步生产者
+	// First obtain asynchronous producer
 	ap, err := manager.GetAsyncProducer()
-	// 如果 Kafka 运行，应该成功
+	// If Kafka is running, it should succeed
 	if err == nil {
 		assert.NotNil(t, ap)
 		
-		// 再次获取应该返回同一个
+		// should return the same again
 		ap2, err := manager.GetAsyncProducer()
 		assert.NoError(t, err)
 		assert.Equal(t, ap, ap2)
@@ -556,11 +556,11 @@ func TestManager_RealKafka_FullFlow(t *testing.T) {
 	assert.NoError(t, err)
 	defer manager.Close()
 
-	// 连接
+	// Connect
 	err = manager.Connect(context.Background())
 	assert.NoError(t, err)
 
-	// 验证 producer
+	// Validate producer
 	producer := manager.GetProducer()
 	assert.NotNil(t, producer)
 
@@ -573,7 +573,7 @@ func TestManager_RealKafka_FullFlow(t *testing.T) {
 	assert.NoError(t, err)
 	t.Logf("Topics: %v", topics)
 
-	// 发送消息
+	// Send message
 	result, err := producer.Send(context.Background(), &Message{
 		Topic: "test-topic",
 		Key:   []byte("full-flow-key"),
@@ -582,7 +582,7 @@ func TestManager_RealKafka_FullFlow(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
 
-	// 创建消费者
+	// Create consumer
 	consumer, err := manager.CreateConsumer("flow-consumer", ConsumerConfig{
 		GroupID:       "flow-group-" + time.Now().Format("150405"),
 		Topics:        []string{"test-topic"},
@@ -591,7 +591,7 @@ func TestManager_RealKafka_FullFlow(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, consumer)
 
-	// 验证 GetConfig
+	// Verify GetConfig
 	gotCfg := manager.GetConfig()
 	assert.Equal(t, cfg.Brokers, gotCfg.Brokers)
 }
@@ -613,31 +613,31 @@ func TestManager_Close_WithConsumersAndProducers(t *testing.T) {
 	err = manager.Connect(context.Background())
 	assert.NoError(t, err)
 
-	// 创建消费者
+	// Create consumer
 	consumer, err := manager.CreateConsumer("close-test-consumer", ConsumerConfig{
 		GroupID: "close-test-group",
 		Topics:  []string{"test-topic"},
 	})
 	assert.NoError(t, err)
 
-	// 启动消费者
+	// Start consumer
 	ctx, cancel := context.WithCancel(context.Background())
 	err = consumer.Start(ctx, func(ctx context.Context, msg *ConsumedMessage) error {
 		return nil
 	})
 	assert.NoError(t, err)
 
-	// 获取异步生产者
+	// Get asynchronous producer
 	_, err = manager.GetAsyncProducer()
 	assert.NoError(t, err)
 
-	// 取消上下文
+	// Cancel context
 	cancel()
 
-	// 等待一下让消费者停止
+	// wait for a moment for the consumer to stop
 	time.Sleep(100 * time.Millisecond)
 
-	// 关闭 - 应该关闭所有资源
+	// Close - All resources should be closed
 	err = manager.Close()
 	assert.NoError(t, err)
 }
@@ -653,15 +653,15 @@ func TestManager_Ping_Variations(t *testing.T) {
 	assert.NoError(t, err)
 	defer manager.Close()
 
-	// 先连接
+	// Establish connection first
 	err = manager.Connect(context.Background())
 	assert.NoError(t, err)
 
-	// Ping 应该成功
+	// The ping should succeed
 	err = manager.Ping(context.Background())
 	assert.NoError(t, err)
 
-	// 使用带超时的 context
+	// Using context with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	err = manager.Ping(ctx)
@@ -685,7 +685,7 @@ func TestManager_Close_MultipleConsumers(t *testing.T) {
 	err = manager.Connect(context.Background())
 	assert.NoError(t, err)
 
-	// 创建多个消费者
+	// Create multiple consumers
 	for i := 0; i < 3; i++ {
 		_, err = manager.CreateConsumer(fmt.Sprintf("consumer-%d", i), ConsumerConfig{
 			GroupID: fmt.Sprintf("group-%d", i),
@@ -694,11 +694,11 @@ func TestManager_Close_MultipleConsumers(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	// 关闭
+	// close
 	err = manager.Close()
 	assert.NoError(t, err)
 
-	// 再次关闭应该是幂等的
+	// Re-closing should be idempotent
 	err = manager.Close()
 	assert.NoError(t, err)
 }

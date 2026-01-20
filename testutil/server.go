@@ -8,62 +8,62 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// TestServer 测试服务器
-// 封装完整的应用实例，用于集成测试
+// TestServer test server
+// Encapsulate the complete application instance for integration testing
 type TestServer struct {
 	Engine *gin.Engine
 	DB     *database.Manager
 	Redis  *redis.Manager
 }
 
-// TestApp 测试应用接口
-// 任何实现了这个接口的应用都可以用于测试
+// TestApp interface testing
+// Any application that implements this interface can be used for testing
 type TestApp interface {
-	// RunNonBlocking 非阻塞启动应用（完整启动但不等待关闭信号）
+	// RunNonBlocking Start the application non-blockingly (fully start but do not wait for shutdown signal)
 	RunNonBlocking() error
 
-	// GetHTTPServer 获取 HTTP Server（用于测试）
+	// GetHTTPServer obtain HTTP server (for testing)
 	GetHTTPServer() interface {
 		GetEngine() *gin.Engine
 	}
 
-	// GetDBManager 获取数据库管理器
+	// GetDBManager Obtain database manager
 	GetDBManager() *database.Manager
 
-	// GetRedisManager 获取 Redis 管理器
+	// GetRedisManager Get Redis manager
 	GetRedisManager() *redis.Manager
 
-	// Shutdown 关闭应用
+	// Shut down application
 	Shutdown()
 }
 
-// NewTestServer 创建测试服务器（优雅版本）
+// Create test server (elegant version)
 //
-// 使用方式：
+// Usage:
 //
-//	// 1. 创建应用实例
+// // 1. Create application instance
 //	userApp := app.NewWithConfig(configPath)
 //
-//	// 2. 注册组件和回调
+// // 2. Register components and callbacks
 //	userApp.RegisterComponents(...)
 //	userApp.SetupCallbacks(...)
 //
-//	// 3. 创建测试服务器（自动调用 RunNonBlocking）
+// // 3. Create test server (automatically calls RunNonBlocking)
 //	server, err := testutil.NewTestServer(userApp)
 //
-// 优势：
-//   - 复用 Application.Run() 的完整逻辑
-//   - 测试环境和生产环境启动流程完全一致
-//   - 代码简洁，易于维护
+// Advantages:
+// - Reuse the complete logic of Application.Run()
+// - The startup process for the test environment is identical to that of the production environment
+// code is concise and easy to maintain
 func NewTestServer(app TestApp) (*TestServer, error) {
 	gin.SetMode(gin.TestMode)
 
-	// 执行完整的应用启动流程（非阻塞）
+	// Execute the full application startup process (non-blocking)
 	if err := app.RunNonBlocking(); err != nil {
 		return nil, err
 	}
 
-	// 获取已初始化的组件
+	// Get initialized components
 	httpServer := app.GetHTTPServer()
 	engine := httpServer.GetEngine()
 	dbManager := app.GetDBManager()
@@ -76,23 +76,23 @@ func NewTestServer(app TestApp) (*TestServer, error) {
 	}, nil
 }
 
-// Close 关闭测试服务器
+// Close the test server
 func (ts *TestServer) Close() error {
-	// 关闭 Redis 连接
+	// Close Redis connection
 	if ts.Redis != nil {
 		if err := ts.Redis.Close(); err != nil {
 			return err
 		}
 	}
 
-	// 关闭数据库连接
+	// Close database connection
 	if ts.DB != nil {
 		return ts.DB.Close()
 	}
 	return nil
 }
 
-// MustNewTestServer 创建测试服务器（失败时 panic）
+// MustNewTestServer Create a test server (panic on failure)
 func MustNewTestServer(t *testing.T, app TestApp) *TestServer {
 	server, err := NewTestServer(app)
 	if err != nil {

@@ -15,7 +15,7 @@ import (
 )
 
 // ============================================================
-// Client 基础测试
+// Client basic tests
 // ============================================================
 
 func TestNewClient(t *testing.T) {
@@ -55,11 +55,11 @@ func TestNewClient_WithOptions(t *testing.T) {
 }
 
 // ============================================================
-// Client.Do 测试
+// Client.DoTest
 // ============================================================
 
 func TestClient_Do_Success(t *testing.T) {
-	// 创建测试服务器
+	// Create test server
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"message": "success"}`))
@@ -158,7 +158,7 @@ func TestClient_Do_WithHeaders(t *testing.T) {
 }
 
 func TestClient_Do_WithTimeout(t *testing.T) {
-	// 创建慢速服务器
+	// Create slow server
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(200 * time.Millisecond)
 		w.WriteHeader(http.StatusOK)
@@ -230,7 +230,7 @@ func TestClient_Do_WithAfterResponse(t *testing.T) {
 }
 
 // ============================================================
-// Client.Get 测试
+// Client.Get test
 // ============================================================
 
 func TestClient_Get(t *testing.T) {
@@ -256,7 +256,7 @@ func TestClient_Get(t *testing.T) {
 }
 
 // ============================================================
-// Client.Post 测试
+// Client.Post test
 // ============================================================
 
 func TestClient_Post(t *testing.T) {
@@ -291,7 +291,7 @@ func TestClient_Post(t *testing.T) {
 }
 
 // ============================================================
-// Client.Put 测试
+// Client.Put test
 // ============================================================
 
 func TestClient_Put(t *testing.T) {
@@ -314,7 +314,7 @@ func TestClient_Put(t *testing.T) {
 }
 
 // ============================================================
-// Client.Delete 测试
+// Client.Delete test
 // ============================================================
 
 func TestClient_Delete(t *testing.T) {
@@ -339,7 +339,7 @@ func TestClient_Delete(t *testing.T) {
 }
 
 // ============================================================
-// Retry 测试
+// Retry test
 // ============================================================
 
 func TestClient_Do_WithRetry_Success(t *testing.T) {
@@ -402,7 +402,7 @@ func TestClient_Do_DisableRetry(t *testing.T) {
 }
 
 // ============================================================
-// 泛型方法测试
+// Generic method test
 // ============================================================
 
 type TestUser struct {
@@ -438,7 +438,7 @@ func TestPost_Generic(t *testing.T) {
 		var user TestUser
 		json.NewDecoder(r.Body).Decode(&user)
 		
-		// 返回相同的用户
+		// Return the same user
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(user)
@@ -459,7 +459,7 @@ func TestPost_Generic(t *testing.T) {
 }
 
 // ============================================================
-// 错误场景测试
+// Error scenario testing
 // ============================================================
 
 func TestClient_Do_InvalidURL(t *testing.T) {
@@ -503,7 +503,7 @@ func TestClient_Do_ContextCanceled(t *testing.T) {
 	req := NewGetRequest(ts.URL)
 	
 	ctx, cancel := context.WithCancel(context.Background())
-	cancel() // 立即取消
+	cancel() // Immediate cancellation
 	
 	_, err := client.Do(ctx, req)
 	if err == nil {
@@ -512,7 +512,7 @@ func TestClient_Do_ContextCanceled(t *testing.T) {
 }
 
 // ============================================================
-// 边界测试
+// boundary test
 // ============================================================
 
 func TestClient_Do_NilContext(t *testing.T) {
@@ -524,7 +524,7 @@ func TestClient_Do_NilContext(t *testing.T) {
 	client := NewClient()
 	req := NewGetRequest(ts.URL)
 	
-	// nil context 应该被替换为 context.Background()
+	// nil context should be replaced with context.Background()
 	resp, err := client.Do(nil, req)
 	if err != nil {
 		t.Fatalf("Do() failed: %v", err)
@@ -535,7 +535,7 @@ func TestClient_Do_NilContext(t *testing.T) {
 func TestClient_Do_EmptyResponse(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
-		// 不写任何 body
+		// Do not write any body
 	}))
 	defer ts.Close()
 	

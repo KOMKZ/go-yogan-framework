@@ -17,7 +17,7 @@ func TestSetup_ManagerNotFound(t *testing.T) {
 	engine := gin.New()
 
 	err := Setup(injector, engine)
-	// Manager 未注册时应返回错误
+	// Return an error when Manager is not registered
 	assert.Error(t, err)
 }
 
@@ -26,7 +26,7 @@ func TestSetup_ManagerNil(t *testing.T) {
 
 	injector := do.New()
 
-	// 注册一个返回 nil 的 Provider
+	// Register a Provider that returns nil
 	do.Provide(injector, func(i do.Injector) (*Manager, error) {
 		return nil, nil
 	})
@@ -35,7 +35,7 @@ func TestSetup_ManagerNil(t *testing.T) {
 	err := Setup(injector, engine)
 	assert.NoError(t, err)
 
-	// 未启用时不应注册路由
+	// Do not register routes when disabled
 	assert.Empty(t, engine.Routes())
 }
 
@@ -44,7 +44,7 @@ func TestSetup_ManagerEnabled(t *testing.T) {
 
 	injector := do.New()
 
-	// 注册依赖
+	// Register dependencies
 	do.Provide(injector, func(i do.Injector) (*config.Loader, error) {
 		return nil, nil
 	})
@@ -52,7 +52,7 @@ func TestSetup_ManagerEnabled(t *testing.T) {
 		return logger.GetLogger("test"), nil
 	})
 
-	// 注册启用的 Manager
+	// Register enabled Manager
 	do.Provide(injector, func(i do.Injector) (*Manager, error) {
 		cfg := Config{
 			Enabled:  true,
@@ -66,7 +66,7 @@ func TestSetup_ManagerEnabled(t *testing.T) {
 	err := Setup(injector, engine)
 	assert.NoError(t, err)
 
-	// 应注册路由
+	// Register route
 	assert.Len(t, engine.Routes(), 2)
 }
 
@@ -86,7 +86,7 @@ func TestSetupWithInfo_ManagerEnabled(t *testing.T) {
 
 	injector := do.New()
 
-	// 注册启用的 Manager
+	// Register enabled Manager
 	do.Provide(injector, func(i do.Injector) (*Manager, error) {
 		cfg := Config{
 			Enabled:  true,
@@ -100,6 +100,6 @@ func TestSetupWithInfo_ManagerEnabled(t *testing.T) {
 	err := SetupWithInfo(injector, engine)
 	assert.NoError(t, err)
 
-	// 应注册路由
+	// Register routes
 	assert.Len(t, engine.Routes(), 2)
 }

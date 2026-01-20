@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// mockRouterRegistrar 模拟路由注册器
+// mockRouterRegistrar simulated router registrar
 type mockRouterRegistrar struct {
 	registered bool
 }
@@ -23,7 +23,7 @@ func (m *mockRouterRegistrar) RegisterRoutes(engine *gin.Engine, app *Applicatio
 	m.registered = true
 }
 
-// TestNew 测试创建应用实例
+// TestNew test create application instance
 func TestNew(t *testing.T) {
 	app := New("./configs", "APP", nil)
 
@@ -32,7 +32,7 @@ func TestNew(t *testing.T) {
 	assert.NotNil(t, app.Context())
 }
 
-// TestApplication_GetState 测试状态获取（线程安全）
+// TestApplication_GetState test state retrieval (thread-safe)
 func TestApplication_GetState(t *testing.T) {
 	app := New("./configs", "APP", nil)
 
@@ -42,7 +42,7 @@ func TestApplication_GetState(t *testing.T) {
 	assert.Equal(t, StateRunning, app.GetState())
 }
 
-// TestApplication_ChainCall 测试链式调用
+// TestApplication_ChainCall Test chained calls
 func TestApplication_ChainCall(t *testing.T) {
 	var setupCalled, readyCalled, shutdownCalled bool
 
@@ -53,7 +53,7 @@ func TestApplication_ChainCall(t *testing.T) {
 		}).
 		OnReady(func(a *Application) error {
 			readyCalled = true
-			a.Shutdown() // 手动触发关闭
+			a.Shutdown() // Manually trigger shutdown
 			return nil
 		}).
 		OnShutdown(func(a *Application) error {
@@ -62,20 +62,20 @@ func TestApplication_ChainCall(t *testing.T) {
 		})
 
 	assert.NotNil(t, app)
-	// 验证回调函数已注册（通过 BaseApplication 的回调）
+	// Verify that the callback function has been registered (via BaseApplication's callback)
 	assert.NotNil(t, app.BaseApplication.onSetup)
 	assert.NotNil(t, app.BaseApplication.onReady)
 	assert.NotNil(t, app.BaseApplication.onShutdown)
 
-	// 这里不验证 setupCalled 等，因为只是注册，还没执行
+	// Here no validation for setupCalled etc., as it is just registration, not execution yet
 	_ = setupCalled
 	_ = readyCalled
 	_ = shutdownCalled
 }
 
-// TestApplication_Run_WithConfig 测试完整启动流程（有配置文件）
+// TestApplication_Run_WithConfig test full startup process (with configuration file)
 func TestApplication_Run_WithConfig(t *testing.T) {
-	// 创建临时配置文件
+	// Create temporary configuration file
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
 	configContent := `
@@ -94,7 +94,7 @@ server:
 
 	app := New(tmpDir, "TEST", nil)
 
-	// 注册回调
+	// register callback
 	app.OnSetup(func(a *Application) error {
 		setupCalled = true
 		assert.NotNil(t, a.GetConfigLoader())
@@ -106,11 +106,11 @@ server:
 		readyCalled = true
 		assert.Equal(t, StateRunning, a.GetState())
 
-		// 验证可以读取配置
+		// Verify that configuration can be read
 		port := a.GetConfigLoader().GetViper().GetInt("server.port")
 		assert.Equal(t, 8080, port)
 
-		// 手动触发关闭
+		// Manually trigger shutdown
 		go func() {
 			time.Sleep(100 * time.Millisecond)
 			a.Shutdown()
@@ -122,17 +122,17 @@ server:
 		atomic.AddInt32(&reloadCalled, 1)
 	})
 
-	// 运行应用
+	// Run the application
 	err = app.Run()
 	assert.NoError(t, err)
 
-	// 验证回调被调用
+	// Verify callback is called
 	assert.True(t, setupCalled, "OnSetup should be called")
 	assert.True(t, readyCalled, "OnReady should be called")
 	assert.Equal(t, StateStopped, app.GetState())
 }
 
-// TestApplication_OnReady_Error 测试 OnReady 返回错误
+// TestApplication_OnReady_Error Test OnReady returns error
 func TestApplication_OnReady_Error(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -142,7 +142,7 @@ func TestApplication_OnReady_Error(t *testing.T) {
 	app := New(tmpDir, "TEST", nil)
 
 	app.OnReady(func(a *Application) error {
-		return assert.AnError // 返回错误
+		return assert.AnError // Return error
 	})
 
 	err = app.Run()
@@ -150,7 +150,7 @@ func TestApplication_OnReady_Error(t *testing.T) {
 	assert.Contains(t, err.Error(), "onReady failed")
 }
 
-// TestApplication_OnShutdown 测试关闭回调
+// TestApplication_OnShutdown test shutdown callback
 func TestApplication_OnShutdown(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -179,33 +179,33 @@ func TestApplication_OnShutdown(t *testing.T) {
 	assert.True(t, shutdownCalled)
 }
 
-// TestApplication_Context 测试应用上下文
+// TestApplication_Context test application context
 func TestApplication_Context(t *testing.T) {
 	app := New("./testdata", "TEST", nil)
 
 	ctx := app.Context()
 	assert.NotNil(t, ctx)
 
-	// 验证上下文未取消
+	// Verify that the context has not been cancelled
 	select {
 	case <-ctx.Done():
 		t.Fatal("context should not be done initially")
 	default:
 	}
 
-	// 触发关闭
+	// Trigger close
 	app.Shutdown()
 
-	// 验证上下文已取消
+	// Verify context has been cancelled
 	select {
 	case <-ctx.Done():
-		// 预期行为
+		// Expected behavior
 	case <-time.After(1 * time.Second):
 		t.Fatal("context should be done after shutdown")
 	}
 }
 
-// TestApplication_ConfigReload 测试配置热更新回调注册
+// TestApplication_ConfigReload test configuration hot update callback registration
 func TestApplication_ConfigReload(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -219,14 +219,14 @@ server:
 
 	app := New(tmpDir, "TEST", nil)
 
-	// 注册配置更新回调
+	// Register configuration update callback
 	callbackRegistered := false
 	app.OnConfigReload(func(loader *config.Loader) {
 		callbackRegistered = true
 	})
 
 	app.OnReady(func(a *Application) error {
-		// 立即关闭，只验证回调可以注册
+		// Immediately close, only verify that callbacks can be registered
 		a.Shutdown()
 		return nil
 	})
@@ -234,12 +234,12 @@ server:
 	err = app.Run()
 	assert.NoError(t, err)
 
-	// 验证回调已注册
+	// Verify callback is registered
 	assert.NotNil(t, app.BaseApplication)
-	_ = callbackRegistered // 未实际触发，但回调已注册
+	_ = callbackRegistered // Not actually triggered, but callback is registered
 }
 
-// TestAppState_String 测试状态字符串表示
+// TestAppState_String test state string representation
 func TestAppState_String(t *testing.T) {
 	tests := []struct {
 		state    AppState
@@ -260,7 +260,7 @@ func TestAppState_String(t *testing.T) {
 	}
 }
 
-// TestApplication_GetLogger 测试获取日志实例
+// TestApplication_GetLogger test getting log instance
 func TestApplication_GetLogger(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -285,7 +285,7 @@ func TestApplication_GetLogger(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-// TestApplication_GetConfigLoader 测试获取配置加载器
+// TestApplication_GetConfigLoader test for getting config loader
 func TestApplication_GetConfigLoader(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -312,7 +312,7 @@ func TestApplication_GetConfigLoader(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-// TestNewWithDefaults 测试使用默认配置创建应用
+// TestNewWithDefaults test creating an application with default configuration
 func TestNewWithDefaults(t *testing.T) {
 	tmpDir := t.TempDir()
 	appDir := filepath.Join(tmpDir, "configs", "test-app")
@@ -331,7 +331,7 @@ func TestNewWithDefaults(t *testing.T) {
 	assert.NotNil(t, app)
 }
 
-// TestNewWithFlags 测试使用 Flags 创建应用
+// TestNewWithFlags test creating an application using Flags
 func TestNewWithFlags(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -343,7 +343,7 @@ func TestNewWithFlags(t *testing.T) {
 	assert.NotNil(t, app)
 }
 
-// TestApplication_WithVersion 测试版本设置
+// TestApplication_WithVersion test version settings
 func TestApplication_WithVersion(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -356,7 +356,7 @@ func TestApplication_WithVersion(t *testing.T) {
 	assert.Equal(t, "v1.0.0", app.GetVersion())
 }
 
-// TestApplication_GetHTTPServer 测试获取 HTTP Server
+// TestApplication_GetHTTPServer test to get HTTP server
 func TestApplication_GetHTTPServer(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -364,11 +364,11 @@ func TestApplication_GetHTTPServer(t *testing.T) {
 
 	app := New(tmpDir, "TEST", nil)
 
-	// 未启动时应该是 nil
+	// should be nil when not started
 	assert.Nil(t, app.GetHTTPServer())
 }
 
-// TestApplication_GetRouterManager 测试获取路由管理器
+// TestApplication_GetRouterManager test getting router manager
 func TestApplication_GetRouterManager(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -380,7 +380,7 @@ func TestApplication_GetRouterManager(t *testing.T) {
 	assert.NotNil(t, manager)
 }
 
-// TestApplication_RegisterRoutes 测试注册路由
+// TestApplication_RegisterRoutes test route registration
 func TestApplication_RegisterRoutes(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -394,7 +394,7 @@ func TestApplication_RegisterRoutes(t *testing.T) {
 	assert.Equal(t, app, result)
 }
 
-// TestApplication_LoadAppConfig 测试加载应用配置
+// TestApplication_LoadAppConfig test loading application configuration
 func TestApplication_LoadAppConfig_HTTP(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -408,14 +408,14 @@ func TestApplication_LoadAppConfig_HTTP(t *testing.T) {
 	assert.Equal(t, 9090, cfg.ApiServer.Port)
 }
 
-// TestNew_DefaultValues 测试默认值处理
+// TestNew_DefaultValues test default value handling
 func TestNew_DefaultValues(t *testing.T) {
-	// 测试空配置路径使用默认值
+	// Test empty configuration path using default values
 	app := New("", "", nil)
 	assert.NotNil(t, app)
 }
 
-// TestApplication_RunNonBlocking_NoRoutes 测试无路由的非阻塞运行
+// TestApplication_RunNonBlocking_NoRoutes_test_non-blocking_run_with_no_routes
 func TestApplication_RunNonBlocking_NoRoutes(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -434,12 +434,12 @@ func TestApplication_RunNonBlocking_NoRoutes(t *testing.T) {
 	assert.True(t, readyCalled)
 	assert.Equal(t, StateRunning, app.GetState())
 
-	// 关闭
+	// Close
 	app.Shutdown()
 	time.Sleep(100 * time.Millisecond)
 }
 
-// TestApplication_GracefulShutdown 测试优雅关闭
+// TestApplication_GracefulShutdown test graceful shutdown
 func TestApplication_GracefulShutdown(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -456,13 +456,13 @@ func TestApplication_GracefulShutdown(t *testing.T) {
 	err := app.RunNonBlocking()
 	assert.NoError(t, err)
 
-	// 手动调用 gracefulShutdown
+	// Manually call gracefulShutdown
 	err = app.gracefulShutdown()
 	assert.NoError(t, err)
 	assert.True(t, shutdownCalled)
 }
 
-// TestApplication_StartHTTPServer_NoRegistrar 测试无路由注册器时启动 HTTP Server
+// TestApplication_StartHTTPServer_NoRegistrar_test_starting_HTTP_server_without_router_registerer
 func TestApplication_StartHTTPServer_NoRegistrar(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -472,12 +472,12 @@ func TestApplication_StartHTTPServer_NoRegistrar(t *testing.T) {
 	err := app.Setup()
 	assert.NoError(t, err)
 
-	// 没有 routerRegistrar 时，startHTTPServer 应该直接返回 nil
+	// When there is no routerRegistrar, startHTTPServer should return nil directly
 	err = app.startHTTPServer()
 	assert.NoError(t, err)
 }
 
-// TestApplication_GracefulShutdown_WithHTTPServer 测试有 HTTP Server 时的优雅关闭
+// TestApplication_GracefulShutdown_WithHTTPServer Test graceful shutdown with HTTP server present
 func TestApplication_GracefulShutdown_WithHTTPServer(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -499,7 +499,7 @@ func TestApplication_GracefulShutdown_WithHTTPServer(t *testing.T) {
 	assert.True(t, shutdownCalled)
 }
 
-// TestApplication_RunNonBlocking_SetupError 测试 Setup 失败
+// TestApplication_RunNonBlocking_SetupError_TestSetup_Failed
 func TestApplication_RunNonBlocking_SetupError(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")

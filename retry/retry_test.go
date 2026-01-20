@@ -8,7 +8,7 @@ import (
 )
 
 // ============================================================
-// Do 基础测试
+// Perform basic tests
 // ============================================================
 
 func TestDo_Success(t *testing.T) {
@@ -68,7 +68,7 @@ func TestDo_AllFailed(t *testing.T) {
 		t.Errorf("expected 3 calls, got %d", called)
 	}
 	
-	// 验证 MultiError
+	// Validate MultiError
 	var multiErr *MultiError
 	if !errors.As(err, &multiErr) {
 		t.Fatalf("expected MultiError, got %T", err)
@@ -84,7 +84,7 @@ func TestDo_AllFailed(t *testing.T) {
 }
 
 // ============================================================
-// DoWithData 测试
+// Test With Data
 // ============================================================
 
 func TestDoWithData_Success(t *testing.T) {
@@ -135,19 +135,19 @@ func TestDoWithData_FailThenSuccess(t *testing.T) {
 }
 
 // ============================================================
-// Context 取消测试
+// Context cancel test
 // ============================================================
 
 func TestDo_ContextCanceled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	called := 0
 	
-	// 第二次调用时取消 Context
+	// Cancel Context on the second call
 	err := Do(ctx, func() error {
 		called++
 		if called == 2 {
 			cancel()
-			time.Sleep(10 * time.Millisecond) // 等待取消生效
+			time.Sleep(10 * time.Millisecond) // wait for cancellation to take effect
 		}
 		return errors.New("test error")
 	}, MaxAttempts(5), Backoff(ConstantBackoff(50*time.Millisecond)))
@@ -156,7 +156,7 @@ func TestDo_ContextCanceled(t *testing.T) {
 		t.Errorf("expected context.Canceled, got %v", err)
 	}
 	
-	// 应该在取消后停止重试
+	// Should stop retrying after cancellation
 	if called > 3 {
 		t.Errorf("expected at most 3 calls, got %d", called)
 	}
@@ -178,14 +178,14 @@ func TestDo_ContextDeadline(t *testing.T) {
 		t.Errorf("expected context.DeadlineExceeded, got %v", err)
 	}
 	
-	// 应该在超时后停止重试
+	// Should stop retrying after timeout
 	if called > 4 {
 		t.Errorf("expected at most 4 calls, got %d (timeout should stop retry)", called)
 	}
 }
 
 // ============================================================
-// 退避策略测试
+// backoff strategy test
 // ============================================================
 
 func TestDo_WithBackoff(t *testing.T) {
@@ -211,7 +211,7 @@ func TestDo_WithBackoff(t *testing.T) {
 		t.Errorf("expected 3 calls, got %d", called)
 	}
 	
-	// 验证退避时间：2 次退避 * 100ms = 200ms
+	// Validate backoff time: 2 attempts backoff * 100ms = 200ms
 	expectedMin := 200 * time.Millisecond
 	expectedMax := 300 * time.Millisecond
 	if elapsed < expectedMin || elapsed > expectedMax {
@@ -220,7 +220,7 @@ func TestDo_WithBackoff(t *testing.T) {
 }
 
 // ============================================================
-// 重试条件测试
+// Retry condition test
 // ============================================================
 
 var ErrRetryable = errors.New("retryable error")
@@ -246,20 +246,20 @@ func TestDo_WithCondition(t *testing.T) {
 		t.Fatal("expected error, got nil")
 	}
 	
-	// 第一次返回 ErrRetryable，应该重试
-	// 第二次返回 ErrNotRetryable，不应该重试
+	// First return ErrRetryable, should retry
+	// The second return of ErrNotRetryable, should not retry
 	if called != 2 {
 		t.Errorf("expected 2 calls, got %d", called)
 	}
 	
-	// 最后的错误应该是 ErrNotRetryable
+	// The last error should be ErrNotRetryable
 	if !errors.Is(err, ErrNotRetryable) {
 		t.Errorf("expected ErrNotRetryable, got %v", err)
 	}
 }
 
 // ============================================================
-// 重试回调测试
+// Retry callback test
 // ============================================================
 
 func TestDo_OnRetry(t *testing.T) {
@@ -288,7 +288,7 @@ func TestDo_OnRetry(t *testing.T) {
 		t.Errorf("expected 3 calls, got %d", called)
 	}
 	
-	// OnRetry 应该被调用 2 次（第一次和第二次失败后）
+	// OnRetry should be called twice (after the first failure and after the second failure)
 	if len(retryAttempts) != 2 {
 		t.Errorf("expected 2 retry callbacks, got %d", len(retryAttempts))
 	}
@@ -302,7 +302,7 @@ func TestDo_OnRetry(t *testing.T) {
 }
 
 // ============================================================
-// 单次超时测试
+// Single timeout test
 // ============================================================
 
 func TestDo_WithTimeout(t *testing.T) {
@@ -323,14 +323,14 @@ func TestDo_WithTimeout(t *testing.T) {
 		t.Errorf("expected context.DeadlineExceeded, got %v", err)
 	}
 	
-	// 每次都会超时，应该重试 3 次
+	// Times out every time, should retry 3 times
 	if called != 3 {
 		t.Errorf("expected 3 calls, got %d", called)
 	}
 }
 
 // ============================================================
-// MultiError 测试
+// MultiError test
 // ============================================================
 
 func TestMultiError_Error(t *testing.T) {
@@ -343,7 +343,7 @@ func TestMultiError_Error(t *testing.T) {
 		Attempts: 3,
 	}
 	
-	// Error() 应该返回最后一次的错误
+	// Error() should return the last error
 	if multiErr.Error() != "error 3" {
 		t.Errorf("expected 'error 3', got %q", multiErr.Error())
 	}
@@ -359,7 +359,7 @@ func TestMultiError_Unwrap(t *testing.T) {
 		Attempts: 3,
 	}
 	
-	// Unwrap() 应该返回最后一次的错误
+	// Unwrap() should return the last error
 	if multiErr.Unwrap() != err3 {
 		t.Errorf("expected err3, got %v", multiErr.Unwrap())
 	}
@@ -402,7 +402,7 @@ func TestMultiError_FirstAndLast(t *testing.T) {
 }
 
 // ============================================================
-// 辅助函数测试
+// helper function test
 // ============================================================
 
 func TestIsMaxAttemptsExceeded(t *testing.T) {

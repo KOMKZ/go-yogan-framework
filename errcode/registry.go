@@ -1,4 +1,4 @@
-// Package errcode 提供分层错误码的基础类型和功能
+// Package errcode provides the basic types and functionalities for hierarchical error codes
 package errcode
 
 import (
@@ -6,25 +6,25 @@ import (
 	"sync"
 )
 
-// Registry 错误码注册表（防止错误码冲突）
+// Registry for error codes (to prevent conflicts)
 type Registry struct {
 	mu     sync.RWMutex
 	codes  map[int]string // code -> module:msgKey
-	locked bool           // 是否锁定（锁定后不允许注册新错误码）
+	locked bool           // Is locked (locked if new error codes are not allowed to be registered)
 }
 
-// globalRegistry 全局错误码注册表
+// globalRegistry global error code registry
 var globalRegistry = &Registry{
 	codes: make(map[int]string),
 }
 
-// Register 注册错误码（防止冲突）
-// 如果错误码已存在且 msgKey 不同，则 panic
+// Register error codes (to prevent conflicts)
+// If the error code already exists and the msgKey is different, then panic
 func Register(err *LayeredError) *LayeredError {
 	return globalRegistry.Register(err)
 }
 
-// Register 注册错误码到注册表
+// Register error codes to the registry
 func (r *Registry) Register(err *LayeredError) *LayeredError {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -43,7 +43,7 @@ func (r *Registry) Register(err *LayeredError) *LayeredError {
 				code, existingKey, key,
 			))
 		}
-		// 相同错误码和键，允许重复注册（幂等）
+		// Same error code and key, allow duplicate registration (idempotent)
 		return err
 	}
 
@@ -51,29 +51,29 @@ func (r *Registry) Register(err *LayeredError) *LayeredError {
 	return err
 }
 
-// Lock 锁定注册表，阻止新错误码注册
-// 通常在应用启动完成后调用，防止运行时动态注册错误码
+// Lock registry to prevent new error code registration
+// Usually called after application startup to prevent runtime dynamic registration errors for error codes
 func (r *Registry) Lock() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.locked = true
 }
 
-// Unlock 解锁注册表，允许注册新错误码
+// Unlock the registry to allow registration of new error codes
 func (r *Registry) Unlock() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.locked = false
 }
 
-// IsLocked 检查注册表是否已锁定
+// Check if the registry is locked
 func (r *Registry) IsLocked() bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.locked
 }
 
-// GetAll 获取所有已注册的错误码
+// GetAll Retrieve all registered error codes
 func (r *Registry) GetAll() map[int]string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -85,14 +85,14 @@ func (r *Registry) GetAll() map[int]string {
 	return codes
 }
 
-// Count 获取已注册错误码数量
+// Count Get the number of registered error codes
 func (r *Registry) Count() int {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return len(r.codes)
 }
 
-// Clear 清空注册表（仅用于测试）
+// Clear registry (for testing only)
 func (r *Registry) Clear() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -100,32 +100,32 @@ func (r *Registry) Clear() {
 	r.locked = false
 }
 
-// LockGlobalRegistry 锁定全局注册表
+// LockGlobalRegistry Lock the global registry
 func LockGlobalRegistry() {
 	globalRegistry.Lock()
 }
 
-// UnlockGlobalRegistry 解锁全局注册表
+// UnlockGlobalRegistry Unlocks the global registry
 func UnlockGlobalRegistry() {
 	globalRegistry.Unlock()
 }
 
-// IsGlobalRegistryLocked 检查全局注册表是否已锁定
+// Check if the global registry is locked
 func IsGlobalRegistryLocked() bool {
 	return globalRegistry.IsLocked()
 }
 
-// GetAllRegisteredCodes 获取所有已注册的错误码
+// GetAllRegisteredCodes Get all registered error codes
 func GetAllRegisteredCodes() map[int]string {
 	return globalRegistry.GetAll()
 }
 
-// GetRegistryCount 获取已注册错误码数量
+// GetRegistryCount Get registered error code count
 func GetRegistryCount() int {
 	return globalRegistry.Count()
 }
 
-// ClearGlobalRegistry 清空全局注册表（仅用于测试）
+// ClearGlobalRegistry Clear global registry (for testing only)
 func ClearGlobalRegistry() {
 	globalRegistry.Clear()
 }

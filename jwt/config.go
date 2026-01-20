@@ -5,64 +5,64 @@ import (
 	"time"
 )
 
-// Config JWT 配置
+// Configure JWT settings
 type Config struct {
-	Enabled bool `yaml:"enabled" mapstructure:"enabled"` // 是否启用
+	Enabled bool `yaml:"enabled" mapstructure:"enabled"` // Is enabled
 
-	// 签名算法
+	// Signature algorithm
 	Algorithm string `yaml:"algorithm" mapstructure:"algorithm"` // HS256, HS384, HS512, RS256, RS384, RS512
 
-	// 密钥配置
-	Secret         string `yaml:"secret" mapstructure:"secret"`                     // 对称密钥（HS256）
-	PrivateKeyPath string `yaml:"private_key_path" mapstructure:"private_key_path"` // 私钥路径（RS256）
-	PublicKeyPath  string `yaml:"public_key_path" mapstructure:"public_key_path"`   // 公钥路径（RS256）
+	// Key configuration
+	Secret         string `yaml:"secret" mapstructure:"secret"`                     // Symmetric key (HS256)
+	PrivateKeyPath string `yaml:"private_key_path" mapstructure:"private_key_path"` // Private key path (RS256)
+	PublicKeyPath  string `yaml:"public_key_path" mapstructure:"public_key_path"`   // Public key path (RS256)
 
-	// Token 配置
+	// Token configuration
 	AccessToken  AccessTokenConfig  `yaml:"access_token" mapstructure:"access_token"`
 	RefreshToken RefreshTokenConfig `yaml:"refresh_token" mapstructure:"refresh_token"`
 
-	// 黑名单配置
+	// Blacklist configuration
 	Blacklist BlacklistConfig `yaml:"blacklist" mapstructure:"blacklist"`
 
-	// 安全配置
+	// Security configuration
 	Security SecurityConfig `yaml:"security" mapstructure:"security"`
 }
 
-// AccessTokenConfig Access Token 配置
+// AccessToken Configuration
 type AccessTokenConfig struct {
-	TTL      time.Duration `yaml:"ttl" mapstructure:"ttl"`           // 有效期
-	Issuer   string        `yaml:"issuer" mapstructure:"issuer"`     // 签发者
-	Audience string        `yaml:"audience" mapstructure:"audience"` // 接收方
+	TTL      time.Duration `yaml:"ttl" mapstructure:"ttl"`           // valid period
+	Issuer   string        `yaml:"issuer" mapstructure:"issuer"`     // issuer
+	Audience string        `yaml:"audience" mapstructure:"audience"` // receiver
 }
 
-// RefreshTokenConfig Refresh Token 配置
+// RefreshTokenConfig Refresh token configuration
 type RefreshTokenConfig struct {
-	Enabled bool          `yaml:"enabled" mapstructure:"enabled"` // 是否启用
-	TTL     time.Duration `yaml:"ttl" mapstructure:"ttl"`         // 有效期
+	Enabled bool          `yaml:"enabled" mapstructure:"enabled"` // Is enabled
+	TTL     time.Duration `yaml:"ttl" mapstructure:"ttl"`         // valid period
 }
 
-// BlacklistConfig 黑名单配置
+// BlacklistConfig blacklist configuration
 type BlacklistConfig struct {
-	Enabled         bool          `yaml:"enabled" mapstructure:"enabled"`                   // 是否启用
+	Enabled         bool          `yaml:"enabled" mapstructure:"enabled"`                   // Is enabled
 	Storage         string        `yaml:"storage" mapstructure:"storage"`                   // redis / memory
-	RedisKeyPrefix  string        `yaml:"redis_key_prefix" mapstructure:"redis_key_prefix"` // Redis key 前缀
-	CleanupInterval time.Duration `yaml:"cleanup_interval" mapstructure:"cleanup_interval"` // 内存模式清理间隔
+	RedisKeyPrefix  string        `yaml:"redis_key_prefix" mapstructure:"redis_key_prefix"` // Redis key prefix
+	CleanupInterval time.Duration `yaml:"cleanup_interval" mapstructure:"cleanup_interval"` // Memory mode cleanup interval
 }
 
-// SecurityConfig 安全配置
+// SecurityConfig security configuration
 type SecurityConfig struct {
-	EnableJTI       bool          `yaml:"enable_jti" mapstructure:"enable_jti"`               // 启用 JTI（防重放）
-	EnableNotBefore bool          `yaml:"enable_not_before" mapstructure:"enable_not_before"` // 启用 NBF（延迟生效）
-	ClockSkew       time.Duration `yaml:"clock_skew" mapstructure:"clock_skew"`               // 时钟偏移容忍
+	EnableJTI       bool          `yaml:"enable_jti" mapstructure:"enable_jti"`               // Enable JTI (anti-replay)
+	EnableNotBefore bool          `yaml:"enable_not_before" mapstructure:"enable_not_before"` // Enable NBF (delayed activation)
+	ClockSkew       time.Duration `yaml:"clock_skew" mapstructure:"clock_skew"`               // clock skew tolerance
 }
 
-// Validate 验证配置
+// Validate configuration
 func (c *Config) Validate() error {
 	if !c.Enabled {
 		return nil
 	}
 
-	// 验证算法
+	// Validate algorithm
 	switch c.Algorithm {
 	case "HS256", "HS384", "HS512":
 		if c.Secret == "" {
@@ -76,7 +76,7 @@ func (c *Config) Validate() error {
 		return ErrAlgorithmNotSupported
 	}
 
-	// 验证 TTL
+	// Validate TTL
 	if c.AccessToken.TTL <= 0 {
 		return fmt.Errorf("jwt: access token ttl must be positive")
 	}
@@ -85,7 +85,7 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("jwt: refresh token ttl must be positive")
 	}
 
-	// 验证黑名单存储
+	// Validate blacklist storage
 	if c.Blacklist.Enabled {
 		if c.Blacklist.Storage != "redis" && c.Blacklist.Storage != "memory" {
 			return fmt.Errorf("jwt: blacklist storage must be redis or memory")
@@ -95,7 +95,7 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-// ApplyDefaults 应用默认值
+// Apply defaults
 func (c *Config) ApplyDefaults() {
 	if c.Algorithm == "" {
 		c.Algorithm = "HS256"

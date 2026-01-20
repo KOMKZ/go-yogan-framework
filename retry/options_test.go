@@ -7,7 +7,7 @@ import (
 )
 
 // ============================================================
-// MultiError 测试
+// MultiError test
 // ============================================================
 
 func TestMultiError_Empty(t *testing.T) {
@@ -38,22 +38,22 @@ func TestMultiError_Empty(t *testing.T) {
 }
 
 // ============================================================
-// Options 测试
+// Options test
 // ============================================================
 
 func TestOptions_Nil(t *testing.T) {
 	cfg := defaultConfig()
 	
-	// 测试 nil 选项不会导致 panic
-	MaxAttempts(0)(cfg)          // 无效值，应该被忽略
-	Backoff(nil)(cfg)             // nil，应该被忽略
-	Condition(nil)(cfg)           // nil，应该被忽略
-	OnRetry(nil)(cfg)             // nil，允许
-	Timeout(0)(cfg)               // 0，应该被忽略
-	Timeout(-time.Second)(cfg)    // 负数，应该被忽略
-	Budget(nil)(cfg)              // nil，允许
+	// Test that nil option does not cause panic
+	MaxAttempts(0)(cfg)          // Invalid value, should be ignored
+	Backoff(nil)(cfg)             // nil, should be ignored
+	Condition(nil)(cfg)           // nil, should be ignored
+	OnRetry(nil)(cfg)             // nil, allow
+	Timeout(0)(cfg)               // 0 should be ignored
+	Timeout(-time.Second)(cfg)    // Negative numbers should be ignored
+	Budget(nil)(cfg)              // nil, allow
 	
-	// 验证默认值没有被破坏
+	// Verify that default values have not been corrupted
 	if cfg.maxAttempts != 3 {
 		t.Errorf("expected 3, got %d", cfg.maxAttempts)
 	}
@@ -70,7 +70,7 @@ func TestOptions_Nil(t *testing.T) {
 func TestOptions_Valid(t *testing.T) {
 	cfg := defaultConfig()
 	
-	// 测试有效选项
+	// Test valid options
 	MaxAttempts(5)(cfg)
 	if cfg.maxAttempts != 5 {
 		t.Errorf("expected 5, got %d", cfg.maxAttempts)

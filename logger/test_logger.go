@@ -9,14 +9,14 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// TestCtxLogger 测试专用的 Context-Aware Logger
-// 将日志记录到内存，方便在单元测试中验证
+// TestCtxLogger context-aware logger for testing purposes
+// Log to memory for convenient verification in unit tests
 type TestCtxLogger struct {
 	logs []LogEntry
 	mu   sync.RWMutex
 }
 
-// LogEntry 日志条目
+// Log Entry
 type LogEntry struct {
 	Level   string
 	Message string
@@ -24,8 +24,8 @@ type LogEntry struct {
 	Fields  map[string]interface{}
 }
 
-// NewTestCtxLogger 创建测试用 Logger（记录到内存）
-// 用法：
+// Create test Logger (log to memory)
+// Usage:
 //
 //	testLogger := logger.NewTestCtxLogger()
 //	svc := user.NewService(repo, testLogger)
@@ -37,7 +37,7 @@ func NewTestCtxLogger() *TestCtxLogger {
 	}
 }
 
-// InfoCtx 记录 Info 级别日志（记录到内存）
+// InfoCtx logs info level logs (recorded in memory)
 func (t *TestCtxLogger) InfoCtx(ctx context.Context, msg string, fields ...zap.Field) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -50,7 +50,7 @@ func (t *TestCtxLogger) InfoCtx(ctx context.Context, msg string, fields ...zap.F
 	})
 }
 
-// ErrorCtx 记录 Error 级别日志（记录到内存）
+// ErrorCtx logs error level logs (records to memory)
 func (t *TestCtxLogger) ErrorCtx(ctx context.Context, msg string, fields ...zap.Field) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -63,7 +63,7 @@ func (t *TestCtxLogger) ErrorCtx(ctx context.Context, msg string, fields ...zap.
 	})
 }
 
-// DebugCtx 记录 Debug 级别日志（记录到内存）
+// DebugCtx logs debug level logs (records to memory)
 func (t *TestCtxLogger) DebugCtx(ctx context.Context, msg string, fields ...zap.Field) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -76,7 +76,7 @@ func (t *TestCtxLogger) DebugCtx(ctx context.Context, msg string, fields ...zap.
 	})
 }
 
-// WarnCtx 记录 Warn 级别日志（记录到内存）
+// WarnCtx logs Warn level messages (stored in memory)
 func (t *TestCtxLogger) WarnCtx(ctx context.Context, msg string, fields ...zap.Field) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -89,21 +89,21 @@ func (t *TestCtxLogger) WarnCtx(ctx context.Context, msg string, fields ...zap.F
 	})
 }
 
-// With 返回带有预设字段的新 Logger（用于测试）
+// Returns a new Logger with preset fields (for testing)
 func (t *TestCtxLogger) With(fields ...zap.Field) *TestCtxLogger {
-	// 测试版本：返回新实例，共享日志存储
+	// Test version: return new instance, shared log storage
 	newLogger := &TestCtxLogger{
-		logs: t.logs, // 共享 logs（用于验证）
-		mu:   t.mu,   // 共享锁
+		logs: t.logs, // Shared logs (for verification)
+		mu:   t.mu,   // shared lock
 	}
 	return newLogger
 }
 
 // ============================================
-// 断言辅助方法
+// Assertion helper method
 // ============================================
 
-// HasLog 检查是否存在指定级别和消息的日志
+// Check if a log with the specified level and message exists
 func (t *TestCtxLogger) HasLog(level, message string) bool {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
@@ -116,7 +116,7 @@ func (t *TestCtxLogger) HasLog(level, message string) bool {
 	return false
 }
 
-// HasLogWithTraceID 检查是否存在指定级别、消息和 TraceID 的日志
+// Checks if a log with specified level, message, and TraceID exists
 func (t *TestCtxLogger) HasLogWithTraceID(level, message, traceID string) bool {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
@@ -129,7 +129,7 @@ func (t *TestCtxLogger) HasLogWithTraceID(level, message, traceID string) bool {
 	return false
 }
 
-// HasLogWithField 检查是否存在指定级别、消息和字段的日志
+// Checks if a log with specified level, message, and field exists
 func (t *TestCtxLogger) HasLogWithField(level, message, fieldKey string, fieldValue interface{}) bool {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
@@ -144,7 +144,7 @@ func (t *TestCtxLogger) HasLogWithField(level, message, fieldKey string, fieldVa
 	return false
 }
 
-// CountLogs 统计指定级别的日志数量
+// CountLogs counts the number of logs at a specified level
 func (t *TestCtxLogger) CountLogs(level string) int {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
@@ -158,18 +158,18 @@ func (t *TestCtxLogger) CountLogs(level string) int {
 	return count
 }
 
-// Logs 获取所有日志（用于详细验证）
+// Logs Retrieve all logs (for detailed verification)
 func (t *TestCtxLogger) Logs() []LogEntry {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 
-	// 返回副本，避免外部修改
+	// Return a copy to avoid external modification
 	logs := make([]LogEntry, len(t.logs))
 	copy(logs, t.logs)
 	return logs
 }
 
-// Clear 清空日志（用于测试隔离）
+// Clear logs (for test isolation)
 func (t *TestCtxLogger) Clear() {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -178,21 +178,21 @@ func (t *TestCtxLogger) Clear() {
 }
 
 // ============================================
-// 内部辅助函数
+// Internal auxiliary function
 // ============================================
 
-// extractFieldsMap 将 zap.Field 转换为 map（用于测试断言）
+// extractFieldsMap converts zap.Field to a map (for test assertions)
 func extractFieldsMap(fields []zap.Field) map[string]interface{} {
 	result := make(map[string]interface{}, len(fields))
 	
-	// 使用 zap.NewProductionEncoderConfig 临时编码字段
+	// Use zap.NewProductionEncoderConfig to temporarily encode fields
 	enc := zapcore.NewMapObjectEncoder()
 	
 	for _, field := range fields {
 		field.AddTo(enc)
 	}
 	
-	// 将编码器的结果转换为 map
+	// Convert the encoder's result to a map
 	for k, v := range enc.Fields {
 		result[k] = v
 	}

@@ -5,73 +5,73 @@ import (
 	"time"
 )
 
-// Config 认证组件配置
+// Configuration for authentication components
 type Config struct {
-	Enabled bool `yaml:"enabled" mapstructure:"enabled"` // 是否启用认证组件
+	Enabled bool `yaml:"enabled" mapstructure:"enabled"` // Whether to enable authentication component
 
-	// 支持的认证方式
+	// Supported authentication methods
 	Providers []string `yaml:"providers" mapstructure:"providers"` // password, oauth2, api_key, basic_auth
 
-	// 密码认证配置
+	// password authentication configuration
 	Password PasswordConfig `yaml:"password" mapstructure:"password"`
 
-	// OAuth2.0 配置（未来扩展）
+	// OAuth2.0 configuration (future expansion)
 	// OAuth2 OAuth2Config `yaml:"oauth2" mapstructure:"oauth2"`
 
-	// API Key 配置（未来扩展）
+	// API Key configuration (future expansion)
 	// APIKey APIKeyConfig `yaml:"api_key" mapstructure:"api_key"`
 
-	// 登录尝试限制
+	// Login attempt limit
 	LoginAttempt LoginAttemptConfig `yaml:"login_attempt" mapstructure:"login_attempt"`
 }
 
-// PasswordConfig 密码认证配置
+// PasswordConfig password authentication configuration
 type PasswordConfig struct {
-	Enabled    bool           `yaml:"enabled" mapstructure:"enabled"`         // 是否启用密码认证
-	Policy     PasswordPolicy `yaml:"policy" mapstructure:"policy"`           // 密码策略
-	BcryptCost int            `yaml:"bcrypt_cost" mapstructure:"bcrypt_cost"` // bcrypt cost（10-14，推荐 12）
+	Enabled    bool           `yaml:"enabled" mapstructure:"enabled"`         // Whether password authentication is enabled
+	Policy     PasswordPolicy `yaml:"policy" mapstructure:"policy"`           // password policy
+	BcryptCost int            `yaml:"bcrypt_cost" mapstructure:"bcrypt_cost"` // bcrypt cost (10-14, recommended 12)
 }
 
-// PasswordPolicy 密码策略
+// PasswordPolicy password policy
 type PasswordPolicy struct {
-	// 复杂度要求
-	MinLength          int  `yaml:"min_length" mapstructure:"min_length"`                     // 最小长度
-	MaxLength          int  `yaml:"max_length" mapstructure:"max_length"`                     // 最大长度
-	RequireUppercase   bool `yaml:"require_uppercase" mapstructure:"require_uppercase"`       // 至少 1 个大写字母
-	RequireLowercase   bool `yaml:"require_lowercase" mapstructure:"require_lowercase"`       // 至少 1 个小写字母
-	RequireDigit       bool `yaml:"require_digit" mapstructure:"require_digit"`               // 至少 1 个数字
-	RequireSpecialChar bool `yaml:"require_special_char" mapstructure:"require_special_char"` // 至少 1 个特殊字符
+	// Complexity requirement
+	MinLength          int  `yaml:"min_length" mapstructure:"min_length"`                     // minimum length
+	MaxLength          int  `yaml:"max_length" mapstructure:"max_length"`                     // maximum length
+	RequireUppercase   bool `yaml:"require_uppercase" mapstructure:"require_uppercase"`       // At least one uppercase letter
+	RequireLowercase   bool `yaml:"require_lowercase" mapstructure:"require_lowercase"`       // At least one lowercase letter
+	RequireDigit       bool `yaml:"require_digit" mapstructure:"require_digit"`               // At least one digit
+	RequireSpecialChar bool `yaml:"require_special_char" mapstructure:"require_special_char"` // At least one special character
 
-	// 安全策略
-	PasswordHistory    int `yaml:"password_history" mapstructure:"password_history"`         // 禁止重复最近 N 次密码
-	PasswordExpiryDays int `yaml:"password_expiry_days" mapstructure:"password_expiry_days"` // 密码 N 天过期
+	// Security policy
+	PasswordHistory    int `yaml:"password_history" mapstructure:"password_history"`         // Prohibit repeated passwords from the last N attempts
+	PasswordExpiryDays int `yaml:"password_expiry_days" mapstructure:"password_expiry_days"` // Password expires in N days
 
-	// 弱密码黑名单
+	// weak password blacklist
 	Blacklist []string `yaml:"blacklist" mapstructure:"blacklist"`
 }
 
-// LoginAttemptConfig 登录尝试限制配置
+// LoginAttemptConfig login attempt restriction configuration
 type LoginAttemptConfig struct {
-	Enabled         bool          `yaml:"enabled" mapstructure:"enabled"`                   // 是否启用
-	MaxAttempts     int           `yaml:"max_attempts" mapstructure:"max_attempts"`         // 最大尝试次数
-	LockoutDuration time.Duration `yaml:"lockout_duration" mapstructure:"lockout_duration"` // 锁定时长
-	Storage         string        `yaml:"storage" mapstructure:"storage"`                   // 存储方式：redis, memory
-	RedisKeyPrefix  string        `yaml:"redis_key_prefix" mapstructure:"redis_key_prefix"` // Redis 键前缀
+	Enabled         bool          `yaml:"enabled" mapstructure:"enabled"`                   // Is Enabled
+	MaxAttempts     int           `yaml:"max_attempts" mapstructure:"max_attempts"`         // Maximum number of attempts
+	LockoutDuration time.Duration `yaml:"lockout_duration" mapstructure:"lockout_duration"` // lock duration
+	Storage         string        `yaml:"storage" mapstructure:"storage"`                   // Storage method: redis, memory
+	RedisKeyPrefix  string        `yaml:"redis_key_prefix" mapstructure:"redis_key_prefix"` // Redis key prefix
 }
 
-// ApplyDefaults 应用默认值
+// ApplyDefaults Apply default values
 func (c *Config) ApplyDefaults() {
-	// 默认启用密码认证
+	// Enable password authentication by default
 	if len(c.Providers) == 0 {
 		c.Providers = []string{"password"}
 	}
 
-	// 密码认证默认值
+	// password authentication default value
 	if c.Password.BcryptCost == 0 {
-		c.Password.BcryptCost = 12 // 推荐值
+		c.Password.BcryptCost = 12 // recommended value
 	}
 
-	// 密码策略默认值
+	// default password policy values
 	policy := &c.Password.Policy
 	if policy.MinLength == 0 {
 		policy.MinLength = 8
@@ -86,7 +86,7 @@ func (c *Config) ApplyDefaults() {
 		policy.PasswordExpiryDays = 90
 	}
 
-	// 登录尝试限制默认值
+	// Login attempt limit default value
 	if c.LoginAttempt.Enabled {
 		if c.LoginAttempt.MaxAttempts == 0 {
 			c.LoginAttempt.MaxAttempts = 5
@@ -103,18 +103,18 @@ func (c *Config) ApplyDefaults() {
 	}
 }
 
-// Validate 验证配置
+// Validate configuration
 func (c *Config) Validate() error {
 	if !c.Enabled {
 		return nil
 	}
 
-	// 至少启用一种认证方式
+	// At least one authentication method must be enabled
 	if len(c.Providers) == 0 {
 		return errors.New("至少需要启用一种认证方式")
 	}
 
-	// 密码策略验证
+	// Password policy validation
 	if c.Password.Enabled {
 		policy := c.Password.Policy
 		if policy.MinLength < 1 || policy.MinLength > policy.MaxLength {
@@ -126,7 +126,7 @@ func (c *Config) Validate() error {
 		}
 	}
 
-	// 登录尝试限制验证
+	// Login attempt limit validation
 	if c.LoginAttempt.Enabled {
 		if c.LoginAttempt.MaxAttempts < 1 {
 			return errors.New("最大登录尝试次数必须 >= 1")
@@ -139,7 +139,7 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-// IsProviderEnabled 检查指定认证方式是否启用
+// Check if the specified authentication method is enabled
 func (c *Config) IsProviderEnabled(provider string) bool {
 	for _, p := range c.Providers {
 		if p == provider {

@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestConfig_Validate_RS256 测试 RS256 配置验证
+// TestConfig_Validate_RS256 test RS256 configuration validation
 func TestConfig_Validate_RS256(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -52,7 +52,7 @@ func TestConfig_Validate_RS256(t *testing.T) {
 	}
 }
 
-// TestConfig_Validate_AllAlgorithms 测试所有支持的算法
+// TestConfig_Validate_AllAlgorithms test all supported algorithms
 func TestConfig_Validate_AllAlgorithms(t *testing.T) {
 	algorithms := []string{"HS256", "HS384", "HS512"}
 

@@ -5,43 +5,43 @@ import (
 	"time"
 )
 
-// AuthProvider 认证提供者接口
+// Authentication provider interface
 type AuthProvider interface {
-	// Name 认证方式名称（password, oauth2, api_key, basic_auth）
+	// Name Authentication method name (password, oauth2, api_key, basic_auth)
 	Name() string
 	
-	// Authenticate 执行认证
+	// Authenticate execution authorization
 	Authenticate(ctx context.Context, credentials Credentials) (*AuthResult, error)
 }
 
-// Credentials 认证凭证（通用结构）
+// Credentials (generic structure)
 type Credentials struct {
-	// 用户名/密码认证
+	// username/password authentication
 	Username string
 	Password string
 	
-	// OAuth2.0 认证
+	// OAuth 2.0 authentication
 	AuthCode string
 	Provider string // google, github, wechat
 	
-	// API Key 认证
+	// API key authentication
 	APIKey string
 	
-	// Basic Auth 认证
+	// Basic Authentication认证
 	BasicAuthUser string
 	BasicAuthPass string
 }
 
-// AuthResult 认证结果
+// Authentication result
 type AuthResult struct {
-	UserID   int64                  // 用户 ID
-	Username string                 // 用户名
-	Email    string                 // 邮箱
-	Roles    []string               // 角色列表
-	Extra    map[string]interface{} // 额外信息
+	UserID   int64                  // User ID
+	Username string                 // Username
+	Email    string                 // emailADDRESS
+	Roles    []string               // List of characters
+	Extra    map[string]interface{} // Additional information
 }
 
-// PasswordAuthProvider 密码认证提供者
+// PasswordAuthProvider password authentication provider
 type PasswordAuthProvider struct {
 	passwordService *PasswordService
 	userRepository  UserRepository
@@ -50,16 +50,16 @@ type PasswordAuthProvider struct {
 	lockoutDuration time.Duration
 }
 
-// UserRepository 用户仓库接口（业务层实现）
+// UserRepository user repository interface (business layer implementation)
 type UserRepository interface {
-	// FindByUsername 根据用户名查找用户
+	// FindUserByUserName retrieves user by username
 	FindByUsername(ctx context.Context, username string) (*User, error)
 	
-	// FindByEmail 根据邮箱查找用户
+	// Find user by email
 	FindByEmail(ctx context.Context, email string) (*User, error)
 }
 
-// User 用户模型
+// User model
 type User struct {
 	ID           int64
 	Username     string
@@ -69,7 +69,7 @@ type User struct {
 	Roles        []string
 }
 
-// NewPasswordAuthProvider 创建密码认证提供者
+// Create password authentication provider
 func NewPasswordAuthProvider(
 	passwordService *PasswordService,
 	userRepository UserRepository,
@@ -86,17 +86,17 @@ func NewPasswordAuthProvider(
 	}
 }
 
-// Name 认证方式名称
+// Name Authentication method name
 func (p *PasswordAuthProvider) Name() string {
 	return "password"
 }
 
-// Authenticate 执行密码认证
+// Authenticate password authentication execution
 func (p *PasswordAuthProvider) Authenticate(ctx context.Context, credentials Credentials) (*AuthResult, error) {
 	username := credentials.Username
 	password := credentials.Password
 
-	// 1. 检查登录尝试次数
+	// 1. Check login attempt count
 	if p.attemptStore != nil {
 		locked, err := p.attemptStore.IsLocked(ctx, username, p.maxAttempts)
 		if err == nil && locked {
@@ -104,17 +104,17 @@ func (p *PasswordAuthProvider) Authenticate(ctx context.Context, credentials Cre
 		}
 	}
 
-	// 2. 查询用户
+	// 2. Query user
 	user, err := p.userRepository.FindByUsername(ctx, username)
 	if err != nil {
-		// 增加失败次数（防止用户名枚举）
+		// Increase failure count (prevent username enumeration)
 		if p.attemptStore != nil {
 			p.attemptStore.IncrementAttempts(ctx, username, p.lockoutDuration)
 		}
 		return nil, ErrInvalidCredentials
 	}
 
-	// 3. 验证密码
+	// 3. Verify password
 	if !p.passwordService.CheckPassword(password, user.PasswordHash) {
 		if p.attemptStore != nil {
 			p.attemptStore.IncrementAttempts(ctx, username, p.lockoutDuration)
@@ -122,17 +122,17 @@ func (p *PasswordAuthProvider) Authenticate(ctx context.Context, credentials Cre
 		return nil, ErrInvalidCredentials
 	}
 
-	// 4. 检查账户状态
+	// 4. Check account status
 	if user.Status != "active" {
 		return nil, ErrAccountDisabled
 	}
 
-	// 5. 重置登录尝试
+	// 5. Reset login attempts
 	if p.attemptStore != nil {
 		p.attemptStore.ResetAttempts(ctx, username)
 	}
 
-	// 6. 返回认证结果
+	// 6. Return authentication result
 	return &AuthResult{
 		UserID:   user.ID,
 		Username: user.Username,

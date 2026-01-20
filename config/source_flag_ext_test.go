@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// TestConvertValue 测试类型转换函数
+// TestConvertValue test type conversion function
 func TestConvertValue(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -14,25 +14,25 @@ func TestConvertValue(t *testing.T) {
 		expected   interface{}
 		expectErr  bool
 	}{
-		// String 转换
+		// String conversion
 		{"int to string", 123, reflect.String, "123", false},
 		{"string to string", "hello", reflect.String, "hello", false},
 
-		// Int 转换
+		// Integer conversion
 		{"int to int", 123, reflect.Int, 123, false},
 		{"int64 to int", int64(456), reflect.Int, int64(456), false},
 		{"string to int", "789", reflect.Int, int64(789), false},
 		{"invalid string to int", "abc", reflect.Int, nil, true},
 		{"float to int", 3.14, reflect.Int, nil, true},
 
-		// Bool 转换
+		// Boolean conversion
 		{"bool to bool", true, reflect.Bool, true, false},
 		{"string true to bool", "true", reflect.Bool, true, false},
 		{"string false to bool", "false", reflect.Bool, false, false},
 		{"invalid string to bool", "maybe", reflect.Bool, nil, true},
 		{"int to bool", 1, reflect.Bool, nil, true},
 
-		// 其他类型
+		// Other types
 		{"any to any", 123, reflect.Float32, 123, false},
 	}
 
@@ -59,7 +59,7 @@ func TestConvertValue(t *testing.T) {
 	}
 }
 
-// TestIsZeroValue 测试零值判断
+// TestIsZeroValue test for zero value judgment
 func TestIsZeroValue(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -121,7 +121,7 @@ func TestIsZeroValue(t *testing.T) {
 	}
 }
 
-// TestIsZeroValue_Interface 测试 interface 类型零值判断
+// TestInterfaceZeroValue_Check:test interface type zero value check
 func TestIsZeroValue_Interface(t *testing.T) {
 	var nilInterface interface{} = nil
 
@@ -131,7 +131,7 @@ func TestIsZeroValue_Interface(t *testing.T) {
 	}
 }
 
-// TestFlagSource_NilFlags 测试 nil flags
+// TestFlagSource_NilFlags test nil flags
 func TestFlagSource_NilFlags(t *testing.T) {
 	source := NewFlagSource(nil, "grpc", 100)
 
@@ -145,7 +145,7 @@ func TestFlagSource_NilFlags(t *testing.T) {
 	}
 }
 
-// TestFlagSource_NilPointer 测试 nil 指针
+// TestFlagSource_NilPointer test nil pointer
 func TestFlagSource_NilPointer(t *testing.T) {
 	var flags *struct{ Port int }
 
@@ -161,7 +161,7 @@ func TestFlagSource_NilPointer(t *testing.T) {
 	}
 }
 
-// TestFlagSource_NonStruct 测试非结构体类型
+// TestFlagSource_NonStruct test non-struct types
 func TestFlagSource_NonStruct(t *testing.T) {
 	source := NewFlagSource("not a struct", "grpc", 100)
 
@@ -171,12 +171,12 @@ func TestFlagSource_NonStruct(t *testing.T) {
 	}
 }
 
-// TestFlagSource_SkipTagDash 测试跳过 "-" tag
+// TestFlagSource_SkipTagDash test skipping "-" tag
 func TestFlagSource_SkipTagDash(t *testing.T) {
 	type Flags struct {
 		Port   int `config:"-"`
 		Name   string
-		Active bool `config:"app.active,-"` // 包含 - 应该被跳过
+		Active bool `config:"app.active,-"` // Include - Should be skipped
 	}
 
 	source := NewFlagSource(&Flags{Port: 8080, Name: "test"}, "grpc", 100)
@@ -186,13 +186,13 @@ func TestFlagSource_SkipTagDash(t *testing.T) {
 		t.Fatalf("Load() error: %v", err)
 	}
 
-	// Port 应该被跳过（tag 是 "-"）
+	// The port should be skipped (tag is "-")
 	if _, ok := data["grpc.server.port"]; ok {
 		t.Error("Port should be skipped with config:\"-\" tag")
 	}
 }
 
-// TestFlagSource_DefaultMapping_GRPCPort 测试 GRPCPort 映射
+// TestFlagSource_DefaultMapping_GRPCPort test GRPCPort mapping
 func TestFlagSource_DefaultMapping_GRPCPort(t *testing.T) {
 	type Flags struct {
 		GRPCPort int
@@ -210,7 +210,7 @@ func TestFlagSource_DefaultMapping_GRPCPort(t *testing.T) {
 	}
 }
 
-// TestFlagSource_DefaultMapping_HTTPPort 测试 HTTPPort 映射
+// TestFlagSource_DefaultMapping_HTTPPort test HTTPPort mapping
 func TestFlagSource_DefaultMapping_HTTPPort(t *testing.T) {
 	type Flags struct {
 		HTTPPort int
@@ -228,7 +228,7 @@ func TestFlagSource_DefaultMapping_HTTPPort(t *testing.T) {
 	}
 }
 
-// TestFlagSource_DefaultMapping_Addresses 测试地址映射
+// TestFlagSource_DefaultMapping_Addresses_Test_Address_Mapping
 func TestFlagSource_DefaultMapping_Addresses(t *testing.T) {
 	type Flags struct {
 		GRPCAddress string

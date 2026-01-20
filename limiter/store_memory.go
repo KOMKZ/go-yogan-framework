@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-// memoryStore 内存存储实现
+// memoryStore memory storage implementation
 type memoryStore struct {
 	mu     sync.RWMutex
 	data   map[string]*memoryValue
@@ -17,32 +17,32 @@ type memoryStore struct {
 	closed bool
 }
 
-// memoryValue 内存值
+// memory value
 type memoryValue struct {
 	data     string
 	expireAt time.Time
 }
 
-// memoryZSet 内存有序集合
+// memoryZSet ordered memory set
 type memoryZSet struct {
 	members  map[string]float64 // member -> score
 	expireAt time.Time
 }
 
-// NewMemoryStore 创建内存存储
+// Create memory store
 func NewMemoryStore() Store {
 	store := &memoryStore{
 		data:  make(map[string]*memoryValue),
 		zsets: make(map[string]*memoryZSet),
 	}
 
-	// 启动清理协程
+	// Start cleanup coroutine
 	go store.cleanupLoop(1 * time.Minute)
 
 	return store
 }
 
-// Get 获取值
+// Get Retrieve value
 func (s *memoryStore) Get(ctx context.Context, key string) (string, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -56,7 +56,7 @@ func (s *memoryStore) Get(ctx context.Context, key string) (string, error) {
 		return "", ErrKeyNotFound
 	}
 
-	// 检查是否过期
+	// Check if expired
 	if !val.expireAt.IsZero() && time.Now().After(val.expireAt) {
 		return "", ErrKeyNotFound
 	}
@@ -64,7 +64,7 @@ func (s *memoryStore) Get(ctx context.Context, key string) (string, error) {
 	return val.data, nil
 }
 
-// Set 设置值
+// Set configuration value
 func (s *memoryStore) Set(ctx context.Context, key string, value string, ttl time.Duration) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -86,7 +86,7 @@ func (s *memoryStore) Set(ctx context.Context, key string, value string, ttl tim
 	return nil
 }
 
-// GetInt64 获取整数值
+// GetInt64 get integer value
 func (s *memoryStore) GetInt64(ctx context.Context, key string) (int64, error) {
 	str, err := s.Get(ctx, key)
 	if err != nil {
@@ -101,17 +101,17 @@ func (s *memoryStore) GetInt64(ctx context.Context, key string) (int64, error) {
 	return val, nil
 }
 
-// SetInt64 设置整数值
+// SetInt64 sets an integer value
 func (s *memoryStore) SetInt64(ctx context.Context, key string, value int64, ttl time.Duration) error {
 	return s.Set(ctx, key, strconv.FormatInt(value, 10), ttl)
 }
 
-// Incr 原子递增
+// Increment atomic increment
 func (s *memoryStore) Incr(ctx context.Context, key string) (int64, error) {
 	return s.IncrBy(ctx, key, 1)
 }
 
-// IncrBy 原子递增指定值
+// IncrBy atomic increment by specified value
 func (s *memoryStore) IncrBy(ctx context.Context, key string, delta int64) (int64, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -122,7 +122,7 @@ func (s *memoryStore) IncrBy(ctx context.Context, key string, delta int64) (int6
 
 	var currentVal int64
 	if val, exists := s.data[key]; exists {
-		// 检查是否过期
+		// Check if expired
 		if !val.expireAt.IsZero() && time.Now().After(val.expireAt) {
 			currentVal = 0
 		} else {
@@ -136,7 +136,7 @@ func (s *memoryStore) IncrBy(ctx context.Context, key string, delta int64) (int6
 
 	newVal := currentVal + delta
 
-	// 保留原来的过期时间
+	// Keep the original expiration time
 	var expireAt time.Time
 	if val, exists := s.data[key]; exists && !val.expireAt.IsZero() {
 		expireAt = val.expireAt
@@ -150,17 +150,17 @@ func (s *memoryStore) IncrBy(ctx context.Context, key string, delta int64) (int6
 	return newVal, nil
 }
 
-// Decr 原子递减
+// Decrement atomic decrement
 func (s *memoryStore) Decr(ctx context.Context, key string) (int64, error) {
 	return s.DecrBy(ctx, key, 1)
 }
 
-// DecrBy 原子递减指定值
+// Atomically decrement the specified value
 func (s *memoryStore) DecrBy(ctx context.Context, key string, delta int64) (int64, error) {
 	return s.IncrBy(ctx, key, -delta)
 }
 
-// Expire 设置过期时间
+// Set expiration time
 func (s *memoryStore) Expire(ctx context.Context, key string, ttl time.Duration) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -183,7 +183,7 @@ func (s *memoryStore) Expire(ctx context.Context, key string, ttl time.Duration)
 	return nil
 }
 
-// TTL 获取剩余过期时间
+// Get remaining TTL time
 func (s *memoryStore) TTL(ctx context.Context, key string) (time.Duration, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -198,18 +198,18 @@ func (s *memoryStore) TTL(ctx context.Context, key string) (time.Duration, error
 	}
 
 	if val.expireAt.IsZero() {
-		return -1, nil // 永不过期
+		return -1, nil // never expires
 	}
 
 	ttl := time.Until(val.expireAt)
 	if ttl < 0 {
-		return 0, ErrKeyNotFound // 已过期
+		return 0, ErrKeyNotFound // Expired
 	}
 
 	return ttl, nil
 }
 
-// Del 删除键
+// Delete key
 func (s *memoryStore) Del(ctx context.Context, keys ...string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -226,7 +226,7 @@ func (s *memoryStore) Del(ctx context.Context, keys ...string) error {
 	return nil
 }
 
-// Exists 检查键是否存在
+// Exists Check if key exists
 func (s *memoryStore) Exists(ctx context.Context, key string) (bool, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -240,7 +240,7 @@ func (s *memoryStore) Exists(ctx context.Context, key string) (bool, error) {
 		return false, nil
 	}
 
-	// 检查是否过期
+	// Check if expired
 	if !val.expireAt.IsZero() && time.Now().After(val.expireAt) {
 		return false, nil
 	}
@@ -248,7 +248,7 @@ func (s *memoryStore) Exists(ctx context.Context, key string) (bool, error) {
 	return true, nil
 }
 
-// ZAdd 添加到有序集合
+// Add to sorted set
 func (s *memoryStore) ZAdd(ctx context.Context, key string, score float64, member string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -270,7 +270,7 @@ func (s *memoryStore) ZAdd(ctx context.Context, key string, score float64, membe
 	return nil
 }
 
-// ZRemRangeByScore 按分数范围删除
+// Remove by score range
 func (s *memoryStore) ZRemRangeByScore(ctx context.Context, key string, min, max float64) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -293,7 +293,7 @@ func (s *memoryStore) ZRemRangeByScore(ctx context.Context, key string, min, max
 	return nil
 }
 
-// ZCount 统计分数范围内的元素数量
+// ZCount statistics the number of elements within a score range
 func (s *memoryStore) ZCount(ctx context.Context, key string, min, max float64) (int64, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -307,7 +307,7 @@ func (s *memoryStore) ZCount(ctx context.Context, key string, min, max float64) 
 		return 0, nil
 	}
 
-	// 检查是否过期
+	// Check if expired
 	if !zset.expireAt.IsZero() && time.Now().After(zset.expireAt) {
 		return 0, nil
 	}
@@ -322,12 +322,12 @@ func (s *memoryStore) ZCount(ctx context.Context, key string, min, max float64) 
 	return count, nil
 }
 
-// Eval 执行Lua脚本（内存存储不支持）
+// Eval executes Lua scripts (in-memory storage does not support)
 func (s *memoryStore) Eval(ctx context.Context, script string, keys []string, args []interface{}) (interface{}, error) {
 	return nil, ErrStoreNotSupported
 }
 
-// Close 关闭连接
+// Close connection
 func (s *memoryStore) Close() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -339,7 +339,7 @@ func (s *memoryStore) Close() error {
 	return nil
 }
 
-// cleanupLoop 定期清理过期数据
+// cleanupLoop periodically cleans up expired data
 func (s *memoryStore) cleanupLoop(interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
@@ -347,7 +347,7 @@ func (s *memoryStore) cleanupLoop(interval time.Duration) {
 	for range ticker.C {
 		s.cleanup()
 
-		// 检查是否已关闭
+		// Check if closed
 		s.mu.RLock()
 		closed := s.closed
 		s.mu.RUnlock()
@@ -358,7 +358,7 @@ func (s *memoryStore) cleanupLoop(interval time.Duration) {
 	}
 }
 
-// cleanup 清理过期数据
+// cleanup Remove expired data
 func (s *memoryStore) cleanup() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -369,14 +369,14 @@ func (s *memoryStore) cleanup() {
 
 	now := time.Now()
 
-	// 清理普通键
+	// Clear regular keys
 	for key, val := range s.data {
 		if !val.expireAt.IsZero() && now.After(val.expireAt) {
 			delete(s.data, key)
 		}
 	}
 
-	// 清理有序集合
+	// Clear ordered set
 	for key, zset := range s.zsets {
 		if !zset.expireAt.IsZero() && now.After(zset.expireAt) {
 			delete(s.zsets, key)

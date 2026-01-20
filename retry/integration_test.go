@@ -8,16 +8,16 @@ import (
 )
 
 // ============================================================
-// Budget 集成测试
+// Budget integration test
 // ============================================================
 
 func TestDo_WithBudget(t *testing.T) {
 	ctx := context.Background()
 	budget := NewBudgetManager(0.5, time.Minute)
 	
-	// 先模拟10个原始请求
+	// First simulate 10 original requests
 	budget.requests = 10
-	// 现在预算：10 * 0.5 = 5次重试
+	// Current budget: 10 * 0.5 = 5 retries
 	
 	called := 0
 	err := Do(ctx, func() error {
@@ -29,12 +29,12 @@ func TestDo_WithBudget(t *testing.T) {
 		Backoff(NoBackoff()),
 	)
 	
-	// 验证有错误
+	// validate error
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
 	
-	// 验证包含预算错误（可能在错误链中）
+	// Verify that it includes budget errors (possibly in the error chain)
 	if multiErr, ok := err.(*MultiError); ok {
 		found := false
 		for _, e := range multiErr.Errors {
@@ -54,7 +54,7 @@ func TestDo_WithBudget_FirstAttemptSuccess(t *testing.T) {
 	budget := NewBudgetManager(0.1, time.Minute)
 	budget.requests = 100
 	
-	// 第一次尝试成功，不消耗预算
+	// First attempt successful, budget not consumed
 	err := Do(ctx, func() error {
 		return nil
 	},
@@ -73,7 +73,7 @@ func TestDo_WithBudget_FirstAttemptSuccess(t *testing.T) {
 }
 
 // ============================================================
-// 边界情况测试
+// boundary condition testing
 // ============================================================
 
 func TestDo_RemainingTimeCheck(t *testing.T) {
@@ -90,7 +90,7 @@ func TestDo_RemainingTimeCheck(t *testing.T) {
 		Backoff(ConstantBackoff(100*time.Millisecond, WithJitter(0))),
 	)
 	
-	// 应该在剩余时间不足时停止重试
+	// Should stop retrying when remaining time is insufficient
 	if called > 2 {
 		t.Errorf("expected at most 2 calls, got %d", called)
 	}
@@ -110,7 +110,7 @@ func TestDoWithData_ZeroValue(t *testing.T) {
 		Backoff(NoBackoff()),
 	)
 	
-	// 失败时应该返回零值
+	// Return zero value on failure
 	if result != 0 {
 		t.Errorf("expected 0, got %d", result)
 	}
@@ -121,7 +121,7 @@ func TestDoWithData_ZeroValue(t *testing.T) {
 }
 
 // ============================================================
-// 测试 executeWithContext 超时
+// Test executeWithContext timeout
 // ============================================================
 
 func TestExecuteWithContext_Timeout(t *testing.T) {

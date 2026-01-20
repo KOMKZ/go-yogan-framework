@@ -10,20 +10,20 @@ func TestSHA256_HashGenerator(t *testing.T) {
 	hash := SHA256()
 	assert.NotNil(t, hash)
 
-	// 验证是 SHA256
+	// Verify as SHA256
 	hash.Write([]byte("test"))
 	sum := hash.Sum(nil)
-	assert.Len(t, sum, 32) // SHA256 输出 32 字节
+	assert.Len(t, sum, 32) // SHA256 output is 32 bytes
 }
 
 func TestSHA512_HashGenerator(t *testing.T) {
 	hash := SHA512()
 	assert.NotNil(t, hash)
 
-	// 验证是 SHA512
+	// Validate as SHA512
 	hash.Write([]byte("test"))
 	sum := hash.Sum(nil)
-	assert.Len(t, sum, 64) // SHA512 输出 64 字节
+	assert.Len(t, sum, 64) // SHA512 output is 64 bytes
 }
 
 func TestXDGSCRAMClient_Begin(t *testing.T) {
@@ -55,7 +55,7 @@ func TestXDGSCRAMClient_Done(t *testing.T) {
 	err := client.Begin("username", "password", "")
 	assert.NoError(t, err)
 
-	// 在开始后，对话尚未完成
+	// The conversation has not yet been completed after starting
 	assert.False(t, client.Done())
 }
 
@@ -67,7 +67,7 @@ func TestXDGSCRAMClient_Step(t *testing.T) {
 	err := client.Begin("username", "password", "")
 	assert.NoError(t, err)
 
-	// 第一次 Step 生成客户端第一条消息
+	// First Step Generate client's first message
 	response, err := client.Step("")
 	assert.NoError(t, err)
 	assert.NotEmpty(t, response)

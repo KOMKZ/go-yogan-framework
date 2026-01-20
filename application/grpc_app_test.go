@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestNewGRPC 测试创建 gRPC 应用
+// TestNewGRPC test creating gRPC application
 func TestNewGRPC(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -23,14 +23,14 @@ func TestNewGRPC(t *testing.T) {
 	assert.NotNil(t, app.BaseApplication)
 }
 
-// TestNewGRPC_DefaultValues 测试默认值处理
+// TestNewGRPC_DefaultValues test default value handling
 func TestNewGRPC_DefaultValues(t *testing.T) {
-	// 测试空配置路径使用默认值
+	// Test empty configuration path using default values
 	app := NewGRPC("", "", nil)
 	assert.NotNil(t, app)
 }
 
-// TestNewGRPCWithDefaults 测试使用默认配置创建 gRPC 应用
+// TestNewGRPCWithDefaults test creating gRPC application with default configuration
 func TestNewGRPCWithDefaults(t *testing.T) {
 	tmpDir := t.TempDir()
 	appDir := filepath.Join(tmpDir, "configs", "grpc-app")
@@ -49,7 +49,7 @@ func TestNewGRPCWithDefaults(t *testing.T) {
 	assert.NotNil(t, app)
 }
 
-// TestNewGRPCWithFlags 测试使用 Flags 创建 gRPC 应用
+// TestNewGRPCWithFlags test creating gRPC application using flags
 func TestNewGRPCWithFlags(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -61,7 +61,7 @@ func TestNewGRPCWithFlags(t *testing.T) {
 	assert.NotNil(t, app)
 }
 
-// TestGRPCApplication_Callbacks 测试回调注册
+// TestGRPCApplication_Callbacks test callback registration
 func TestGRPCApplication_Callbacks(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -95,7 +95,7 @@ func TestGRPCApplication_Callbacks(t *testing.T) {
 	_ = shutdownCalled
 }
 
-// TestGRPCApplication_SetGovernanceManager 测试设置服务治理管理器
+// TestGRPCApplication_SetGovernanceManager test setting service governance manager
 func TestGRPCApplication_SetGovernanceManager(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -103,13 +103,13 @@ func TestGRPCApplication_SetGovernanceManager(t *testing.T) {
 
 	app := NewGRPC(tmpDir, "TEST", nil)
 
-	// SetGovernanceManager 接受 nil 也可以
+	// SetGovernanceManager can also accept null
 	result := app.SetGovernanceManager(nil)
 	assert.Equal(t, app, result)
 	assert.Nil(t, app.governanceManager)
 }
 
-// TestGRPCApplication_Run 测试阻塞运行
+// TestGRPCApplication_Run test blocking run
 func TestGRPCApplication_Run(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -121,7 +121,7 @@ func TestGRPCApplication_Run(t *testing.T) {
 
 	app.OnReady(func(g *GRPCApplication) error {
 		readyCalled = true
-		// 在 OnReady 中触发关闭
+		// Trigger close in OnReady
 		go func() {
 			time.Sleep(50 * time.Millisecond)
 			g.Cancel()
@@ -129,7 +129,7 @@ func TestGRPCApplication_Run(t *testing.T) {
 		return nil
 	})
 
-	// 在 goroutine 中运行以避免阻塞测试
+	// Run in a goroutine to avoid blocking tests
 	done := make(chan struct{})
 	go func() {
 		app.Run()
@@ -144,7 +144,7 @@ func TestGRPCApplication_Run(t *testing.T) {
 	}
 }
 
-// TestGRPCApplication_GracefulShutdown 测试优雅关闭
+// TestGRPCApplication_GracefulShutdown tests graceful shutdown
 func TestGRPCApplication_GracefulShutdown(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -152,16 +152,16 @@ func TestGRPCApplication_GracefulShutdown(t *testing.T) {
 
 	app := NewGRPC(tmpDir, "TEST", nil)
 
-	// 先 Setup
+	// First setup
 	err := app.Setup()
 	require.NoError(t, err)
 
-	// 测试 gracefulShutdown
+	// Test graceful shutdown
 	err = app.gracefulShutdown()
 	assert.NoError(t, err)
 }
 
-// TestGRPCApplication_AutoDeregisterService_NilManager 测试自动注销服务（无管理器）
+// TestGRPCApplication_AutoDeregisterService_NilManager Test auto-deregistration service (no manager)
 func TestGRPCApplication_AutoDeregisterService_NilManager(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -169,12 +169,12 @@ func TestGRPCApplication_AutoDeregisterService_NilManager(t *testing.T) {
 
 	app := NewGRPC(tmpDir, "TEST", nil)
 
-	// governanceManager 为 nil 时，autoDeregisterService 应返回 nil
+	// When governanceManager is nil, autoDeregisterService should return nil
 	err := app.autoDeregisterService()
 	assert.NoError(t, err)
 }
 
-// TestGRPCApplication_AutoRegisterService 测试自动注册服务
+// TestGRPCApplication_AutoRegisterService test auto register service
 func TestGRPCApplication_AutoRegisterService(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -184,12 +184,12 @@ func TestGRPCApplication_AutoRegisterService(t *testing.T) {
 	err := app.Setup()
 	require.NoError(t, err)
 
-	// autoRegisterService 目前只记录日志，不会报错
+	// autoRegisterService currently only logs, does not throw errors
 	err = app.autoRegisterService()
 	assert.NoError(t, err)
 }
 
-// TestGRPCApplication_Run_SetupError 测试 Run 启动失败
+// TestGRPCApplication_Run_SetupError Run startup failed due to setup error
 func TestGRPCApplication_Run_SetupError(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -206,7 +206,7 @@ func TestGRPCApplication_Run_SetupError(t *testing.T) {
 	})
 }
 
-// TestGRPCApplication_Run_ReadyError 测试 OnReady 失败
+// TestGRPCApplication_OnReady_Error test failed
 func TestGRPCApplication_Run_ReadyError(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")

@@ -1,46 +1,46 @@
 package event
 
-// listenerEntry 监听器条目
+// listener entry
 type listenerEntry struct {
-	id       uint64   // 唯一 ID（用于取消订阅）
-	listener Listener // 监听器
-	priority int      // 优先级（数字越小越先执行）
-	async    bool     // 是否异步执行
-	once     bool     // 是否只执行一次
+	id       uint64   // Unique ID (for unsubscribing)
+	listener Listener // listener
+	priority int      // Priority (the smaller the number, the higher the priority)
+	async    bool     // Is asynchronous execution
+	once     bool     // Should it be executed only once?
 }
 
-// SubscribeOption 订阅选项
+// SubscribeOption subscription options
 type SubscribeOption func(*listenerEntry)
 
-// WithPriority 设置优先级
-// 数字越小优先级越高，越先执行
-// 默认优先级为 0
+// WithPriority sets the priority
+// The smaller the number, the higher the priority, and it is executed first
+// Default priority is 0
 func WithPriority(priority int) SubscribeOption {
 	return func(e *listenerEntry) {
 		e.priority = priority
 	}
 }
 
-// WithAsync 标记为异步监听器
-// 即使使用 Dispatch 同步分发，该监听器也会异步执行
-// 异步监听器的错误不会影响事件传播
+// WithAsync marked as asynchronous listener
+// Even with Dispatch synchronous distribution, this listener will execute asynchronously
+// Asynchronous listener errors will not affect event propagation
 func WithAsync() SubscribeOption {
 	return func(e *listenerEntry) {
 		e.async = true
 	}
 }
 
-// WithOnce 只执行一次后自动取消订阅
+// Executes only once and then automatically unsubscribes
 func WithOnce() SubscribeOption {
 	return func(e *listenerEntry) {
 		e.once = true
 	}
 }
 
-// DispatcherOption 分发器配置选项
+// DispatcherOption Dispatcher configuration options
 type DispatcherOption func(*dispatcher)
 
-// WithPoolSize 设置异步协程池大小
+// WithPoolSize sets the size of the asynchronous coroutine pool
 func WithPoolSize(size int) DispatcherOption {
 	return func(d *dispatcher) {
 		d.poolSize = size
@@ -53,17 +53,17 @@ func WithSetAllSync(v bool) DispatcherOption {
 	}
 }
 
-// WithKafkaPublisher 设置 Kafka 发布者
-// 设置后可使用 WithKafka() 选项发送事件到 Kafka
+// WithKafkaPublisher set Kafka publisher
+// After setting up, use the WithKafka() option to send events to Kafka
 func WithKafkaPublisher(publisher KafkaPublisher) DispatcherOption {
 	return func(d *dispatcher) {
 		d.kafkaPublisher = publisher
 	}
 }
 
-// WithRouter 设置事件路由器
-// 路由器根据配置决定事件发送到 Kafka 还是内存
-// 优先级：代码选项 > 配置路由 > 默认(内存)
+// WithRouter sets the event router
+// The router decides based on the configuration whether an event is sent to Kafka or to memory
+// Priority: Code option > Configured route > Default (memory)
 func WithRouter(router *Router) DispatcherOption {
 	return func(d *dispatcher) {
 		d.router = router

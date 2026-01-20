@@ -2,19 +2,19 @@ package event
 
 import "time"
 
-// Event 事件接口
+// Event event interface
 type Event interface {
-	// Name 事件名称（唯一标识，如 "admin.login"）
+	// Name event name (unique identifier, such as "admin.login")
 	Name() string
 }
 
-// BaseEvent 事件基类，可嵌入到具体事件结构体中
+// BaseEvent base class for events, can be embedded into specific event structs
 type BaseEvent struct {
 	name       string
 	occurredAt time.Time
 }
 
-// NewEvent 创建基础事件
+// Create base event
 func NewEvent(name string) BaseEvent {
 	return BaseEvent{
 		name:       name,
@@ -22,12 +22,12 @@ func NewEvent(name string) BaseEvent {
 	}
 }
 
-// Name 返回事件名称
+// Returns the event name
 func (e BaseEvent) Name() string {
 	return e.name
 }
 
-// OccurredAt 返回事件发生时间
+// OccurredAt returns the event occurrence time
 func (e BaseEvent) OccurredAt() time.Time {
 	return e.occurredAt
 }

@@ -7,14 +7,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestNewManager 测试创建路由管理器
+// TestNewManager test creating route manager
 func TestNewManager(t *testing.T) {
 	manager := NewManager()
 	assert.NotNil(t, manager)
 	assert.Empty(t, manager.routers)
 }
 
-// mockRouterImpl 模拟路由（实现正确的接口）
+// mockRouterImpl Mock router (implements correct interface)
 type mockRouterImpl struct {
 	registered bool
 }
@@ -23,7 +23,7 @@ func (m *mockRouterImpl) Register(engine *gin.Engine, app *Application) {
 	m.registered = true
 }
 
-// TestManager_Add 测试添加路由
+// TestManager_Add test route addition
 func TestManager_Add(t *testing.T) {
 	manager := NewManager()
 
@@ -34,7 +34,7 @@ func TestManager_Add(t *testing.T) {
 	assert.Len(t, manager.routers, 1)
 }
 
-// TestManager_AddFunc 测试添加路由函数
+// TestManager_AddFunc test function for adding routes
 func TestManager_AddFunc(t *testing.T) {
 	manager := NewManager()
 
@@ -46,7 +46,7 @@ func TestManager_AddFunc(t *testing.T) {
 	assert.Equal(t, manager, result)
 	assert.Len(t, manager.routers, 1)
 
-	// 注册路由
+	// Register routes
 	gin.SetMode(gin.TestMode)
 	engine := gin.New()
 	manager.Register(engine, nil)
@@ -54,7 +54,7 @@ func TestManager_AddFunc(t *testing.T) {
 	assert.True(t, called)
 }
 
-// TestManager_Register 测试注册路由
+// TestManager_Register test registration route
 func TestManager_Register(t *testing.T) {
 	manager := NewManager()
 
@@ -71,7 +71,7 @@ func TestManager_Register(t *testing.T) {
 	assert.True(t, router2.registered)
 }
 
-// TestRouterInterface 测试 Router 接口
+// TestRouterInterface test router interface
 func TestRouterInterface(t *testing.T) {
 	router := &mockRouterImpl{}
 
@@ -85,7 +85,7 @@ func TestRouterInterface(t *testing.T) {
 	assert.True(t, router.registered)
 }
 
-// TestRouterFunc 测试 RouterFunc 类型
+// TestRouterFunc test RouterFunc type
 func TestRouterFunc(t *testing.T) {
 	called := false
 	fn := RouterFunc(func(engine *gin.Engine, app *Application) {

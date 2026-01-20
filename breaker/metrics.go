@@ -4,72 +4,72 @@ import (
 	"time"
 )
 
-// MetricsCollector 指标采集器接口
+// MetricsCollector metric collector interface
 type MetricsCollector interface {
-	// RecordSuccess 记录成功
+	// RecordSuccess Recording successful
 	RecordSuccess(duration time.Duration)
 	
-	// RecordFailure 记录失败
+	// RecordFailure log failure
 	RecordFailure(duration time.Duration, err error)
 	
-	// RecordTimeout 记录超时
+	// RecordTimeout recording timeout
 	RecordTimeout(duration time.Duration)
 	
-	// RecordRejection 记录拒绝
+	// RecordRejection record rejection
 	RecordRejection()
 	
-	// GetSnapshot 获取当前快照
+	// GetSnapshot Get current snapshot
 	GetSnapshot() *MetricsSnapshot
 	
-	// Subscribe 订阅实时指标
+	// Subscribe to real-time metrics
 	Subscribe(observer MetricsObserver) ObserverID
 	
-	// Unsubscribe 取消订阅
+	// Unsubscribe from subscription
 	Unsubscribe(id ObserverID)
 	
-	// Reset 重置指标
+	// Reset metrics
 	Reset()
 }
 
-// MetricsSnapshot 指标快照（应用层可访问）
+// MetricsSnapshot metric snapshot (accessible at the application layer)
 type MetricsSnapshot struct {
 	Resource      string
 	State         State
 	WindowStart   time.Time
 	WindowEnd     time.Time
 	
-	// 计数统计
+	// count statistics
 	TotalRequests int64
 	Successes     int64
 	Failures      int64
 	Timeouts      int64
 	Rejections    int64
 	
-	// 百分比
-	SuccessRate   float64 // 成功率
-	ErrorRate     float64 // 错误率
-	TimeoutRate   float64 // 超时率
+	// Percentage
+	SuccessRate   float64 // success rate
+	ErrorRate     float64 // error rate
+	TimeoutRate   float64 // timeout rate
 	
-	// 延迟统计
+	// delayed statistics
 	AvgLatency    time.Duration
 	P50Latency    time.Duration
 	P95Latency    time.Duration
 	P99Latency    time.Duration
 	MaxLatency    time.Duration
 	
-	// 慢调用统计
+	// slow call statistics
 	SlowCalls     int64
 	SlowCallRate  float64
 	
-	// 错误分布（可选）
+	// Error distribution (optional)
 	ErrorTypes    map[string]int64
 }
 
-// MetricsObserver 指标观察者（应用层实现）
+// MetricsObserver metric observer (application layer implementation)
 type MetricsObserver interface {
 	OnMetricsUpdated(snapshot *MetricsSnapshot)
 }
 
-// ObserverID 观察者ID
+// ObserverID observer ID
 type ObserverID string
 

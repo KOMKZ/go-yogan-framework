@@ -8,19 +8,19 @@ import (
 	"go.uber.org/zap"
 )
 
-// RequestLogConfig HTTP 请求日志配置
+// HTTP request log configuration
 type RequestLogConfig struct {
-	// SkipPaths 跳过记录的路径列表
+	// SkipPaths list of paths to skip recording
 	SkipPaths []string
 
-	// EnableBody 是否记录请求体（性能考虑，默认 false）
+	// EnableBody Whether to log request body (considering performance, default is false)
 	EnableBody bool
 
-	// MaxBodySize 最大请求体记录大小（字节）
+	// MaxBodySize maximum request body recording size (bytes)
 	MaxBodySize int
 }
 
-// DefaultRequestLogConfig 默认配置
+// Default request log configuration
 func DefaultRequestLogConfig() RequestLogConfig {
 	return RequestLogConfig{
 		SkipPaths:   []string{},
@@ -29,20 +29,20 @@ func DefaultRequestLogConfig() RequestLogConfig {
 	}
 }
 
-// RequestLog Gin HTTP 请求日志中间件（结构化日志）
-// 替代 gin.Logger()，使用自定义 Logger 组件记录请求日志
+// RequestLog Gin HTTP request logging middleware (structured logs)
+// Replace gin.Logger() with a custom Logger component to log request logs
 //
-// 功能：
-//   - 结构化日志字段（状态码、耗时、客户端IP等）
-//   - 按状态码自动分级（500+ Error、400+ Warn、200+ Info）
-//   - 记录请求错误信息
-//   - 支持 TraceID 自动关联（使用 Context API）
-//   - 支持跳过指定路径
+// Function:
+// - Structured log fields (status code, duration, client IP, etc.)
+// - Automatically classify by status code (500+ Error, 400+ Warning, 200+ Information)
+// - Record request error information
+// - Support for automatic association of TraceID (using Context API)
+// - Support skipping specified paths
 //
-// 用法：
+// Usage:
 //
 //	engine.Use(middleware.RequestLog())
-//	// 或自定义配置
+// // or custom configuration
 //	cfg := middleware.DefaultRequestLogConfig()
 //	cfg.SkipPaths = []string{"/health", "/metrics"}
 //	engine.Use(middleware.RequestLogWithConfig(cfg))
@@ -50,42 +50,42 @@ func RequestLog() gin.HandlerFunc {
 	return RequestLogWithConfig(DefaultRequestLogConfig())
 }
 
-// RequestLogWithConfig 创建 HTTP 请求日志中间件（自定义配置）
+// Create HTTP request log middleware with custom configuration
 func RequestLogWithConfig(cfg RequestLogConfig) gin.HandlerFunc {
-	// 构建跳过路径的 map（提高查找性能）
+	// Build a map for skipping paths (improve lookup performance)
 	skipPathsMap := make(map[string]bool)
 	for _, path := range cfg.SkipPaths {
 		skipPathsMap[path] = true
 	}
 
 	return func(c *gin.Context) {
-		// 检查是否跳过此路径
+		// Check if skip this path
 		if skipPathsMap[c.Request.URL.Path] {
 			c.Next()
 			return
 		}
 
-		// 记录开始时间
+		// Record start time
 		startTime := time.Now()
 
-		// 处理请求（调用后续中间件和 Handler）
+		// Handle request (invoke subsequent middleware and Handler)
 		c.Next()
 
-		// 计算请求耗时
+		// Calculate request duration
 		endTime := time.Now()
 		latency := endTime.Sub(startTime)
 
-		// 提取请求信息
+		// Extract request information
 		clientIP := c.ClientIP()
 		method := c.Request.Method
 		path := c.Request.URL.Path
 		statusCode := c.Writer.Status()
 		bodySize := c.Writer.Size()
 
-		// 提取错误信息（如果有）
+		// Extract error message if any
 		errorMessage := c.Errors.ByType(gin.ErrorTypePrivate).String()
 
-		// 构建结构化日志字段
+		// Build structured log fields
 		fields := []zap.Field{
 			zap.Int("status", statusCode),
 			zap.Duration("latency", latency),
@@ -95,18 +95,18 @@ func RequestLogWithConfig(cfg RequestLogConfig) gin.HandlerFunc {
 			zap.Int("body_size", bodySize),
 		}
 
-		// 如果有错误信息，添加到字段中
+		// If there is an error message, add it to the field
 		if errorMessage != "" {
 			fields = append(fields, zap.String("error", errorMessage))
 		}
 
-		// ✅ 使用 Context API（支持 TraceID 自动关联）
+		// ✅ Uses Context API (supports automatic association of TraceID)
 		ctx := c.Request.Context()
 
-		// 根据状态码选择日志级别
-		// 500+: 服务器错误，Error 级别
-		// 400+: 客户端错误，Warn 级别
-		// 200+: 正常请求，Info 级别
+		// Select log level based on status code
+		// 500+: Server error, Error level
+		// 400+: Client error, Warn level
+		// 200+: Normal request, Info level
 		if statusCode >= 500 {
 			logger.ErrorCtx(ctx, "yogan", "HTTP 请求", fields...)
 		} else if statusCode >= 400 {

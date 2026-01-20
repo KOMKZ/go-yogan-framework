@@ -14,31 +14,31 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// TestClientManager_Timeout_ShortTimeout 测试短超时配置
+// TestClientManager_Timeout_ShortTimeout Test short timeout configuration
 func TestClientManager_Timeout_ShortTimeout(t *testing.T) {
 	log := logger.GetLogger("grpc_test")
 
-	// 配置一个无法连接的地址，使用1秒超时
+	// Configure an unreachable address with a 1-second timeout
 	configs := map[string]ClientConfig{
 		"slow-service": {
-			Target:  "127.0.0.1:19999", // 不存在的服务
-			Timeout: 1,                 // 1秒超时
+			Target:  "127.0.0.1:19999", // Service does not exist
+			Timeout: 1,                 // 1 second timeout
 		},
 	}
 
 	manager := NewClientManager(configs, log)
 	require.NotNil(t, manager)
 
-	// 记录开始时间
+	// Record start time
 	start := time.Now()
 
-	// 尝试获取连接（应该在1秒内失败）
+	// Try to get connection (should fail within 1 second)
 	conn, err := manager.GetConn("slow-service")
 
-	// 计算耗时
+	// Calculate duration
 	elapsed := time.Since(start)
 
-	// 验证：应该失败且耗时接近1秒
+	// Verify: Should fail and take approximately 1 second
 	assert.Error(t, err, "应该超时失败")
 	assert.Nil(t, conn, "连接应该为空")
 	assert.Less(t, elapsed, 2*time.Second, "应该在2秒内超时")
@@ -47,31 +47,31 @@ func TestClientManager_Timeout_ShortTimeout(t *testing.T) {
 	t.Logf("超时测试完成，耗时: %v", elapsed)
 }
 
-// TestClientManager_Timeout_LongTimeout 测试长超时配置
+// TestClientManager_Timeout_LongTimeout_Test long timeout configuration
 func TestClientManager_Timeout_LongTimeout(t *testing.T) {
 	log := logger.GetLogger("grpc_test")
 
-	// 配置一个无法连接的地址，使用10秒超时
+	// Configure an unreachable address with a 10-second timeout
 	configs := map[string]ClientConfig{
 		"slow-service": {
-			Target:  "127.0.0.1:19998", // 不存在的服务
-			Timeout: 10,                // 10秒超时
+			Target:  "127.0.0.1:19998", // Service does not exist
+			Timeout: 10,                // 10 second timeout
 		},
 	}
 
 	manager := NewClientManager(configs, log)
 	require.NotNil(t, manager)
 
-	// 记录开始时间
+	// Record start time
 	start := time.Now()
 
-	// 尝试获取连接（应该在10秒内失败）
+	// Try to get connection (should fail within 10 seconds)
 	conn, err := manager.GetConn("slow-service")
 
-	// 计算耗时
+	// Calculate duration
 	elapsed := time.Since(start)
 
-	// 验证：应该失败且耗时接近10秒
+	// Validate: Should fail and take approximately 10 seconds
 	assert.Error(t, err, "应该超时失败")
 	assert.Nil(t, conn, "连接应该为空")
 	assert.Less(t, elapsed, 12*time.Second, "应该在12秒内超时")
@@ -79,31 +79,31 @@ func TestClientManager_Timeout_LongTimeout(t *testing.T) {
 	t.Logf("超时测试完成，耗时: %v", elapsed)
 }
 
-// TestClientManager_Timeout_DefaultTimeout 测试默认超时（未配置时）
+// TestClientManager_Timeout_DefaultTimeout Test default timeout (when not configured)
 func TestClientManager_Timeout_DefaultTimeout(t *testing.T) {
 	log := logger.GetLogger("grpc_test")
 
-	// 不配置超时，应该使用默认5秒
+	// Without configuring timeout, the default 5 seconds should be used.
 	configs := map[string]ClientConfig{
 		"default-timeout-service": {
-			Target: "127.0.0.1:19997", // 不存在的服务
-			// Timeout 未设置，应该默认5秒
+			Target: "127.0.0.1:19997", // Service does not exist
+			// Timeout not set, should default to 5 seconds
 		},
 	}
 
 	manager := NewClientManager(configs, log)
 	require.NotNil(t, manager)
 
-	// 记录开始时间
+	// Record start time
 	start := time.Now()
 
-	// 尝试获取连接（应该在5秒内失败）
+	// Try to obtain connection (should fail within 5 seconds)
 	conn, err := manager.GetConn("default-timeout-service")
 
-	// 计算耗时
+	// Calculate time consumption
 	elapsed := time.Since(start)
 
-	// 验证：应该失败且耗时接近5秒
+	// Verify: Should fail and take approximately 5 seconds
 	assert.Error(t, err, "应该超时失败")
 	assert.Nil(t, conn, "连接应该为空")
 	assert.Less(t, elapsed, 7*time.Second, "应该在7秒内超时")
@@ -112,40 +112,40 @@ func TestClientManager_Timeout_DefaultTimeout(t *testing.T) {
 	t.Logf("默认超时测试完成，耗时: %v", elapsed)
 }
 
-// TestClientManager_Timeout_DifferentTimeouts 测试多个客户端不同超时配置
+// TestClientManager_Timeout_DifferentTimeouts Test multiple clients with different timeout configurations
 func TestClientManager_Timeout_DifferentTimeouts(t *testing.T) {
 	log := logger.GetLogger("grpc_test")
 
-	// 启动一个正常的测试服务器
+	// Start a normal test server
 	server := startTestGRPCServer(t)
 	defer server.Stop(context.Background())
 
-	// 配置多个客户端，不同超时
+	// Configure multiple clients, different timeouts
 	configs := map[string]ClientConfig{
 		"fast-service": {
 			Target:  fmt.Sprintf("127.0.0.1:%d", server.Port),
-			Timeout: 1, // 1秒超时（但服务正常，能快速连接）
+			Timeout: 1, // 1 second timeout (but the service is functioning normally and can connect quickly)
 		},
 		"normal-service": {
 			Target:  fmt.Sprintf("127.0.0.1:%d", server.Port),
-			Timeout: 5, // 5秒超时
+			Timeout: 5, // 5 second timeout
 		},
 		"slow-service": {
 			Target:  fmt.Sprintf("127.0.0.1:%d", server.Port),
-			Timeout: 30, // 30秒超时
+			Timeout: 30, // 30 second timeout
 		},
 	}
 
 	manager := NewClientManager(configs, log)
 	require.NotNil(t, manager)
 
-	// 测试所有客户端都能成功连接（因为服务器正常）
+	// Test that all clients can successfully connect (since the server is running properly)
 	for serviceName := range configs {
 		conn, err := manager.GetConn(serviceName)
 		assert.NoError(t, err, "服务 %s 应该连接成功", serviceName)
 		assert.NotNil(t, conn, "服务 %s 连接不应该为空", serviceName)
 
-		// 验证连接可用
+		// Verify connection availability
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		healthClient := grpc_health_v1.NewHealthClient(conn)
 		resp, err := healthClient.Check(ctx, &grpc_health_v1.HealthCheckRequest{})
@@ -155,7 +155,7 @@ func TestClientManager_Timeout_DifferentTimeouts(t *testing.T) {
 		assert.Equal(t, grpc_health_v1.HealthCheckResponse_SERVING, resp.Status)
 	}
 
-	// 验证配置被正确读取
+	// Verify that the configuration is correctly read
 	cfg1 := configs["fast-service"]
 	assert.Equal(t, 1, cfg1.GetTimeout())
 
@@ -166,35 +166,35 @@ func TestClientManager_Timeout_DifferentTimeouts(t *testing.T) {
 	assert.Equal(t, 30, cfg3.GetTimeout())
 }
 
-// TestClientManager_Timeout_RealTimeoutScenario 测试真实超时场景
-// 使用一个会延迟响应的服务模拟超时
+// TestClientManager_Timeout_RealTimeoutScenario Test real timeout scenario
+// Use a service that delays responses to simulate a timeout
 func TestClientManager_Timeout_RealTimeoutScenario(t *testing.T) {
 	log := logger.GetLogger("grpc_test")
 
-	// 启动测试服务器
+	// Start test server
 	server := startTestGRPCServer(t)
 	defer server.Stop(context.Background())
 
-	// 配置2秒超时
+	// Configure 2-second timeout
 	configs := map[string]ClientConfig{
 		"test-service": {
 			Target:  fmt.Sprintf("127.0.0.1:%d", server.Port),
-			Timeout: 2, // 2秒超时
+			Timeout: 2, // 2 second timeout
 		},
 	}
 
 	manager := NewClientManager(configs, log)
 	require.NotNil(t, manager)
 
-	// 获取连接（应该成功）
+	// Get connection (should succeed)
 	conn, err := manager.GetConn("test-service")
 	require.NoError(t, err)
 	require.NotNil(t, conn)
 
-	// 创建健康检查客户端
+	// Create health check client
 	healthClient := grpc_health_v1.NewHealthClient(conn)
 
-	// 测试1: 正常调用（应该成功）
+	// Test 1: Normal call (should succeed)
 	ctx1, cancel1 := context.WithTimeout(context.Background(), 1*time.Second)
 	resp1, err1 := healthClient.Check(ctx1, &grpc_health_v1.HealthCheckRequest{})
 	cancel1()
@@ -202,20 +202,20 @@ func TestClientManager_Timeout_RealTimeoutScenario(t *testing.T) {
 	assert.NoError(t, err1, "正常调用应该成功")
 	assert.NotNil(t, resp1)
 
-	// 测试2: 超时调用（使用100ms超时模拟超时场景）
+	// Test 2: Timeout call (simulating a timeout scenario using a 100ms timeout)
 	ctx2, cancel2 := context.WithTimeout(context.Background(), 10*time.Millisecond)
 	start := time.Now()
 	_, err2 := healthClient.Check(ctx2, &grpc_health_v1.HealthCheckRequest{
-		Service: "delay-service", // 假设服务会延迟
+		Service: "delay-service", // Assume service will be delayed
 	})
 	elapsed := time.Since(start)
 	cancel2()
 
-	// 验证超时行为
+	// Validate timeout behavior
 	if err2 != nil {
 		st, ok := status.FromError(err2)
 		if ok {
-			// 应该是超时或取消错误
+			// Should be a timeout or cancellation error
 			assert.True(t,
 				st.Code() == codes.DeadlineExceeded || st.Code() == codes.Canceled,
 				"应该是超时或取消错误，实际: %v", st.Code())

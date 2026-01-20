@@ -240,11 +240,11 @@ func TestResourceConfig_Merge(t *testing.T) {
 
 	merged := defaultCfg.Merge(overrideCfg)
 
-	// 覆盖的字段应该使用override的值
+	// The covered fields should use the override values
 	assert.Equal(t, int64(50), merged.Rate)
 	assert.Equal(t, int64(100), merged.Capacity)
 
-	// 未覆盖的字段应该使用默认值
+	// Fields not covered should use default values
 	assert.Equal(t, "token_bucket", merged.Algorithm)
 	assert.Equal(t, int64(200), merged.InitTokens)
 	assert.Equal(t, 1*time.Second, merged.Timeout)
@@ -265,12 +265,12 @@ func TestConfig_GetResourceConfig(t *testing.T) {
 		},
 	}
 
-	// 获取已配置的资源
+	// Get configured resources
 	resCfg := cfg.GetResourceConfig("api1")
 	assert.Equal(t, "sliding_window", resCfg.Algorithm)
 	assert.Equal(t, int64(1000), resCfg.Limit)
 
-	// 获取未配置的资源，应该返回默认配置
+	// Get resources that are not configured, should return default configuration
 	resCfg = cfg.GetResourceConfig("api2")
 	assert.Equal(t, "token_bucket", resCfg.Algorithm)
 	assert.Equal(t, int64(100), resCfg.Rate)
@@ -346,8 +346,8 @@ func TestConfig_Validate_Merge(t *testing.T) {
 		},
 		Resources: map[string]ResourceConfig{
 			"api1": {
-				Rate:     50, // 只覆盖Rate
-				Capacity: 100, // 只覆盖Capacity
+				Rate:     50, // Only cover Rate
+				Capacity: 100, // Only cover Capacity
 			},
 		},
 	}
@@ -355,10 +355,10 @@ func TestConfig_Validate_Merge(t *testing.T) {
 	err := cfg.Validate()
 	require.NoError(t, err)
 
-	// 验证合并后的配置
+	// Validate the merged configuration
 	api1Cfg := cfg.Resources["api1"]
-	assert.Equal(t, "token_bucket", api1Cfg.Algorithm) // 继承默认配置
-	assert.Equal(t, int64(50), api1Cfg.Rate)           // 覆盖值
-	assert.Equal(t, int64(100), api1Cfg.Capacity)      // 覆盖值
+	assert.Equal(t, "token_bucket", api1Cfg.Algorithm) // Inherit default configuration
+	assert.Equal(t, int64(50), api1Cfg.Rate)           // coverage value
+	assert.Equal(t, int64(100), api1Cfg.Capacity)      // coverage value
 }
 

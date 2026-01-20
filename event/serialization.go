@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// KafkaEventPayload Kafka 事件消息格式
+// KafkaEventPayload Kafka event message format
 type KafkaEventPayload struct {
 	EventName  string          `json:"event_name"`
 	Payload    json.RawMessage `json:"payload"`
@@ -16,7 +16,7 @@ type KafkaEventPayload struct {
 	TraceID    string          `json:"trace_id,omitempty"`
 }
 
-// SerializeEvent 序列化事件为 KafkaEventPayload
+// SerializeEvent serialize event to KafkaEventPayload
 func SerializeEvent(event Event, traceID string) (*KafkaEventPayload, error) {
 	payload, err := json.Marshal(event)
 	if err != nil {
@@ -31,24 +31,24 @@ func SerializeEvent(event Event, traceID string) (*KafkaEventPayload, error) {
 	}, nil
 }
 
-// eventRegistry 事件注册表（用于反序列化）
+// eventRegistry event registry (for deserialization)
 var (
 	eventRegistry   = make(map[string]reflect.Type)
 	eventRegistryMu sync.RWMutex
 )
 
-// RegisterEventType 注册事件类型（用于反序列化）
-// 在应用启动时调用，注册所有需要从 Kafka 消费的事件类型
-// T 应该是指针类型，如 RegisterEventType[*UserCreatedEvent]()
+// RegisterEventType Register event type (for deserialization)
+// Called at application startup to register all event types that need to consume from Kafka
+// T should be a pointer type, such as RegisterEventType<UserCreatedEvent\*>()
 func RegisterEventType[T Event]() {
 	typ := reflect.TypeOf((*T)(nil)).Elem()
 
-	// 如果是指针类型，获取元素类型
+	// If it is a pointer type, get the element type
 	if typ.Kind() == reflect.Ptr {
 		typ = typ.Elem()
 	}
 
-	// 创建一个零值实例来获取事件名称
+	// Create a zero-valued instance to obtain the event name
 	instance := reflect.New(typ).Interface().(Event)
 	name := instance.Name()
 
@@ -57,21 +57,21 @@ func RegisterEventType[T Event]() {
 	eventRegistry[name] = typ
 }
 
-// DeserializeEvent 反序列化事件
+// DeserializeEvent deserialize event
 func DeserializeEvent(payload *KafkaEventPayload) (Event, error) {
 	eventRegistryMu.RLock()
 	typ, ok := eventRegistry[payload.EventName]
 	eventRegistryMu.RUnlock()
 
 	if !ok {
-		// 未注册的事件类型，返回 GenericEvent
+		// Unregistered event type, return GenericEvent
 		return &GenericEvent{
 			name:    payload.EventName,
 			payload: payload.Payload,
 		}, nil
 	}
 
-	// 创建事件实例
+	// Create event instance
 	eventPtr := reflect.New(typ).Interface()
 	if err := json.Unmarshal(payload.Payload, eventPtr); err != nil {
 		return nil, fmt.Errorf("unmarshal event %s failed: %w", payload.EventName, err)
@@ -80,23 +80,23 @@ func DeserializeEvent(payload *KafkaEventPayload) (Event, error) {
 	return eventPtr.(Event), nil
 }
 
-// GenericEvent 通用事件（用于未注册类型）
+// GenericEvent generic event (for unregistered types)
 type GenericEvent struct {
 	name    string
 	payload json.RawMessage
 }
 
-// Name 返回事件名称
+// Return event name
 func (e *GenericEvent) Name() string {
 	return e.name
 }
 
-// Payload 返回原始负载
+// Payload returns original payload
 func (e *GenericEvent) Payload() json.RawMessage {
 	return e.payload
 }
 
-// GetRegisteredEventNames 获取已注册的事件名称列表
+// GetRegisteredEventNames Get the list of registered event names
 func GetRegisteredEventNames() []string {
 	eventRegistryMu.RLock()
 	defer eventRegistryMu.RUnlock()

@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestDefaultConfig 测试默认配置
+// TestDefaultConfig test default configuration
 func TestDefaultConfig(t *testing.T) {
 	cfg := DefaultConfig()
 	
@@ -18,7 +18,7 @@ func TestDefaultConfig(t *testing.T) {
 	assert.NotNil(t, cfg.Resources)
 }
 
-// TestDefaultResourceConfig 测试默认资源配置
+// TestDefaultResourceConfig test default resource configuration
 func TestDefaultResourceConfig(t *testing.T) {
 	cfg := DefaultResourceConfig()
 	
@@ -34,7 +34,7 @@ func TestDefaultResourceConfig(t *testing.T) {
 	assert.Equal(t, time.Second, cfg.BucketSize)
 }
 
-// TestConfig_Validate 测试配置验证
+// TestConfig_Validate test configuration validation
 func TestConfig_Validate(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -46,7 +46,7 @@ func TestConfig_Validate(t *testing.T) {
 			name: "未启用时不验证",
 			config: Config{
 				Enabled: false,
-				Default: ResourceConfig{}, // 无效配置
+				Default: ResourceConfig{}, // invalid configuration
 			},
 			wantErr: false,
 		},
@@ -55,7 +55,7 @@ func TestConfig_Validate(t *testing.T) {
 			config: Config{
 				Enabled: true,
 				Default: ResourceConfig{
-					MinRequests: -1, // 无效
+					MinRequests: -1, // invalid
 				},
 			},
 			wantErr: true,
@@ -68,7 +68,7 @@ func TestConfig_Validate(t *testing.T) {
 				Default: DefaultResourceConfig(),
 				Resources: map[string]ResourceConfig{
 					"test-service": {
-						ErrorRateThreshold: 1.5, // 无效
+						ErrorRateThreshold: 1.5, // invalid
 					},
 				},
 			},
@@ -100,7 +100,7 @@ func TestConfig_Validate(t *testing.T) {
 	}
 }
 
-// TestResourceConfig_Validate 测试资源配置验证
+// TestResourceConfig_Validate test resource configuration validation
 func TestResourceConfig_Validate(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -235,7 +235,7 @@ func TestResourceConfig_Validate(t *testing.T) {
 	}
 }
 
-// TestConfig_GetResourceConfig 测试获取资源配置
+// TestConfig_GetResourceConfig test for getting resource configuration
 func TestConfig_GetResourceConfig(t *testing.T) {
 	defaultCfg := DefaultResourceConfig()
 	defaultCfg.MinRequests = 10
@@ -261,7 +261,7 @@ func TestConfig_GetResourceConfig(t *testing.T) {
 	})
 }
 
-// TestState_String 测试状态字符串
+// TestState_String test status string
 func TestState_String(t *testing.T) {
 	tests := []struct {
 		state State
@@ -280,7 +280,7 @@ func TestState_String(t *testing.T) {
 	}
 }
 
-// TestState_Methods 测试状态判断方法
+// TestState-Methods Test state evaluation methods
 func TestState_Methods(t *testing.T) {
 	t.Run("StateClosed", func(t *testing.T) {
 		state := StateClosed
@@ -304,7 +304,7 @@ func TestState_Methods(t *testing.T) {
 	})
 }
 
-// TestValidationError 测试验证错误
+// Test ValidationError
 func TestValidationError(t *testing.T) {
 	tests := []struct {
 		name string

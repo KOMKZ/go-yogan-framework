@@ -9,7 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// MemoryTokenStore 内存 Token 存储（开发/测试环境）
+// MemoryTokenStore (in-memory token storage for development/test environment)
 type MemoryTokenStore struct {
 	blacklist     sync.Map // map[string]time.Time (token -> expiry)
 	userBlacklist sync.Map // map[string]time.Time (subject -> timestamp)
@@ -18,14 +18,14 @@ type MemoryTokenStore struct {
 	wg            sync.WaitGroup
 }
 
-// NewMemoryTokenStore 创建内存 Token 存储
+// Create memory token storage
 func NewMemoryTokenStore(cleanupInterval time.Duration, log *logger.CtxZapLogger) *MemoryTokenStore {
 	store := &MemoryTokenStore{
 		logger: log,
 		stopCh: make(chan struct{}),
 	}
 
-	// 启动定期清理
+	// Start regular cleanup
 	if cleanupInterval > 0 {
 		store.wg.Add(1)
 		go store.cleanup(cleanupInterval)
@@ -34,7 +34,7 @@ func NewMemoryTokenStore(cleanupInterval time.Duration, log *logger.CtxZapLogger
 	return store
 }
 
-// IsBlacklisted 检查 Token 是否在黑名单
+// Check if Token is in blacklist
 func (s *MemoryTokenStore) IsBlacklisted(ctx context.Context, token string) (bool, error) {
 	value, exists := s.blacklist.Load(token)
 	if !exists {
@@ -43,7 +43,7 @@ func (s *MemoryTokenStore) IsBlacklisted(ctx context.Context, token string) (boo
 
 	expiry := value.(time.Time)
 	if time.Now().After(expiry) {
-		// 已过期，删除
+		// Expired, delete
 		s.blacklist.Delete(token)
 		return false, nil
 	}
@@ -51,7 +51,7 @@ func (s *MemoryTokenStore) IsBlacklisted(ctx context.Context, token string) (boo
 	return true, nil
 }
 
-// AddToBlacklist 添加到黑名单
+// AddToBlacklist Add to blacklist
 func (s *MemoryTokenStore) AddToBlacklist(ctx context.Context, token string, ttl time.Duration) error {
 	expiry := time.Now().Add(ttl)
 	s.blacklist.Store(token, expiry)
@@ -64,7 +64,7 @@ func (s *MemoryTokenStore) AddToBlacklist(ctx context.Context, token string, ttl
 	return nil
 }
 
-// RemoveFromBlacklist 从黑名单移除
+// RemoveFromBlacklist Remove from blacklist
 func (s *MemoryTokenStore) RemoveFromBlacklist(ctx context.Context, token string) error {
 	s.blacklist.Delete(token)
 
@@ -75,7 +75,7 @@ func (s *MemoryTokenStore) RemoveFromBlacklist(ctx context.Context, token string
 	return nil
 }
 
-// BlacklistUserTokens 添加用户所有 Token 到黑名单
+// Add all user tokens to the blacklist
 func (s *MemoryTokenStore) BlacklistUserTokens(ctx context.Context, subject string, ttl time.Duration) error {
 	timestamp := time.Now()
 	s.userBlacklist.Store(subject, timestamp)
@@ -88,7 +88,7 @@ func (s *MemoryTokenStore) BlacklistUserTokens(ctx context.Context, subject stri
 	return nil
 }
 
-// IsUserBlacklisted 检查用户是否被全局拉黑
+// Check if user is globally blacklisted
 func (s *MemoryTokenStore) IsUserBlacklisted(ctx context.Context, subject string, issuedAt time.Time) (bool, error) {
 	value, exists := s.userBlacklist.Load(subject)
 	if !exists {
@@ -96,18 +96,18 @@ func (s *MemoryTokenStore) IsUserBlacklisted(ctx context.Context, subject string
 	}
 
 	blacklistTime := value.(time.Time)
-	// 如果 Token 签发时间早于拉黑时间，则认为被拉黑
+	// If the token issuance time is earlier than the blacklist time, it is considered blacklisted
 	return issuedAt.Before(blacklistTime), nil
 }
 
-// Close 关闭连接
+// Close the connection
 func (s *MemoryTokenStore) Close() error {
 	close(s.stopCh)
 	s.wg.Wait()
 	return nil
 }
 
-// cleanup 定期清理过期条目
+// clean up expired entries regularly
 func (s *MemoryTokenStore) cleanup(interval time.Duration) {
 	defer s.wg.Done()
 
@@ -124,7 +124,7 @@ func (s *MemoryTokenStore) cleanup(interval time.Duration) {
 	}
 }
 
-// doCleanup 执行清理
+// doCleanup performs cleanup
 func (s *MemoryTokenStore) doCleanup() {
 	now := time.Now()
 	count := 0
@@ -145,7 +145,7 @@ func (s *MemoryTokenStore) doCleanup() {
 	}
 }
 
-// truncateToken 截取 Token 前缀（日志用）
+// truncateToken truncates the token prefix (for logging)
 func truncateToken(token string) string {
 	if len(token) <= 10 {
 		return token

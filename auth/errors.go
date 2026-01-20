@@ -2,9 +2,9 @@ package auth
 
 import "errors"
 
-// 认证相关错误
+// Authentication related errors
 var (
-	// 密码错误
+	// Password error
 	ErrPasswordTooShort         = errors.New("密码长度过短")
 	ErrPasswordTooLong          = errors.New("密码长度过长")
 	ErrPasswordRequireUppercase = errors.New("密码必须包含大写字母")
@@ -14,14 +14,14 @@ var (
 	ErrPasswordTooWeak          = errors.New("密码过于简单，请使用更强密码")
 	ErrPasswordInBlacklist      = errors.New("密码在黑名单中")
 	
-	// 登录错误
+	// Login error
 	ErrInvalidCredentials       = errors.New("用户名或密码错误")
 	ErrUserNotFound             = errors.New("用户不存在")
 	ErrAccountDisabled          = errors.New("账户已禁用")
 	ErrAccountLocked            = errors.New("账户已锁定")
 	ErrTooManyAttempts          = errors.New("登录尝试次数过多，请稍后再试")
 	
-	// 认证提供者错误
+	// Authentication provider error
 	ErrProviderNotEnabled       = errors.New("认证方式未启用")
 	ErrProviderNotSupported     = errors.New("不支持的认证方式")
 )

@@ -6,11 +6,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestMiddlewareConfig_ApplyDefaults 测试中间件配置默认值
+// TestMiddlewareConfig_ApplyDefaults_test_default_values_for_middleware_config
 func TestMiddlewareConfig_ApplyDefaults(t *testing.T) {
 	t.Run("nil config", func(t *testing.T) {
 		var cfg *MiddlewareConfig
-		cfg.ApplyDefaults() // 不应该 panic
+		cfg.ApplyDefaults() // Should not panic
 	})
 
 	t.Run("empty CORS config", func(t *testing.T) {
@@ -85,7 +85,7 @@ func TestMiddlewareConfig_ApplyDefaults(t *testing.T) {
 		}
 		cfg.ApplyDefaults()
 
-		// 自定义值不应该被覆盖
+		// Custom values should not be overwritten
 		assert.Equal(t, []string{"https://example.com"}, cfg.CORS.AllowOrigins)
 		assert.Equal(t, []string{"GET"}, cfg.CORS.AllowMethods)
 		assert.Equal(t, []string{"X-Custom"}, cfg.CORS.AllowHeaders)
@@ -96,7 +96,7 @@ func TestMiddlewareConfig_ApplyDefaults(t *testing.T) {
 	})
 }
 
-// TestCORSConfig 测试 CORS 配置结构体
+// TestCORSConfig tests the CORS configuration struct
 func TestCORSConfig(t *testing.T) {
 	cfg := CORSConfig{
 		Enable:           true,
@@ -114,7 +114,7 @@ func TestCORSConfig(t *testing.T) {
 	assert.Equal(t, 86400, cfg.MaxAge)
 }
 
-// TestApiServerConfig 测试 API 服务器配置
+// TestApiServerConfig Test API server configuration
 func TestApiServerConfig(t *testing.T) {
 	cfg := ApiServerConfig{
 		Host:         "0.0.0.0",

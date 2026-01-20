@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// Response HTTP 响应封装
+// Encapsulate HTTP response
 type Response struct {
 	StatusCode  int
 	Status      string
@@ -15,27 +15,27 @@ type Response struct {
 	Body        []byte
 	RawResponse *http.Response
 	
-	// 扩展字段
-	Duration time.Duration // 请求总耗时
-	Attempts int           // 重试次数
+	// Extend fields
+	Duration time.Duration // Total request duration
+	Attempts int           // Number of retries
 }
 
-// IsSuccess 判断响应是否成功（2xx）
+// Checks if the response is successful (2xx)
 func (r *Response) IsSuccess() bool {
 	return r.StatusCode >= 200 && r.StatusCode < 300
 }
 
-// IsClientError 判断是否客户端错误（4xx）
+// determines if it is a client error (4xx)
 func (r *Response) IsClientError() bool {
 	return r.StatusCode >= 400 && r.StatusCode < 500
 }
 
-// IsServerError 判断是否服务端错误（5xx）
+// Check if it is a server error (5xx)
 func (r *Response) IsServerError() bool {
 	return r.StatusCode >= 500 && r.StatusCode < 600
 }
 
-// JSON 反序列化 JSON 响应
+// JSON deserialization of JSON response
 func (r *Response) JSON(v interface{}) error {
 	if v == nil {
 		return nil
@@ -43,17 +43,17 @@ func (r *Response) JSON(v interface{}) error {
 	return json.Unmarshal(r.Body, v)
 }
 
-// String 返回响应 Body 字符串
+// String return response Body string
 func (r *Response) String() string {
 	return string(r.Body)
 }
 
-// Bytes 返回响应 Body 字节数组
+// Returns response body as byte array
 func (r *Response) Bytes() []byte {
 	return r.Body
 }
 
-// Close 关闭响应（如果 RawResponse 存在）
+// Close the response (if RawResponse exists)
 func (r *Response) Close() error {
 	if r.RawResponse != nil && r.RawResponse.Body != nil {
 		return r.RawResponse.Body.Close()
@@ -61,13 +61,13 @@ func (r *Response) Close() error {
 	return nil
 }
 
-// newResponse 从 http.Response 创建 Response
+// newResponse is created from http.Response
 func newResponse(httpResp *http.Response, duration time.Duration, attempts int) (*Response, error) {
 	if httpResp == nil {
 		return nil, nil
 	}
 	
-	// 读取 Body
+	// Read Body
 	body, err := io.ReadAll(httpResp.Body)
 	if err != nil {
 		return nil, err

@@ -1,4 +1,4 @@
-// Package health 提供统一的健康检查能力
+// Provides unified health check capabilities
 package health
 
 import (
@@ -7,46 +7,46 @@ import (
 	"github.com/KOMKZ/go-yogan-framework/component"
 )
 
-// Status 健康状态枚举
+// Status health status enumeration
 type Status string
 
 const (
-	// StatusHealthy 健康
+	// StatusHealthy Healthy
 	StatusHealthy Status = "healthy"
-	// StatusDegraded 降级（部分功能不可用）
+	// StatusDegraded Degraded (partial functionality unavailable)
 	StatusDegraded Status = "degraded"
-	// StatusUnhealthy 不健康
+	// StatusUnhealthy Unhealthy
 	StatusUnhealthy Status = "unhealthy"
 )
 
-// Checker 是 component.HealthChecker 的别名，方便使用
+// Checker is an alias for component.HealthChecker for convenient use
 type Checker = component.HealthChecker
 
-// CheckResult 单个检查项的结果
+// CheckResult individual check item result
 type CheckResult struct {
-	Name      string        `json:"name"`               // 检查项名称
-	Status    Status        `json:"status"`             // 健康状态
-	Message   string        `json:"message,omitempty"`  // 状态消息
-	Error     string        `json:"error,omitempty"`    // 错误信息
-	Timestamp time.Time     `json:"timestamp"`          // 检查时间
-	Duration  time.Duration `json:"duration,omitempty"` // 检查耗时
+	Name      string        `json:"name"`               // Check item name
+	Status    Status        `json:"status"`             // health status
+	Message   string        `json:"message,omitempty"`  // status message
+	Error     string        `json:"error,omitempty"`    // Error message
+	Timestamp time.Time     `json:"timestamp"`          // Check time
+	Duration  time.Duration `json:"duration,omitempty"` // Check for time consumption
 }
 
-// Response 健康检查响应
+// Health check response
 type Response struct {
-	Status    Status                 `json:"status"`             // 整体健康状态
-	Timestamp time.Time              `json:"timestamp"`          // 检查时间
-	Duration  time.Duration          `json:"duration"`           // 总检查耗时
-	Checks    map[string]CheckResult `json:"checks"`             // 各检查项结果
-	Metadata  map[string]interface{} `json:"metadata,omitempty"` // 元数据
+	Status    Status                 `json:"status"`             // overall health status
+	Timestamp time.Time              `json:"timestamp"`          // Check time
+	Duration  time.Duration          `json:"duration"`           // Total check duration
+	Checks    map[string]CheckResult `json:"checks"`             // Results of each inspection item
+	Metadata  map[string]interface{} `json:"metadata,omitempty"` // metadata
 }
 
-// IsHealthy 判断整体是否健康
+// Check if the system is healthy overall
 func (r *Response) IsHealthy() bool {
 	return r.Status == StatusHealthy
 }
 
-// IsDegraded 判断是否降级
+// determines if degraded
 func (r *Response) IsDegraded() bool {
 	return r.Status == StatusDegraded
 }

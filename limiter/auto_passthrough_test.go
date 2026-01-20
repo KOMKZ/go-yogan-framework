@@ -7,9 +7,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestAutoPassthrough 测试未配置资源的自动放行功能
+// TestAutoPassthrough test automatic passthrough for unconfigured resources
 func TestAutoPassthrough(t *testing.T) {
-	// 创建配置：只配置一个资源
+	// Create configuration: configure only one resource
 	cfg := Config{
 		Enabled:   true,
 		StoreType: "memory",
@@ -22,14 +22,14 @@ func TestAutoPassthrough(t *testing.T) {
 		Resources: map[string]ResourceConfig{
 			"configured-resource": {
 				Algorithm:  "token_bucket",
-				Rate:       1, // 每秒1个请求（很严格）
+				Rate:       1, // One request per second (very strict)
 				Capacity:   1,
 				InitTokens: 1,
 			},
 		},
 	}
 
-	// 创建 Manager
+	// Create Manager
 	manager, err := NewManager(cfg)
 	assert.NoError(t, err)
 	defer manager.Close()
@@ -37,21 +37,21 @@ func TestAutoPassthrough(t *testing.T) {
 	ctx := context.Background()
 
 	// ===========================
-	// 测试1：配置的资源应该受限流控制
+	// Test 1: Configured resources should be subject to rate limiting control
 	// ===========================
 	allowed1, err := manager.Allow(ctx, "configured-resource")
 	assert.NoError(t, err)
 	assert.True(t, allowed1, "第一个请求应该被允许")
 
-	// 第二个请求应该被拒绝（因为 rate=1, capacity=1, 没有足够的令牌）
+	// The second request should be rejected (because rate=1, capacity=1, not enough tokens)
 	allowed2, err := manager.Allow(ctx, "configured-resource")
 	assert.NoError(t, err)
 	assert.False(t, allowed2, "第二个请求应该被拒绝")
 
 	// ===========================
-	// 测试2：未配置的资源应该自动放行
+	// Test 2: Unconfigured resources should be automatically allowed through
 	// ===========================
-	// 发送多个请求，都应该被允许
+	// Multiple requests should all be allowed
 	for i := 0; i < 100; i++ {
 		allowed, err := manager.Allow(ctx, "unconfigured-resource")
 		assert.NoError(t, err)
@@ -59,7 +59,7 @@ func TestAutoPassthrough(t *testing.T) {
 	}
 
 	// ===========================
-	// 测试3：另一个未配置的资源也应该自动放行
+	// Test 3: Another unconfigured resource should also be automatically allowed
 	// ===========================
 	for i := 0; i < 50; i++ {
 		allowed, err := manager.Allow(ctx, "another-unconfigured")
@@ -70,9 +70,9 @@ func TestAutoPassthrough(t *testing.T) {
 	t.Log("✅ 未配置资源自动放行测试通过")
 }
 
-// TestAutoPassthrough_Disabled 测试禁用状态下的自动放行
+// TestAutoPassthrough_Disabled Test automatic passthrough in disabled state
 func TestAutoPassthrough_Disabled(t *testing.T) {
-	// 创建配置：禁用限流器
+	// Create configuration: disable rate limiter
 	cfg := Config{
 		Enabled:   false,
 		StoreType: "memory",
@@ -87,19 +87,19 @@ func TestAutoPassthrough_Disabled(t *testing.T) {
 				Algorithm:  "token_bucket",
 				Rate:       1,
 				Capacity:   1,
-				InitTokens: 0, // 0个初始令牌
+				InitTokens: 0, // initial zero tokens
 			},
 		},
 	}
 
-	// 创建 Manager
+	// Create Manager
 	manager, err := NewManager(cfg)
 	assert.NoError(t, err)
 	defer manager.Close()
 
 	ctx := context.Background()
 
-	// 即使是配置的资源，也应该被放行（因为禁用了）
+	// Even configured resources should be allowed (because they are disabled)
 	for i := 0; i < 100; i++ {
 		allowed, err := manager.Allow(ctx, "configured-resource")
 		assert.NoError(t, err)
@@ -109,9 +109,9 @@ func TestAutoPassthrough_Disabled(t *testing.T) {
 	t.Log("✅ 禁用状态自动放行测试通过")
 }
 
-// TestAutoPassthrough_MixedResources 测试混合资源场景
+// TestAutoPassthrough_MixedResources test mixed resource scenario
 func TestAutoPassthrough_MixedResources(t *testing.T) {
-	// 创建配置：配置多个资源
+	// Create configuration: Configure multiple resources
 	cfg := Config{
 		Enabled:   true,
 		StoreType: "memory",
@@ -137,26 +137,26 @@ func TestAutoPassthrough_MixedResources(t *testing.T) {
 		},
 	}
 
-	// 创建 Manager
+	// Create Manager
 	manager, err := NewManager(cfg)
 	assert.NoError(t, err)
 	defer manager.Close()
 
 	ctx := context.Background()
 
-	// 测试配置的资源
+	// Test configured resources
 	for i := 0; i < 10; i++ {
 		allowed, err := manager.Allow(ctx, "api:users")
 		assert.NoError(t, err)
 		assert.True(t, allowed, "api:users 前10个请求应该被允许")
 	}
 
-	// 第11个请求应该被拒绝
+	// The 11th request should be rejected
 	allowed, err := manager.Allow(ctx, "api:users")
 	assert.NoError(t, err)
 	assert.False(t, allowed, "api:users 第11个请求应该被拒绝")
 
-	// 测试未配置的资源（应该无限制）
+	// Test unconfigured resources (should be unrestricted)
 	for i := 0; i < 1000; i++ {
 		allowed, err := manager.Allow(ctx, "api:products")
 		assert.NoError(t, err)

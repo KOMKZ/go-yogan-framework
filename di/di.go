@@ -3,19 +3,19 @@ package di
 
 import "github.com/samber/do/v2"
 
-// Injector 类型别名
+// Injector type alias
 type Injector = do.Injector
 
-// RootScope 类型别名
+// RootScope type alias
 type RootScope = do.RootScope
 
-// New 创建新的根注入器
+// Create new root injector
 var New = do.New
 
-// NewWithOpts 使用选项创建新的根注入器
+// Create a new root injector using options
 var NewWithOpts = do.NewWithOpts
 
-// 注意：以下泛型函数不能直接导出为 var，需要通过包名调用
+// Note: The following generic function cannot be exported as var directly; it needs to be called via package name
 // - do.Provide[T](injector, provider)
 // - do.ProvideNamed[T](injector, name, provider)
 // - do.ProvideValue[T](injector, value)
@@ -24,7 +24,7 @@ var NewWithOpts = do.NewWithOpts
 // - do.MustInvoke[T](injector)
 // - do.MustInvokeNamed[T](injector, name)
 //
-// 使用示例:
+// Usage example:
 //   injector := di.New()
 //   do.Provide(injector, func(i do.Injector) (*MyService, error) {
 //       return &MyService{}, nil

@@ -12,13 +12,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestNewHTTPServer 测试创建 HTTP Server
+// TestNewHTTPServer test creating HTTP server
 func TestNewHTTPServer(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	cfg := ApiServerConfig{
 		Host:         "127.0.0.1",
-		Port:         0, // 使用随机端口
+		Port:         0, // Use random port
 		Mode:         "test",
 		ReadTimeout:  30,
 		WriteTimeout: 30,
@@ -30,7 +30,7 @@ func TestNewHTTPServer(t *testing.T) {
 	assert.NotNil(t, server.GetEngine())
 }
 
-// TestNewHTTPServer_WithMiddleware 测试带中间件的 HTTP Server
+// TestNewHTTPServer_WithMiddleware test HTTP server with middleware
 func TestNewHTTPServer_WithMiddleware(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -63,7 +63,7 @@ func TestNewHTTPServer_WithMiddleware(t *testing.T) {
 	assert.NotNil(t, server.GetEngine())
 }
 
-// TestHTTPServer_GetEngine 测试获取 Gin Engine
+// TestHTTPServer_GetEngine test getting Gin Engine
 func TestHTTPServer_GetEngine(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -78,12 +78,12 @@ func TestHTTPServer_GetEngine(t *testing.T) {
 
 	assert.NotNil(t, engine)
 
-	// 注册一个测试路由
+	// Register a test route
 	engine.GET("/test", func(c *gin.Context) {
 		c.String(200, "OK")
 	})
 
-	// 使用 httptest 测试
+	// Use httptest for testing
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/test", nil)
 	engine.ServeHTTP(w, req)
@@ -92,7 +92,7 @@ func TestHTTPServer_GetEngine(t *testing.T) {
 	assert.Equal(t, "OK", w.Body.String())
 }
 
-// TestHTTPServer_Shutdown 测试关闭 Server
+// TestHTTPServer_Shutdown test server shutdown
 func TestHTTPServer_Shutdown(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -104,16 +104,16 @@ func TestHTTPServer_Shutdown(t *testing.T) {
 
 	server := NewHTTPServer(cfg, nil, nil, nil)
 
-	// 关闭未启动的 server（应该不会 panic）
+	// shut down unstarted server (should not cause panic)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	err := server.Shutdown(ctx)
-	// 关闭未启动的 server 可能返回错误或 nil，取决于实现
+	// Shutting down an uninitialized server may return an error or nil, depending on the implementation
 	_ = err
 }
 
-// TestHTTPServer_ShutdownWithTimeout 测试带超时的关闭
+// TestHTTPServer_ShutdownWithTimeout Tests shutdown with timeout
 func TestHTTPServer_ShutdownWithTimeout(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -126,11 +126,11 @@ func TestHTTPServer_ShutdownWithTimeout(t *testing.T) {
 	server := NewHTTPServer(cfg, nil, nil, nil)
 
 	err := server.ShutdownWithTimeout(5 * time.Second)
-	// 关闭未启动的 server
+	// shut down unstarted server
 	_ = err
 }
 
-// TestNewHTTPServerWithTelemetry 测试带遥测的 HTTP Server
+// TestNewHTTPServerWithTelemetry test new HTTP server with telemetry
 func TestNewHTTPServerWithTelemetry(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -140,14 +140,14 @@ func TestNewHTTPServerWithTelemetry(t *testing.T) {
 		Mode: "test",
 	}
 
-	// 不传递 telemetry（nil）
+	// Do not pass telemetry (nil)
 	server := NewHTTPServerWithTelemetry(cfg, nil, nil, nil, nil)
 
 	assert.NotNil(t, server)
 	assert.NotNil(t, server.GetEngine())
 }
 
-// TestNewHTTPServerWithTelemetryAndHealth 测试带遥测和健康检查的 HTTP Server
+// TestNewHTTPServerWithTelemetryAndHealth test new HTTP server with telemetry and health checks
 func TestNewHTTPServerWithTelemetryAndHealth(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -163,7 +163,7 @@ func TestNewHTTPServerWithTelemetryAndHealth(t *testing.T) {
 	assert.NotNil(t, server.GetEngine())
 }
 
-// TestNewHTTPServer_AllMiddleware 测试所有中间件
+// TestNewHTTPServer_AllMiddleware_TestingAllMiddlewares
 func TestNewHTTPServer_AllMiddleware(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -199,7 +199,7 @@ func TestNewHTTPServer_AllMiddleware(t *testing.T) {
 
 	assert.NotNil(t, server)
 
-	// 测试请求
+	// Test request
 	engine := server.GetEngine()
 	engine.GET("/test", func(c *gin.Context) {
 		c.String(200, "OK")
@@ -212,32 +212,32 @@ func TestNewHTTPServer_AllMiddleware(t *testing.T) {
 	assert.Equal(t, 200, w.Code)
 }
 
-// TestHTTPServer_Start 测试启动服务器
+// TestHTTPServer_Start Test server startup
 func TestHTTPServer_Start(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	cfg := ApiServerConfig{
 		Host: "127.0.0.1",
-		Port: 0, // 使用随机端口
+		Port: 0, // Use random port
 		Mode: "test",
 	}
 
 	server := NewHTTPServer(cfg, nil, nil, nil)
 
-	// 启动服务器
+	// Start server
 	err := server.Start()
 	assert.NoError(t, err)
 
-	// 等待一会儿
+	// wait for a moment
 	time.Sleep(100 * time.Millisecond)
 
-	// 关闭服务器
+	// Shut down server
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	server.Shutdown(ctx)
 }
 
-// TestNewHTTPServer_WithHttpxConfig 测试带 httpx 配置的 HTTP Server
+// TestNewHTTPServer_WithHttpxConfig test HTTP Server with httpx configuration
 func TestNewHTTPServer_WithHttpxConfig(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -264,7 +264,7 @@ func TestNewHTTPServer_WithHttpxConfig(t *testing.T) {
 	assert.NotNil(t, server)
 	assert.NotNil(t, server.GetEngine())
 
-	// 测试 404 处理
+	// Test 404 handling
 	engine := server.GetEngine()
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/not-exist", nil)
@@ -273,7 +273,7 @@ func TestNewHTTPServer_WithHttpxConfig(t *testing.T) {
 	assert.Equal(t, 404, w.Code)
 }
 
-// TestNewHTTPServer_ReleaseMode 测试 release 模式
+// TestNewHTTPServer_ReleaseMode test release mode
 func TestNewHTTPServer_ReleaseMode(t *testing.T) {
 	cfg := ApiServerConfig{
 		Host: "127.0.0.1",
@@ -285,7 +285,7 @@ func TestNewHTTPServer_ReleaseMode(t *testing.T) {
 	assert.NotNil(t, server)
 }
 
-// TestNewHTTPServer_DebugMode 测试 debug 模式
+// TestNewHTTPServer_DebugMode test debug mode
 func TestNewHTTPServer_DebugMode(t *testing.T) {
 	cfg := ApiServerConfig{
 		Host: "127.0.0.1",
@@ -296,6 +296,6 @@ func TestNewHTTPServer_DebugMode(t *testing.T) {
 	server := NewHTTPServer(cfg, nil, nil, nil)
 	assert.NotNil(t, server)
 
-	// 还原为 test 模式
+	// Revert to test mode
 	gin.SetMode(gin.TestMode)
 }

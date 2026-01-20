@@ -5,86 +5,86 @@ import (
 	"time"
 )
 
-// Config 缓存组件配置
+// Configuration for cache component
 type Config struct {
-	// Enabled 是否启用缓存
+	// Enabled whether to enable caching
 	Enabled bool `mapstructure:"enabled"`
 
-	// DefaultTTL 默认过期时间
+	// DefaultTTL default expiration time
 	DefaultTTL time.Duration `mapstructure:"default_ttl"`
 
-	// DefaultStore 默认存储后端
+	// DefaultStore default storage backend
 	DefaultStore string `mapstructure:"default_store"`
 
-	// Stores 存储后端配置
+	// Stores backend configuration
 	Stores map[string]StoreConfig `mapstructure:"stores"`
 
-	// Cacheables 缓存项配置
+	// Cacheable item configuration
 	Cacheables []CacheableConfig `mapstructure:"cacheables"`
 
-	// InvalidationRules 失效规则
+	// InvalidationRules invalidation rules
 	InvalidationRules []InvalidationRule `mapstructure:"invalidation_rules"`
 }
 
-// StoreConfig 存储后端配置
+// StoreConfig stores backend configuration
 type StoreConfig struct {
-	// Type 存储类型：redis, memory, chain
+	// Type storage: redis, memory, chain
 	Type string `mapstructure:"type"`
 
-	// Redis 相关配置
-	Instance  string `mapstructure:"instance"`   // Redis 实例名
-	KeyPrefix string `mapstructure:"key_prefix"` // Key 前缀
+	// Redis related configuration
+	Instance  string `mapstructure:"instance"`   // Redis instance name
+	KeyPrefix string `mapstructure:"key_prefix"` // Key prefix
 
-	// Memory 相关配置
-	MaxSize   int    `mapstructure:"max_size"`  // 最大条目数
-	MaxMemory string `mapstructure:"max_memory"` // 最大内存
-	Eviction  string `mapstructure:"eviction"`   // 淘汰策略：lru, lfu
+	// Memory related configurations
+	MaxSize   int    `mapstructure:"max_size"`  // Maximum item count
+	MaxMemory string `mapstructure:"max_memory"` // Maximum memory
+	Eviction  string `mapstructure:"eviction"`   // Eviction strategy: lru, lfu
 
-	// Chain 相关配置
-	Layers []string `mapstructure:"layers"` // 缓存层列表
+	// Chain related configurations
+	Layers []string `mapstructure:"layers"` // cache layer list
 }
 
-// CacheableConfig 缓存项配置
+// CacheableConfig cache item configuration
 type CacheableConfig struct {
-	// Name 缓存项名称（唯一标识）
+	// Name Cache item name (unique identifier)
 	Name string `mapstructure:"name"`
 
-	// KeyPattern Key 模式，支持占位符 {0}, {1}, {hash}
+	// KeyPattern key pattern, supports placeholders {0}, {1}, {hash}
 	KeyPattern string `mapstructure:"key_pattern"`
 
-	// TTL 过期时间
+	// TTL expiration time
 	TTL time.Duration `mapstructure:"ttl"`
 
-	// Store 存储后端名称
+	// Store backend name
 	Store string `mapstructure:"store"`
 
-	// LocalCache 是否叠加本地缓存
+	// Whether to overlay local cache
 	LocalCache bool `mapstructure:"local_cache"`
 
-	// DependsOn 失效依赖的事件列表
+	// List of events for failed dependencies
 	DependsOn []string `mapstructure:"depends_on"`
 
-	// Enabled 是否启用
+	// Enabled whether to enable
 	Enabled bool `mapstructure:"enabled"`
 }
 
-// InvalidationRule 失效规则
+// InvalidationRule invalidation rule
 type InvalidationRule struct {
-	// Event 触发失效的事件名
+	// Event name for a failed trigger event
 	Event string `mapstructure:"event"`
 
-	// Invalidate 要失效的缓存项名称列表
+	// Invalidate list of cache items to be invalidated
 	Invalidate []string `mapstructure:"invalidate"`
 
-	// Pattern 按模式失效，如 "user:*"
-	// 注意：仅在需要批量失效时使用，推荐使用 CacheInvalidator 接口精确失效
+	// Pattern fails according to mode, e.g., "user:*"
+	// Note: Use only when bulk invalidation is needed; precise invalidation is recommended using the CacheInvalidator interface
 	Pattern string `mapstructure:"pattern"`
 }
 
-// Validate 验证配置
+// Validate configuration
 func (c *Config) Validate() error {
 	if !c.Enabled {
-		return nil // 未启用时不验证
+		return nil // Do not validate when disabled
 	}
 
 	if c.DefaultTTL <= 0 {
@@ -95,7 +95,7 @@ func (c *Config) Validate() error {
 		c.DefaultStore = "memory"
 	}
 
-	// 验证存储后端配置
+	// Validate storage backend configuration
 	for name, store := range c.Stores {
 		if store.Type == "" {
 			return fmt.Errorf("store %s: type is required", name)
@@ -108,7 +108,7 @@ func (c *Config) Validate() error {
 		}
 	}
 
-	// 验证缓存项配置
+	// Validate cache item configuration
 	for _, cacheable := range c.Cacheables {
 		if cacheable.Name == "" {
 			return fmt.Errorf("cacheable: name is required")
@@ -121,7 +121,7 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-// ApplyDefaults 应用默认值
+// ApplyDefaults Apply default values
 func (c *Config) ApplyDefaults() {
 	if c.DefaultTTL <= 0 {
 		c.DefaultTTL = 5 * time.Minute
@@ -130,7 +130,7 @@ func (c *Config) ApplyDefaults() {
 		c.DefaultStore = "memory"
 	}
 
-	// 为每个缓存项应用默认值
+	// Apply default values to each cache item
 	for i := range c.Cacheables {
 		if c.Cacheables[i].TTL <= 0 {
 			c.Cacheables[i].TTL = c.DefaultTTL
@@ -138,7 +138,7 @@ func (c *Config) ApplyDefaults() {
 		if c.Cacheables[i].Store == "" {
 			c.Cacheables[i].Store = c.DefaultStore
 		}
-		// 默认启用
+		// Default enabled
 		if !c.Cacheables[i].Enabled {
 			c.Cacheables[i].Enabled = true
 		}

@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// mockExporter 模拟导出器
+// mock exporter
 type mockExporter struct {
 	shouldFail bool
 	callCount  int
@@ -47,12 +47,12 @@ func TestCircuitBreaker_StateMachine(t *testing.T) {
 	ctx := context.Background()
 	spans := []trace.ReadOnlySpan{}
 
-	// 初始状态：Closed
+	// Initial state: Closed
 	if cb.GetState() != StateClosed {
 		t.Errorf("Expected initial state to be Closed, got %s", cb.GetState())
 	}
 
-	// 场景 1：连续失败触发熔断
+	// Scenario 1: Continuous failures trigger circuit breaker
 	primaryExporter.shouldFail = true
 	for i := 0; i < 3; i++ {
 		_ = cb.ExportSpans(ctx, spans)
@@ -62,14 +62,14 @@ func TestCircuitBreaker_StateMachine(t *testing.T) {
 		t.Errorf("Expected state to be Open after %d failures, got %s", config.FailureThreshold, cb.GetState())
 	}
 
-	// 场景 2：熔断期间使用降级导出器
+	// Scenario 2: Use fallback exporter during circuit breaker period
 	fallbackCallCount := fallbackExporter.callCount
 	_ = cb.ExportSpans(ctx, spans)
 	if fallbackExporter.callCount <= fallbackCallCount {
 		t.Error("Expected fallback exporter to be called during Open state")
 	}
 
-	// 场景 3：等待超时后尝试恢复（Half-Open）
+	// Scenario 3: Attempt recovery after timeout (Half-Open)
 	time.Sleep(150 * time.Millisecond)
 	primaryExporter.shouldFail = false
 	_ = cb.ExportSpans(ctx, spans)
@@ -78,7 +78,7 @@ func TestCircuitBreaker_StateMachine(t *testing.T) {
 		t.Errorf("Expected state to be HalfOpen after timeout, got %s", cb.GetState())
 	}
 
-	// 场景 4：半开状态成功后恢复
+	// Scenario 4: Recovery after successful half-open state
 	for i := 0; i < config.SuccessThreshold; i++ {
 		_ = cb.ExportSpans(ctx, spans)
 	}
@@ -96,9 +96,9 @@ func TestCircuitBreaker_HalfOpenMaxRequests(t *testing.T) {
 	config := CircuitBreakerConfig{
 		Enabled:              true,
 		FailureThreshold:     2,
-		SuccessThreshold:     10, // 设置很高，确保保持 HalfOpen 状态
+		SuccessThreshold:     10, // Set high, ensure staying in HalfOpen state
 		Timeout:              50 * time.Millisecond,
-		HalfOpenMaxRequests:  2, // 减少限制，更容易测试
+		HalfOpenMaxRequests:  2, // reduce restrictions, easier to test
 		FallbackExporterType: "stdout",
 	}
 
@@ -106,7 +106,7 @@ func TestCircuitBreaker_HalfOpenMaxRequests(t *testing.T) {
 	ctx := context.Background()
 	spans := []trace.ReadOnlySpan{}
 
-	// 触发熔断
+	// Trigger circuit breaker
 	primaryExporter.shouldFail = true
 	_ = cb.ExportSpans(ctx, spans)
 	_ = cb.ExportSpans(ctx, spans)
@@ -115,36 +115,36 @@ func TestCircuitBreaker_HalfOpenMaxRequests(t *testing.T) {
 		t.Fatalf("Expected state Open, got %s", cb.GetState())
 	}
 
-	// 等待超时
+	// timeout waiting
 	time.Sleep(100 * time.Millisecond)
 
-	// 恢复主导出器
+	// Restore master output device
 	primaryExporter.shouldFail = false
 	primaryExporter.callCount = 0
 	fallbackExporter.callCount = 0
 
-	// 第一次请求触发 HalfOpen
+	// The first request triggers HalfOpen
 	err1 := cb.ExportSpans(ctx, spans)
 	if err1 != nil {
 		t.Fatalf("First request failed: %v", err1)
 	}
 	
-	// 此时应该在 HalfOpen 状态
+	// Now it should be in HalfOpen state
 	if cb.GetState() != StateHalfOpen {
 		t.Logf("After first request, state=%s (expected HalfOpen)", cb.GetState())
 	}
 
-	// 后续请求（在半开限制内）
+	// Subsequent requests (within half-open limit)
 	_ = cb.ExportSpans(ctx, spans)
 	
-	// 超过限制的请求应该走 fallback
+	// Requests exceeding the limit should use the fallback method
 	_ = cb.ExportSpans(ctx, spans)
 	_ = cb.ExportSpans(ctx, spans)
 
 	t.Logf("Primary calls: %d, Fallback calls: %d, State: %s", 
 		primaryExporter.callCount, fallbackExporter.callCount, cb.GetState())
 
-	// 验证：fallback 至少被调用一次
+	// Verify: fallback is called at least once
 	if fallbackExporter.callCount == 0 {
 		t.Error("Expected fallback exporter to be called when exceeding HalfOpenMaxRequests")
 	}
@@ -168,19 +168,19 @@ func TestCircuitBreaker_HalfOpenFailureReopen(t *testing.T) {
 	ctx := context.Background()
 	spans := []trace.ReadOnlySpan{}
 
-	// 触发熔断
+	// Trigger circuit breaker
 	primaryExporter.shouldFail = true
 	for i := 0; i < 2; i++ {
 		_ = cb.ExportSpans(ctx, spans)
 	}
 
-	// 等待超时进入 HalfOpen
+	// enter HalfOpen on timeout
 	time.Sleep(100 * time.Millisecond)
 
-	// HalfOpen 状态下第一次请求失败
+	// First request fails in HalfOpen state
 	_ = cb.ExportSpans(ctx, spans)
 
-	// 验证：HalfOpen 状态任何失败立即重新打开
+	// Verify: Any failure in HalfOpen state immediately reopens
 	if cb.GetState() != StateOpen {
 		t.Errorf("Expected state to be Open after failure in HalfOpen, got %s", cb.GetState())
 	}
@@ -192,14 +192,14 @@ func TestCircuitBreaker_Disabled(t *testing.T) {
 	fallbackExporter := &mockExporter{}
 
 	config := CircuitBreakerConfig{
-		Enabled: false, // 禁用熔断器
+		Enabled: false, // Disable circuit breaker
 	}
 
 	cb := NewCircuitBreaker(config, logger, primaryExporter, fallbackExporter)
 	ctx := context.Background()
 	spans := []trace.ReadOnlySpan{}
 
-	// 即使失败，也不会触发熔断
+	// Even if it fails, it will not trigger circuit breaking
 	for i := 0; i < 10; i++ {
 		_ = cb.ExportSpans(ctx, spans)
 	}

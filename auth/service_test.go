@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// mockAuthProvider 模拟认证提供者
+// mock auth provider
 type mockAuthProvider struct {
 	name        string
 	authErr     error

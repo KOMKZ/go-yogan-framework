@@ -9,16 +9,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// ParseFlags 从 cobra.Command 解析 flags 到结构体（类似 Gin 的 ShouldBind）
+// ParseFlags parses flags from cobra.Command to a struct (similar to Gin's ShouldBind)
 //
-// 使用方式：
+// Usage:
 //
 //	var req dto.CreateUserRequest
 //	if err := flagx.ParseFlags(cmd, &req); err != nil {
 //	    return err
 //	}
 //
-// DTO 定义（支持 struct tags）：
+// DTO definition (supporting struct tags):
 //
 //	type CreateUserRequest struct {
 //	    Name  string `flag:"name"`
@@ -26,9 +26,9 @@ import (
 //	    Age   int    `flag:"age"`
 //	}
 //
-// 支持的 tag：
-//   - flag: flag 名称（必须）
-//   - default: 默认值（可选）
+// Supported tags:
+// - flag: flag name (mandatory)
+// - default: Default value (optional)
 func ParseFlags(cmd *cobra.Command, target interface{}) error {
 	v := reflect.ValueOf(target)
 	if v.Kind() != reflect.Ptr || v.Elem().Kind() != reflect.Struct {
@@ -42,21 +42,21 @@ func ParseFlags(cmd *cobra.Command, target interface{}) error {
 		field := v.Field(i)
 		fieldType := t.Field(i)
 
-		// 跳过未导出的字段
+		// Skip unexported fields
 		if !field.CanSet() {
 			continue
 		}
 
-		// 获取 flag tag
+		// Get flag tag
 		flagTag := fieldType.Tag.Get("flag")
 		if flagTag == "" {
 			continue
 		}
 
-		// 解析 flag 名称（支持短名称，如 "name,n"）
+		// Parse flag names (support short names, e.g., "name,n")
 		flagName := strings.Split(flagTag, ",")[0]
 
-		// 根据字段类型解析对应的 flag
+		// Parse the corresponding flag based on the field type
 		if err := setFieldValue(cmd, field, flagName); err != nil {
 			return fmt.Errorf("parse field %s: %w", fieldType.Name, err)
 		}
@@ -65,7 +65,7 @@ func ParseFlags(cmd *cobra.Command, target interface{}) error {
 	return nil
 }
 
-// setFieldValue 设置字段值
+// set field value
 func setFieldValue(cmd *cobra.Command, field reflect.Value, flagName string) error {
 	switch field.Kind() {
 	case reflect.String:
@@ -98,7 +98,7 @@ func setFieldValue(cmd *cobra.Command, field reflect.Value, flagName string) err
 	return nil
 }
 
-// setSliceValue 设置切片类型字段
+// Set slice type field value
 func setSliceValue(cmd *cobra.Command, field reflect.Value, flagName string) error {
 	switch field.Type().Elem().Kind() {
 	case reflect.String:
@@ -116,20 +116,20 @@ func setSliceValue(cmd *cobra.Command, field reflect.Value, flagName string) err
 	return nil
 }
 
-// BindFlags 自动为结构体字段注册 flags（类似 Gin 的自动绑定）
+// BindFlags automatically registers flags for struct fields (similar to Gin's automatic binding)
 //
-// 使用方式：
+// Usage:
 //
 //	cmd := &cobra.Command{...}
 //	var req dto.CreateUserRequest
 //	flagx.BindFlags(cmd, &req)
 //
-// DTO 定义（完整 tags）：
+// DTO definition (complete tags):
 //
 //	type CreateUserRequest struct {
-//	    Name  string `flag:"name,n" usage:"用户名（必填）" required:"true"`
-//	    Email string `flag:"email,e" usage:"邮箱（必填）" required:"true"`
-//	    Age   int    `flag:"age,a" usage:"年龄" default:"0"`
+// Name string `flag:"name,n" usage:"username (required)" required:"true"`
+// Email string `flag:"email,e" usage:"email (required)" required:"true"`
+// Age   int    `flag:"age,a" usage:"age" default:"0"`
 //	}
 func BindFlags(cmd *cobra.Command, target interface{}) error {
 	v := reflect.ValueOf(target)
@@ -143,13 +143,13 @@ func BindFlags(cmd *cobra.Command, target interface{}) error {
 	for i := 0; i < v.NumField(); i++ {
 		fieldType := t.Field(i)
 
-		// 获取 tag 信息
+		// Get tag information
 		flagTag := fieldType.Tag.Get("flag")
 		if flagTag == "" {
 			continue
 		}
 
-		// 解析 flag 名称和短名称
+		// Parse flag name and short name
 		parts := strings.Split(flagTag, ",")
 		flagName := parts[0]
 		shortName := ""
@@ -161,12 +161,12 @@ func BindFlags(cmd *cobra.Command, target interface{}) error {
 		defaultVal := fieldType.Tag.Get("default")
 		required := fieldType.Tag.Get("required") == "true"
 
-		// 根据字段类型注册对应的 flag
+		// Register the corresponding flag based on the field type
 		if err := registerFlag(cmd, fieldType, flagName, shortName, usage, defaultVal); err != nil {
 			return err
 		}
 
-		// 标记为必填
+		// Mark as required
 		if required {
 			cmd.MarkFlagRequired(flagName)
 		}
@@ -175,7 +175,7 @@ func BindFlags(cmd *cobra.Command, target interface{}) error {
 	return nil
 }
 
-// registerFlag 注册 flag
+// registerFlag Register flag
 func registerFlag(cmd *cobra.Command, field reflect.StructField, name, short, usage, defaultVal string) error {
 	switch field.Type.Kind() {
 	case reflect.String:

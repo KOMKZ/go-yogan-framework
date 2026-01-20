@@ -8,7 +8,7 @@ import (
 	"github.com/KOMKZ/go-yogan-framework/logger"
 )
 
-// MockRegistry 模拟服务注册器（用于测试）
+// MockRegistry mock service registry (for testing)
 type MockRegistry struct {
 	RegisterFunc        func(ctx context.Context, info *ServiceInfo) error
 	DeregisterFunc      func(ctx context.Context) error
@@ -50,7 +50,7 @@ func (m *MockRegistry) IsRegistered() bool {
 	return false
 }
 
-// TestServiceInfo_Validate 测试服务信息验证
+// TestServiceInfo_Validate test service information validation
 func TestServiceInfo_Validate(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -100,7 +100,7 @@ func TestServiceInfo_Validate(t *testing.T) {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
-			// 验证默认值设置
+			// Verify default value settings
 			if !tt.wantErr {
 				if tt.info.TTL == 0 {
 					t.Error("TTL 应该有默认值")
@@ -116,7 +116,7 @@ func TestServiceInfo_Validate(t *testing.T) {
 	}
 }
 
-// TestManager_RegisterService 测试服务注册
+// TestManager_RegisterService test service registration
 func TestManager_RegisterService(t *testing.T) {
 	mockRegistry := &MockRegistry{}
 	ctxLogger := logger.GetLogger("yogan")
@@ -143,20 +143,20 @@ func TestManager_RegisterService(t *testing.T) {
 		t.Error("服务应该处于已注册状态")
 	}
 
-	// 重复注册应该返回错误
+	// Duplicate registration should return an error
 	err = manager.RegisterService(ctx, serviceInfo)
 	if err != ErrAlreadyRegistered {
 		t.Errorf("重复注册应该返回 ErrAlreadyRegistered，实际返回 %v", err)
 	}
 }
 
-// TestManager_DeregisterService 测试服务注销
+// TestManager_DeregisterService test service deregistration
 func TestManager_DeregisterService(t *testing.T) {
 	mockRegistry := &MockRegistry{}
 	ctxLogger := logger.GetLogger("yogan")
 	manager := NewManager(mockRegistry, nil, ctxLogger)
 
-	// 先注册
+	// Register first
 	serviceInfo := &ServiceInfo{
 		ServiceName: "test-service",
 		Address:     "127.0.0.1",
@@ -166,7 +166,7 @@ func TestManager_DeregisterService(t *testing.T) {
 	ctx := context.Background()
 	manager.RegisterService(ctx, serviceInfo)
 
-	// 再注销
+	// Re-log out
 	err := manager.DeregisterService(ctx)
 	if err != nil {
 		t.Fatalf("DeregisterService() error = %v", err)
@@ -181,13 +181,13 @@ func TestManager_DeregisterService(t *testing.T) {
 	}
 }
 
-// TestManager_UpdateMetadata 测试元数据更新
+// TestManager_UpdateMetadata metadata update test
 func TestManager_UpdateMetadata(t *testing.T) {
 	mockRegistry := &MockRegistry{}
 	ctxLogger := logger.GetLogger("yogan")
 	manager := NewManager(mockRegistry, nil, ctxLogger)
 
-	// 先注册
+	// Register first
 	serviceInfo := &ServiceInfo{
 		ServiceName: "test-service",
 		Address:     "127.0.0.1",
@@ -198,7 +198,7 @@ func TestManager_UpdateMetadata(t *testing.T) {
 	ctx := context.Background()
 	manager.RegisterService(ctx, serviceInfo)
 
-	// 更新元数据
+	// Update metadata
 	newMetadata := map[string]string{
 		"version": "v1.1",
 		"weight":  "100",
@@ -213,7 +213,7 @@ func TestManager_UpdateMetadata(t *testing.T) {
 		t.Errorf("UpdateMetadata 应该被调用 1 次，实际调用了 %d 次", mockRegistry.updateMetaCallCount)
 	}
 
-	// 验证元数据已更新
+	// Verify metadata has been updated
 	info := manager.GetServiceInfo()
 	if info.Metadata["version"] != "v1.1" {
 		t.Errorf("version 应该是 v1.1，实际是 %s", info.Metadata["version"])
@@ -223,13 +223,13 @@ func TestManager_UpdateMetadata(t *testing.T) {
 	}
 }
 
-// TestManager_Shutdown 测试关闭
+// TestManager Shutdown test
 func TestManager_Shutdown(t *testing.T) {
 	mockRegistry := &MockRegistry{}
 	ctxLogger := logger.GetLogger("yogan")
 	manager := NewManager(mockRegistry, nil, ctxLogger)
 
-	// 注册服务
+	// Register service
 	serviceInfo := &ServiceInfo{
 		ServiceName: "test-service",
 		Address:     "127.0.0.1",
@@ -239,7 +239,7 @@ func TestManager_Shutdown(t *testing.T) {
 	ctx := context.Background()
 	manager.RegisterService(ctx, serviceInfo)
 
-	// 关闭
+	// close
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 

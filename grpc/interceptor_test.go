@@ -12,11 +12,11 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-// TestUnaryLoggerInterceptor 测试服务端日志拦截器
+// TestUnaryLoggerInterceptor test server log interceptor
 func TestUnaryLoggerInterceptor(t *testing.T) {
 	log := logger.GetLogger("grpc_test")
 
-	interceptor := UnaryLoggerInterceptor(log, true) // 启用日志
+	interceptor := UnaryLoggerInterceptor(log, true) // Enable logging
 	assert.NotNil(t, interceptor)
 
 	tests := []struct {
@@ -60,7 +60,7 @@ func TestUnaryLoggerInterceptor(t *testing.T) {
 	}
 }
 
-// TestUnaryRecoveryInterceptor 测试服务端 Panic 恢复拦截器
+// TestUnaryRecoveryInterceptor tests server panic recovery interceptor
 func TestUnaryRecoveryInterceptor(t *testing.T) {
 	log := logger.GetLogger("grpc_test")
 
@@ -111,11 +111,11 @@ func TestUnaryRecoveryInterceptor(t *testing.T) {
 	}
 }
 
-// TestUnaryClientLoggerInterceptor 测试客户端日志拦截器
+// TestUnaryClientLoggerInterceptor test client log interceptor
 func TestUnaryClientLoggerInterceptor(t *testing.T) {
 	log := logger.GetLogger("grpc_test")
 
-	interceptor := UnaryClientLoggerInterceptor(log, true) // 启用日志
+	interceptor := UnaryClientLoggerInterceptor(log, true) // Enable logging
 	assert.NotNil(t, interceptor)
 
 	tests := []struct {
@@ -144,7 +144,7 @@ func TestUnaryClientLoggerInterceptor(t *testing.T) {
 			ctx := context.Background()
 			method := "/test.Service/Method"
 
-			// 创建一个 mock ClientConn
+			// Create a mock ClientConn
 			ctx2, cancel2 := context.WithTimeout(context.Background(), 100*time.Millisecond)
 			defer cancel2()
 
@@ -152,7 +152,7 @@ func TestUnaryClientLoggerInterceptor(t *testing.T) {
 				grpc.WithTransportCredentials(insecure.NewCredentials()),
 				grpc.WithBlock())
 			if err != nil {
-				// 连接失败是预期的，我们只是需要一个 ClientConn 对象
+				// Connection failure is expected; we just need a ClientConn object
 				t.Skip("无法创建 mock ClientConn")
 			}
 			defer conn.Close()
@@ -169,47 +169,47 @@ func TestUnaryClientLoggerInterceptor(t *testing.T) {
 	}
 }
 
-// TestInterceptorChain 测试拦截器链
+// TestInterceptorChain test interceptor chain
 func TestInterceptorChain(t *testing.T) {
 	log := logger.GetLogger("grpc_test")
 
-	// 创建多个拦截器
-	loggerInterceptor := UnaryLoggerInterceptor(log, true) // 启用日志
+	// Create multiple interceptors
+	loggerInterceptor := UnaryLoggerInterceptor(log, true) // Enable logging
 	recoveryInterceptor := UnaryRecoveryInterceptor(log)
 
 	assert.NotNil(t, loggerInterceptor)
 	assert.NotNil(t, recoveryInterceptor)
 
-	// 测试拦截器链（Recovery -> Logger -> Handler）
+	// Test the interceptor chain (Recovery -> Logger -> Handler)
 	ctx := context.Background()
 	info := &grpc.UnaryServerInfo{
 		FullMethod: "/test.Service/Method",
 	}
 
-	// 模拟 panic 的 handler
+	// handler for simulating panic
 	panicHandler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		panic("test panic in chain")
 	}
 
-	// 先通过 logger 拦截器
+	// First intercept through the logger interceptor
 	wrappedHandler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return loggerInterceptor(ctx, req, info, panicHandler)
 	}
 
-	// 再通过 recovery 拦截器
+	// Then intercept via the recovery interceptor
 	resp, err := recoveryInterceptor(ctx, "request", info, wrappedHandler)
 
-	// 应该捕获 panic 并返回错误
+	// Should catch panics and return errors
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "服务内部错误")
 	assert.Nil(t, resp)
 }
 
-// TestInterceptorPerformance 测试拦截器性能
+// TestInterceptorPerformance test interceptor performance
 func TestInterceptorPerformance(t *testing.T) {
 	log := logger.GetLogger("grpc_test")
 
-	interceptor := UnaryLoggerInterceptor(log, true) // 启用日志
+	interceptor := UnaryLoggerInterceptor(log, true) // Enable logging
 
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return "success", nil
@@ -231,7 +231,7 @@ func TestInterceptorPerformance(t *testing.T) {
 	duration := time.Since(start)
 	avgDuration := duration / time.Duration(iterations)
 
-	// 平均每次调用应该小于 1ms
+	// The average time per call should be less than 1ms
 	assert.Less(t, avgDuration, 1*time.Millisecond,
 		"拦截器性能过慢: 平均 %v per call", avgDuration)
 

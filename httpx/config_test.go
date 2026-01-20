@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestDefaultErrorLoggingConfig 测试默认配置
+// TestDefaultErrorLoggingConfig test default configuration
 func TestDefaultErrorLoggingConfig(t *testing.T) {
 	cfg := DefaultErrorLoggingConfig()
 
@@ -16,7 +16,7 @@ func TestDefaultErrorLoggingConfig(t *testing.T) {
 	assert.Equal(t, "error", cfg.LogLevel)
 }
 
-// TestErrorLoggingConfig_Fields 测试配置字段
+// TestErrorLoggingConfig_Fields Test configuration fields
 func TestErrorLoggingConfig_Fields(t *testing.T) {
 	cfg := ErrorLoggingConfig{
 		Enable:           true,

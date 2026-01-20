@@ -7,15 +7,15 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Loader 配置加载器（支持多数据源）
+// Loader configuration loader (supporting multiple data sources)
 type Loader struct {
-	sources      []ConfigSource           // 数据源列表
-	mergedConfig map[string]interface{}   // 合并后的配置
-	v            *viper.Viper             // Viper 实例（用于兼容）
-	loadedFiles  []string                 // 已加载的文件列表（用于日志）
+	sources      []ConfigSource           // data source list
+	mergedConfig map[string]interface{}   // merged configuration
+	v            *viper.Viper             // Viper instance (for compatibility)
+	loadedFiles  []string                 // List of loaded files (for logging)
 }
 
-// NewLoader 创建配置加载器
+// Create configuration loader
 func NewLoader() *Loader {
 	return &Loader{
 		sources:      make([]ConfigSource, 0),
@@ -25,19 +25,19 @@ func NewLoader() *Loader {
 	}
 }
 
-// AddSource 添加配置数据源
+// AddSource add configuration data source
 func (l *Loader) AddSource(source ConfigSource) {
 	l.sources = append(l.sources, source)
 }
 
-// Load 加载并合并所有数据源
+// Load and merge all data sources
 func (l *Loader) Load() error {
-	// 1. 按优先级排序（从低到高）
+	// 1. Sort by priority (from low to high)
 	sort.Slice(l.sources, func(i, j int) bool {
 		return l.sources[i].Priority() < l.sources[j].Priority()
 	})
 
-	// 2. 依次加载并合并
+	// 2. Load and merge in sequence
 	l.mergedConfig = make(map[string]interface{})
 	for _, source := range l.sources {
 		data, err := source.Load()
@@ -45,42 +45,42 @@ func (l *Loader) Load() error {
 			return fmt.Errorf("加载数据源 %s 失败: %w", source.Name(), err)
 		}
 
-		// 记录文件数据源
+		// Log file data source
 		if fileSource, ok := source.(*FileSource); ok {
 			l.loadedFiles = append(l.loadedFiles, fileSource.path)
 		}
 
-		// 合并数据（高优先级覆盖低优先级）
+		// Merge data (higher priority overrides lower priority)
 		l.mergeFlat(data)
 	}
 
-	// 3. 将合并后的配置同步到 Viper（用于兼容现有代码）
+	// 3. Sync the merged configuration to Viper (for compatibility with existing code)
 	l.syncToViper()
 
 	return nil
 }
 
-// mergeFlat 合并扁平化的配置（key 为点号分隔）
+// mergeFlat merges flattened configuration (keys are dot-separated)
 func (l *Loader) mergeFlat(data map[string]interface{}) {
 	for key, value := range data {
 		l.mergedConfig[key] = value
 	}
 }
 
-// syncToViper 将合并后的配置同步到 Viper
+// syncToViper synchronizes the merged configuration to Viper
 func (l *Loader) syncToViper() {
-	// 将扁平化的 map 转换为嵌套 map
+	// Convert the flat map to a nested map
 	nested := l.unflattenMap(l.mergedConfig)
 
-	// 清空 Viper 并重新设置
+	// Clear Viper and reset
 	l.v = viper.New()
 	for key, value := range nested {
 		l.v.Set(key, value)
 	}
 }
 
-// unflattenMap 将扁平化的 map 转换为嵌套 map
-// 例如：{"grpc.server.port": 9002} -> {"grpc": {"server": {"port": 9002}}}
+// unflattenMap converts a flattened map to a nested map
+// For example: {"grpc.server.port": 9002} -> {"grpc": {"server": {"port": 9002}}}
 func (l *Loader) unflattenMap(flat map[string]interface{}) map[string]interface{} {
 	result := make(map[string]interface{})
 
@@ -91,20 +91,20 @@ func (l *Loader) unflattenMap(flat map[string]interface{}) map[string]interface{
 	return result
 }
 
-// setNestedValue 设置嵌套 map 的值
+// Set the value of a nested map
 func (l *Loader) setNestedValue(m map[string]interface{}, key string, value interface{}) {
 	keys := splitKey(key)
 	if len(keys) == 0 {
 		return
 	}
 
-	// 最后一个 key
+	// last key
 	if len(keys) == 1 {
 		m[keys[0]] = value
 		return
 	}
 
-	// 递归创建嵌套 map
+	// Recursively create nested maps
 	current := m
 	for i := 0; i < len(keys)-1; i++ {
 		k := keys[i]
@@ -112,22 +112,22 @@ func (l *Loader) setNestedValue(m map[string]interface{}, key string, value inte
 			current[k] = make(map[string]interface{})
 		}
 
-		// 类型断言
+		// type assertion
 		if nested, ok := current[k].(map[string]interface{}); ok {
 			current = nested
 		} else {
-			// 如果已存在的不是 map，覆盖它
+			// If it is not already a map, override it
 			newMap := make(map[string]interface{})
 			current[k] = newMap
 			current = newMap
 		}
 	}
 
-	// 设置最终值
+	// Set final value
 	current[keys[len(keys)-1]] = value
 }
 
-// splitKey 分割配置 key
+// splitKey configuration key split
 func splitKey(key string) []string {
 	if key == "" {
 		return []string{}
@@ -154,52 +154,52 @@ func splitKey(key string) []string {
 	return result
 }
 
-// Unmarshal 解析配置到结构体
+// Unmarshal parse configuration into struct
 func (l *Loader) Unmarshal(v interface{}) error {
 	return l.v.Unmarshal(v)
 }
 
-// Get 获取配置值
+// Get configuration value
 func (l *Loader) Get(key string) interface{} {
 	return l.v.Get(key)
 }
 
-// GetString 获取字符串配置
+// GetString Get string configuration
 func (l *Loader) GetString(key string) string {
 	return l.v.GetString(key)
 }
 
-// GetInt 获取整数配置
+// Get integer configuration
 func (l *Loader) GetInt(key string) int {
 	return l.v.GetInt(key)
 }
 
-// GetBool 获取布尔配置
+// GetBool Get boolean configuration
 func (l *Loader) GetBool(key string) bool {
 	return l.v.GetBool(key)
 }
 
-// IsSet 检查配置项是否存在
+// Check if the configuration item exists
 func (l *Loader) IsSet(key string) bool {
 	return l.v.IsSet(key)
 }
 
-// AllSettings 获取所有配置
+// Get all settings
 func (l *Loader) AllSettings() map[string]interface{} {
 	return l.v.AllSettings()
 }
 
-// GetLoadedFiles 获取已加载的配置文件列表
+// GetLoadedFiles Retrieve the list of loaded configuration files
 func (l *Loader) GetLoadedFiles() []string {
 	return l.loadedFiles
 }
 
-// GetViper 获取底层 Viper 实例
+// GetViper获取底层Viper实例
 func (l *Loader) GetViper() *viper.Viper {
 	return l.v
 }
 
-// Reload 重新加载配置
+// Reload reload configuration
 func (l *Loader) Reload() error {
 	return l.Load()
 }

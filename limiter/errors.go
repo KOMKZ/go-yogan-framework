@@ -3,26 +3,26 @@ package limiter
 import "errors"
 
 var (
-	// ErrLimitExceeded 超过限流阈值
+	// ErrLimitExceeded Exceeds rate limiting threshold
 	ErrLimitExceeded = errors.New("rate limit exceeded")
 
-	// ErrWaitTimeout 等待超时
+	// ErrWaitTimeout timeout waiting
 	ErrWaitTimeout = errors.New("wait timeout")
 
-	// ErrKeyNotFound 键不存在
+	// ErrKeyNotFound Key does not exist
 	ErrKeyNotFound = errors.New("key not found")
 
-	// ErrInvalidConfig 配置无效
+	// ErrInvalidConfig Invalid configuration
 	ErrInvalidConfig = errors.New("invalid config")
 
-	// ErrStoreNotSupported 存储不支持
+	// ErrStoreNotSupported Storage Not Supported
 	ErrStoreNotSupported = errors.New("store operation not supported")
 
-	// ErrResourceNotFound 资源不存在
+	// ErrResourceNotFound Resource not found
 	ErrResourceNotFound = errors.New("resource not found")
 )
 
-// ValidationError 配置验证错误
+// ValidationError configuration validation error
 type ValidationError struct {
 	Resource string
 	Field    string

@@ -9,46 +9,46 @@ import (
 	"go.uber.org/zap"
 )
 
-// ConsumedMessage 消费的消息
+// Consumed message
 type ConsumedMessage struct {
-	// Topic 消息来源 Topic
+	// Topic message source Topic
 	Topic string
 
-	// Partition 消息分区
+	// Partition message partitioning
 	Partition int32
 
-	// Offset 消息 Offset
+	// Message Offset
 	Offset int64
 
-	// Key 消息键
+	// Key message key
 	Key []byte
 
-	// Value 消息值
+	// Message value
 	Value []byte
 
-	// Headers 消息头
+	// Headers header information
 	Headers map[string]string
 
-	// Timestamp 消息时间戳
+	// Timestamp Message timestamp
 	Timestamp int64
 }
 
-// MessageHandler 消息处理函数
+// MessageHandler message processing function
 type MessageHandler func(ctx context.Context, msg *ConsumedMessage) error
 
-// Consumer Kafka 消费者接口
+// Kafka consumer interface
 type Consumer interface {
-	// Start 启动消费者
+	// Start the consumer
 	Start(ctx context.Context, handler MessageHandler) error
 
-	// Stop 停止消费者
+	// Stop Terminate consumer
 	Stop() error
 
-	// IsRunning 检查是否运行中
+	// Check if running
 	IsRunning() bool
 }
 
-// ConsumerGroup 消费者组实现
+// ConsumerGroup implementation
 type ConsumerGroup struct {
 	group    sarama.ConsumerGroup
 	config   ConsumerConfig
@@ -61,7 +61,7 @@ type ConsumerGroup struct {
 	doneCh   chan struct{}
 }
 
-// NewConsumerGroup 创建消费者组
+// Create consumer group NewConsumerGroup
 func NewConsumerGroup(brokers []string, cfg ConsumerConfig, saramaCfg *sarama.Config, logger *zap.Logger) (*ConsumerGroup, error) {
 	if logger == nil {
 		return nil, fmt.Errorf("logger cannot be nil")
@@ -86,7 +86,7 @@ func NewConsumerGroup(brokers []string, cfg ConsumerConfig, saramaCfg *sarama.Co
 	}, nil
 }
 
-// Start 启动消费者
+// Start Consumer Initialization
 func (c *ConsumerGroup) Start(ctx context.Context, handler MessageHandler) error {
 	c.mu.Lock()
 	if c.running {
@@ -106,7 +106,7 @@ func (c *ConsumerGroup) Start(ctx context.Context, handler MessageHandler) error
 	return nil
 }
 
-// consumeLoop 消费循环
+// consumeLoop consumption loop
 func (c *ConsumerGroup) consumeLoop(ctx context.Context) {
 	defer close(c.doneCh)
 
@@ -124,13 +124,13 @@ func (c *ConsumerGroup) consumeLoop(ctx context.Context) {
 			c.logger.Debug("consumer loop stopped by context")
 			return
 		default:
-			// 消费消息
+			// Consume message
 			err := c.group.Consume(ctx, c.config.Topics, consumerHandler)
 			if err != nil {
 				c.logger.Error("consume error", zap.Error(err))
 			}
 
-			// 检查 context 是否取消
+			// Check if context is cancelled
 			if ctx.Err() != nil {
 				return
 			}
@@ -138,7 +138,7 @@ func (c *ConsumerGroup) consumeLoop(ctx context.Context) {
 	}
 }
 
-// Stop 停止消费者
+// Stop Terminate consumer
 func (c *ConsumerGroup) Stop() error {
 	c.mu.Lock()
 	if !c.running {
@@ -150,7 +150,7 @@ func (c *ConsumerGroup) Stop() error {
 
 	close(c.stopCh)
 
-	// 等待消费循环结束
+	// wait for consumption loop to end
 	<-c.doneCh
 
 	if err := c.group.Close(); err != nil {
@@ -163,20 +163,20 @@ func (c *ConsumerGroup) Stop() error {
 	return nil
 }
 
-// IsRunning 检查是否运行中
+// Check if running
 func (c *ConsumerGroup) IsRunning() bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.running
 }
 
-// consumerGroupHandler 实现 sarama.ConsumerGroupHandler 接口
+// consumerGroupHandler implements the sarama.ConsumerGroupHandler interface
 type consumerGroupHandler struct {
 	handler MessageHandler
 	logger  *zap.Logger
 }
 
-// Setup 在新会话开始时调用
+// Setup called at the start of a new session
 func (h *consumerGroupHandler) Setup(session sarama.ConsumerGroupSession) error {
 	h.logger.Debug("consumer session setup",
 		zap.Int32("generation_id", session.GenerationID()),
@@ -184,14 +184,14 @@ func (h *consumerGroupHandler) Setup(session sarama.ConsumerGroupSession) error 
 	return nil
 }
 
-// Cleanup 在会话结束时调用
+// Cleanup is called at the end of the session
 func (h *consumerGroupHandler) Cleanup(session sarama.ConsumerGroupSession) error {
 	h.logger.Debug("consumer session cleanup",
 		zap.Int32("generation_id", session.GenerationID()))
 	return nil
 }
 
-// ConsumeClaim 消费分区消息
+// Consume partition messages
 func (h *consumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	for {
 		select {
@@ -202,7 +202,7 @@ func (h *consumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 				return nil
 			}
 
-			// 构建消费消息
+			// Build consumption message
 			consumedMsg := &ConsumedMessage{
 				Topic:     msg.Topic,
 				Partition: msg.Partition,
@@ -213,12 +213,12 @@ func (h *consumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 				Headers:   make(map[string]string),
 			}
 
-			// 解析 Headers
+			// Parse Headers
 			for _, header := range msg.Headers {
 				consumedMsg.Headers[string(header.Key)] = string(header.Value)
 			}
 
-			// 调用处理函数
+			// Call processing function
 			if h.handler != nil {
 				if err := h.handler(session.Context(), consumedMsg); err != nil {
 					h.logger.Error("handle message failed",
@@ -226,17 +226,17 @@ func (h *consumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 						zap.Int32("partition", msg.Partition),
 						zap.Int64("offset", msg.Offset),
 						zap.Error(err))
-					// 继续处理下一条消息，不中断消费
+					// Proceed to process the next message without interruption
 				}
 			}
 
-			// 标记消息已处理
+			// Mark message as processed
 			session.MarkMessage(msg, "")
 		}
 	}
 }
 
-// SimpleConsumer 简单消费者（单 Topic，单分区）
+// SimpleConsumer (single Topic, single partition)
 type SimpleConsumer struct {
 	consumer sarama.Consumer
 	config   ConsumerConfig
@@ -246,7 +246,7 @@ type SimpleConsumer struct {
 	stopCh   chan struct{}
 }
 
-// NewSimpleConsumer 创建简单消费者
+// Create simple consumer
 func NewSimpleConsumer(brokers []string, saramaCfg *sarama.Config, logger *zap.Logger) (*SimpleConsumer, error) {
 	if logger == nil {
 		return nil, fmt.Errorf("logger cannot be nil")
@@ -264,7 +264,7 @@ func NewSimpleConsumer(brokers []string, saramaCfg *sarama.Config, logger *zap.L
 	}, nil
 }
 
-// ConsumePartition 消费指定分区
+// ConsumePartition Consume the specified partition
 func (c *SimpleConsumer) ConsumePartition(ctx context.Context, topic string, partition int32, offset int64, handler MessageHandler) error {
 	c.mu.Lock()
 	if c.running {
@@ -323,7 +323,7 @@ func (c *SimpleConsumer) ConsumePartition(ctx context.Context, topic string, par
 	return nil
 }
 
-// Stop 停止消费者
+// Stop Terminate consumer
 func (c *SimpleConsumer) Stop() error {
 	c.mu.Lock()
 	if !c.running {
@@ -337,7 +337,7 @@ func (c *SimpleConsumer) Stop() error {
 	return c.consumer.Close()
 }
 
-// IsRunning 检查是否运行中
+// Check if running
 func (c *SimpleConsumer) IsRunning() bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()

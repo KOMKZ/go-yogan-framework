@@ -11,9 +11,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestRedisTokenStore_ErrorHandling 测试 Redis 错误处理
+// TestRedisTokenStore_ErrorHandling test Redis error handling
 func TestRedisTokenStore_ErrorHandling(t *testing.T) {
-	// 创建一个 miniredis 实例
+	// Create a miniredis instance
 	mr := miniredis.RunT(t)
 	client := redis.NewClient(&redis.Options{
 		Addr: mr.Addr(),
@@ -27,14 +27,14 @@ func TestRedisTokenStore_ErrorHandling(t *testing.T) {
 	ctx := context.Background()
 	token := "test-token"
 
-	// 正常添加
+	// Add normally
 	err := store.AddToBlacklist(ctx, token, 1*time.Hour)
 	assert.NoError(t, err)
 
-	// 关闭 Redis 模拟错误
+	// Close Redis simulation error
 	mr.Close()
 
-	// 测试各种错误情况
+	// Test various error cases
 	t.Run("IsBlacklisted error", func(t *testing.T) {
 		_, err := store.IsBlacklisted(ctx, "another-token")
 		assert.Error(t, err)
@@ -61,7 +61,7 @@ func TestRedisTokenStore_ErrorHandling(t *testing.T) {
 	})
 }
 
-// TestRedisTokenStore_IsUserBlacklisted_ParseError 测试解析错误
+// TestRedisTokenStore_IsUserBlacklisted_ParseError Parse error test
 func TestRedisTokenStore_IsUserBlacklisted_ParseError(t *testing.T) {
 	mr := miniredis.RunT(t)
 	client := redis.NewClient(&redis.Options{
@@ -77,12 +77,12 @@ func TestRedisTokenStore_IsUserBlacklisted_ParseError(t *testing.T) {
 	ctx := context.Background()
 	subject := "user123"
 
-	// 手动设置一个无效的值
+	// Manually set an invalid value
 	key := "jwt:blacklist:user:" + subject
 	err := client.Set(ctx, key, "invalid_timestamp", 1*time.Hour).Err()
 	assert.NoError(t, err)
 
-	// 尝试检查用户黑名单（应该返回解析错误）
+	// Try to check user blacklist (should return parsing error)
 	_, err = store.IsUserBlacklisted(ctx, subject, time.Now())
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "parse blacklist time failed")

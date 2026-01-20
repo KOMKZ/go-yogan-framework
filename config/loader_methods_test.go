@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-// TestLoader_Get 测试获取配置值
+// TestLoader_Get test to retrieve configuration values
 func TestLoader_Get(t *testing.T) {
 	loader := NewLoader()
 	loader.AddSource(NewFileSource("testdata/config.yaml", 10))
@@ -13,20 +13,20 @@ func TestLoader_Get(t *testing.T) {
 		t.Fatalf("Load() error: %v", err)
 	}
 
-	// 测试 Get 方法
+	// Test Get method
 	value := loader.Get("app.name")
 	if value != "test-app" {
 		t.Errorf("Get(app.name) = %v, want test-app", value)
 	}
 
-	// 测试 Get 不存在的 key
+	// Test getting a non-existent key
 	nilValue := loader.Get("not.exist.key")
 	if nilValue != nil {
 		t.Errorf("Get(not.exist.key) = %v, want nil", nilValue)
 	}
 }
 
-// TestLoader_GetBool 测试获取布尔配置
+// TestLoader_GetBool test for retrieving boolean configuration
 func TestLoader_GetBool(t *testing.T) {
 	loader := NewLoader()
 	loader.AddSource(NewFileSource("testdata/config.yaml", 10))
@@ -35,7 +35,7 @@ func TestLoader_GetBool(t *testing.T) {
 		t.Fatalf("Load() error: %v", err)
 	}
 
-	// 设置一个布尔值用于测试
+	// Set a boolean value for testing
 	loader.v.Set("app.debug", true)
 
 	value := loader.GetBool("app.debug")
@@ -43,14 +43,14 @@ func TestLoader_GetBool(t *testing.T) {
 		t.Errorf("GetBool(app.debug) = %v, want true", value)
 	}
 
-	// 测试默认值（不存在时返回 false）
+	// Test default values (return false when not existing)
 	defaultValue := loader.GetBool("not.exist.key")
 	if defaultValue {
 		t.Errorf("GetBool(not.exist.key) = %v, want false", defaultValue)
 	}
 }
 
-// TestLoader_IsSet 测试检查配置项是否存在
+// TestLoader_IsSet test checks if configuration item exists
 func TestLoader_IsSet(t *testing.T) {
 	loader := NewLoader()
 	loader.AddSource(NewFileSource("testdata/config.yaml", 10))
@@ -59,18 +59,18 @@ func TestLoader_IsSet(t *testing.T) {
 		t.Fatalf("Load() error: %v", err)
 	}
 
-	// 测试存在的 key
+	// Test existing keys
 	if !loader.IsSet("app.name") {
 		t.Error("IsSet(app.name) = false, want true")
 	}
 
-	// 测试不存在的 key
+	// Test non-existent key
 	if loader.IsSet("not.exist.key") {
 		t.Error("IsSet(not.exist.key) = true, want false")
 	}
 }
 
-// TestLoader_AllSettings 测试获取所有配置
+// TestLoader_AllSettings test to get all settings
 func TestLoader_AllSettings(t *testing.T) {
 	loader := NewLoader()
 	loader.AddSource(NewFileSource("testdata/config.yaml", 10))
@@ -84,13 +84,13 @@ func TestLoader_AllSettings(t *testing.T) {
 		t.Error("AllSettings() = nil, want map")
 	}
 
-	// 验证配置存在
+	// Validate configuration exists
 	if _, ok := settings["app"]; !ok {
 		t.Error("AllSettings() missing 'app' key")
 	}
 }
 
-// TestLoader_GetViper 测试获取 Viper 实例
+// TestLoader_GetViper test to obtain Viper instance
 func TestLoader_GetViper(t *testing.T) {
 	loader := NewLoader()
 	loader.AddSource(NewFileSource("testdata/config.yaml", 10))
@@ -104,25 +104,25 @@ func TestLoader_GetViper(t *testing.T) {
 		t.Error("GetViper() = nil, want *viper.Viper")
 	}
 
-	// 通过 Viper 访问配置
+	// Access configuration through Viper
 	if v.GetString("app.name") != "test-app" {
 		t.Errorf("GetViper().GetString(app.name) = %s, want test-app", v.GetString("app.name"))
 	}
 }
 
-// TestLoader_SetNestedValue_OverwriteNonMap 测试覆盖非 map 值
+// TestLoader_SetNestedValue_OverrideNonMap tests overriding non-map values
 func TestLoader_SetNestedValue_OverwriteNonMap(t *testing.T) {
 	loader := NewLoader()
 
-	// 创建一个初始值是非 map 的情况
+	// Create an initial state where it is not a map
 	m := map[string]interface{}{
-		"app": "not-a-map", // 这是一个字符串，不是 map
+		"app": "not-a-map", // This is a string, not a map
 	}
 
-	// 尝试设置嵌套值，这应该覆盖字符串为 map
+	// Try to set nested value, this should override string as map
 	loader.setNestedValue(m, "app.name", "test")
 
-	// 验证 app 变成了 map
+	// Verify that the app has changed to map mode
 	if app, ok := m["app"].(map[string]interface{}); ok {
 		if app["name"] != "test" {
 			t.Errorf("app.name = %v, want test", app["name"])
@@ -132,12 +132,12 @@ func TestLoader_SetNestedValue_OverwriteNonMap(t *testing.T) {
 	}
 }
 
-// TestLoader_SetNestedValue_EmptyKey 测试空 key
+// TestLoader_SetNestedValue_EmptyKey test empty key
 func TestLoader_SetNestedValue_EmptyKey(t *testing.T) {
 	loader := NewLoader()
 	m := make(map[string]interface{})
 
-	// 空 key 应该直接返回
+	// empty key should be returned directly
 	loader.setNestedValue(m, "", "test")
 
 	if len(m) != 0 {

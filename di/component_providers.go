@@ -21,20 +21,20 @@ import (
 )
 
 // ============================================
-// 基础组件 Provider（Config, Logger）
-// 这些是最底层的依赖，其他组件都依赖它们
+// Basic components Provider (Config, Logger)
+// These are the lowest level dependencies, upon which all other components rely.
 // ============================================
 
-// ConfigOptions 配置组件选项
+// ConfigOptions configuration component options
 type ConfigOptions struct {
-	ConfigPath   string      // 配置目录路径
-	ConfigPrefix string      // 环境变量前缀
-	AppType      string      // 应用类型：grpc, http, mixed
-	Flags        interface{} // 命令行参数
+	ConfigPath   string      // Configure directory path
+	ConfigPrefix string      // Environment variable prefix
+	AppType      string      // Application type: grpc, http, mixed
+	Flags        interface{} // command line arguments
 }
 
-// ProvideConfigLoader 创建 config.Loader 的 Provider
-// 这是最基础的组件，无依赖
+// ProvideConfigLoader creates a Provider for config.Loader
+// This is the most basic component, with no dependencies
 func ProvideConfigLoader(opts ConfigOptions) func(do.Injector) (*config.Loader, error) {
 	return func(i do.Injector) (*config.Loader, error) {
 		if opts.ConfigPath == "" {
@@ -57,12 +57,12 @@ func ProvideConfigLoader(opts ConfigOptions) func(do.Injector) (*config.Loader, 
 	}
 }
 
-// ProvideLoggerManager 创建 logger.Manager 的 Provider
-// 依赖：config.Loader（从配置读取 logger 配置）
+// ProvideLoggerManager creates a Provider for logger.Manager
+// Dependencies: config.Loader (reads logger configuration from config)
 func ProvideLoggerManager(i do.Injector) (*logger.Manager, error) {
 	var loggerCfg logger.ManagerConfig
 
-	// 尝试从配置加载 logger 配置
+	// Try to load logger configuration from config
 	loader, err := do.Invoke[*config.Loader](i)
 	if err == nil && loader != nil {
 		if v := loader.GetViper(); v != nil {
@@ -72,35 +72,35 @@ func ProvideLoggerManager(i do.Injector) (*logger.Manager, error) {
 
 	loggerCfg.ApplyDefaults()
 
-	// 同时初始化全局 Manager（兼容旧代码）
+	// Initialize the global Manager concurrently (compatible with old code)
 	logger.InitManager(loggerCfg)
 
 	return logger.NewManager(loggerCfg), nil
 }
 
-// ProvideCtxLogger 创建命名 CtxZapLogger 的 Provider 工厂
-// 用于应用层获取特定模块的 logger
+// CreateCtxLogger provides a factory for the named CtxZapLogger provider
+// For the application layer to obtain a logger for a specific module
 func ProvideCtxLogger(moduleName string) func(do.Injector) (*logger.CtxZapLogger, error) {
 	return func(i do.Injector) (*logger.CtxZapLogger, error) {
-		// 先尝试从 Manager 获取（推荐）
+		// Try to get from Manager first (recommended)
 		mgr, err := do.Invoke[*logger.Manager](i)
 		if err == nil && mgr != nil {
 			if ctxLogger := mgr.GetLogger(moduleName); ctxLogger != nil {
 				return ctxLogger, nil
 			}
 		}
-		// 回退到全局 logger
+		// fallback to global logger
 		return logger.GetLogger(moduleName), nil
 	}
 }
 
 // ============================================
-// Database 组件 Provider
-// 依赖：Config, Logger
+// Database component provider
+// Dependencies: Config, Logger
 // ============================================
 
-// ProvideDatabaseManager 创建 database.Manager 的 Provider
-// 依赖：config.Loader（读取数据库配置）
+// ProvideDatabaseManager creates a Provider for database.Manager
+// Dependencies: config.Loader (reads database configuration)
 func ProvideDatabaseManager(i do.Injector) (*database.Manager, error) {
 	loader, err := do.Invoke[*config.Loader](i)
 	if err != nil {
@@ -112,17 +112,17 @@ func ProvideDatabaseManager(i do.Injector) (*database.Manager, error) {
 		log = logger.GetLogger("yogan")
 	}
 
-	// 读取数据库配置
+	// Read database configuration
 	var dbConfigs map[string]database.Config
 	if err := loader.GetViper().UnmarshalKey("database.connections", &dbConfigs); err != nil {
 		return nil, err
 	}
 
 	if len(dbConfigs) == 0 {
-		return nil, nil // 未配置数据库
+		return nil, nil // Database not configured
 	}
 
-	// 创建 GORM Logger 工厂
+	// Create GORM Logger factory
 	gormLoggerFactory := func(dbCfg database.Config) gormlogger.Interface {
 		if dbCfg.EnableLog {
 			loggerCfg := logger.DefaultGormLoggerConfig()
@@ -138,12 +138,12 @@ func ProvideDatabaseManager(i do.Injector) (*database.Manager, error) {
 }
 
 // ============================================
-// Redis 组件 Provider
-// 依赖：Config, Logger
+// Redis component Provider
+// Dependencies: Config, Logger
 // ============================================
 
-// ProvideRedisManager 创建 redis.Manager 的 Provider
-// 依赖：config.Loader（读取 Redis 配置）
+// ProvideRedisManager creates a Provider for redis.Manager
+// Dependency: config.Loader (reads Redis configuration)
 func ProvideRedisManager(i do.Injector) (*redis.Manager, error) {
 	loader, err := do.Invoke[*config.Loader](i)
 	if err != nil {
@@ -155,25 +155,25 @@ func ProvideRedisManager(i do.Injector) (*redis.Manager, error) {
 		log = logger.GetLogger("yogan")
 	}
 
-	// 读取 Redis 配置
+	// Read Redis configuration
 	var redisConfigs map[string]redis.Config
 	if err := loader.GetViper().UnmarshalKey("redis.instances", &redisConfigs); err != nil {
 		return nil, err
 	}
 
 	if len(redisConfigs) == 0 {
-		return nil, nil // 未配置 Redis
+		return nil, nil // Redis not configured
 	}
 
 	return redis.NewManager(redisConfigs, log.GetZapLogger())
 }
 
 // ============================================
-// JWT 组件 Provider
-// 依赖：Config, Logger, Redis(可选)
+// JWT component provider
+// Dependencies: Config, Logger, Redis(optional)
 // ============================================
 
-// ProvideJWTConfig 提供 JWT 配置
+// Provide JWT Config
 func ProvideJWTConfig(i do.Injector) (*jwt.Config, error) {
 	loader, err := do.Invoke[*config.Loader](i)
 	if err != nil {
@@ -182,12 +182,12 @@ func ProvideJWTConfig(i do.Injector) (*jwt.Config, error) {
 
 	var cfg jwt.Config
 	if err := loader.GetViper().UnmarshalKey("jwt", &cfg); err != nil {
-		return nil, nil // JWT 未配置
+		return nil, nil // JWT not configured
 	}
 	cfg.ApplyDefaults()
 
 	if !cfg.Enabled {
-		return nil, nil // JWT 未启用
+		return nil, nil // JWT is not enabled
 	}
 
 	if err := cfg.Validate(); err != nil {
@@ -197,24 +197,24 @@ func ProvideJWTConfig(i do.Injector) (*jwt.Config, error) {
 	return &cfg, nil
 }
 
-// ProvideJWTTokenManagerIndependent 创建 jwt.TokenManager 的独立 Provider
-// 依赖：config.Loader, redis.Manager(可选)
-// 注意：与 providers.go 中的 ProvideJWTManager 区分，后者从 Registry 获取
+// Create an independent Provider for jwt.TokenManager
+// Dependencies: config.Loader, redis.Manager (optional)
+// Note: Distinguish from ProvideJWTManager in providers.go, which retrieves from the Registry
 func ProvideJWTTokenManagerIndependent(i do.Injector) (jwt.TokenManager, error) {
 	loader, err := do.Invoke[*config.Loader](i)
 	if err != nil {
 		return nil, err
 	}
 
-	// 读取 JWT 配置
+	// Read JWT configuration
 	var cfg jwt.Config
 	if err := loader.GetViper().UnmarshalKey("jwt", &cfg); err != nil {
-		return nil, nil // JWT 未配置
+		return nil, nil // JWT not configured
 	}
 	cfg.ApplyDefaults()
 
 	if !cfg.Enabled {
-		return nil, nil // JWT 未启用
+		return nil, nil // JWT is not enabled
 	}
 
 	if err := cfg.Validate(); err != nil {
@@ -226,7 +226,7 @@ func ProvideJWTTokenManagerIndependent(i do.Injector) (jwt.TokenManager, error) 
 		log = logger.GetLogger("yogan")
 	}
 
-	// 创建 TokenStore
+	// Create TokenStore
 	var tokenStore jwt.TokenStore
 	if cfg.Blacklist.Enabled && cfg.Blacklist.Storage == "redis" {
 		redisMgr, _ := do.Invoke[*redis.Manager](i)
@@ -245,26 +245,26 @@ func ProvideJWTTokenManagerIndependent(i do.Injector) (jwt.TokenManager, error) 
 }
 
 // ============================================
-// Event 组件 Provider
-// 依赖：Config, Logger
+// Event Component Provider
+// Dependencies: Config, Logger
 // ============================================
 
-// ProvideEventDispatcherIndependent 创建 event.Dispatcher 的独立 Provider
-// 注意：与 providers.go 中的 ProvideEventDispatcher 区分，后者从 Registry 获取
+// Create an independent Provider for event.Dispatcher
+// Note: Distinct from ProvideEventDispatcher in providers.go, which retrieves from the Registry
 func ProvideEventDispatcherIndependent(i do.Injector) (event.Dispatcher, error) {
 	loader, err := do.Invoke[*config.Loader](i)
 	if err != nil {
 		return nil, err
 	}
 
-	// 读取 Event 配置
+	// Read Event configuration
 	var cfg event.Config
 	if err := loader.GetViper().UnmarshalKey("event", &cfg); err != nil {
 		cfg = event.DefaultConfig()
 	}
 
 	if !cfg.Enabled {
-		return nil, nil // Event 未启用
+		return nil, nil // Event not enabled
 	}
 
 	log, _ := do.Invoke[*logger.CtxZapLogger](i)
@@ -272,7 +272,7 @@ func ProvideEventDispatcherIndependent(i do.Injector) (event.Dispatcher, error) 
 		log = logger.GetLogger("yogan")
 	}
 
-	// 创建 Dispatcher（使用 Option 模式）
+	// Create Dispatcher (using Option pattern)
 	return event.NewDispatcher(
 		event.WithPoolSize(cfg.PoolSize),
 		event.WithSetAllSync(cfg.SetAllSync),
@@ -280,11 +280,11 @@ func ProvideEventDispatcherIndependent(i do.Injector) (event.Dispatcher, error) 
 }
 
 // ============================================
-// Kafka 组件 Provider
-// 依赖：Config, Logger
+// Kafka Component Provider
+// Dependencies: Config, Logger
 // ============================================
 
-// ProvideKafkaManager 创建 kafka.Manager 的独立 Provider
+// ProvideKafkaManager creates an independent Provider for kafka.Manager
 func ProvideKafkaManager(i do.Injector) (*kafka.Manager, error) {
 	loader, err := do.Invoke[*config.Loader](i)
 	if err != nil {
@@ -296,32 +296,32 @@ func ProvideKafkaManager(i do.Injector) (*kafka.Manager, error) {
 		log = logger.GetLogger("yogan")
 	}
 
-	// 读取 Kafka 配置
+	// Read Kafka configuration
 	var cfg kafka.Config
 	if err := loader.GetViper().UnmarshalKey("kafka", &cfg); err != nil {
-		return nil, nil // Kafka 未配置
+		return nil, nil // Kafka not configured
 	}
 
 	if len(cfg.Brokers) == 0 {
-		return nil, nil // Kafka brokers 未配置
+		return nil, nil // Kafka brokers not configured
 	}
 
 	return kafka.NewManager(cfg, log.GetZapLogger())
 }
 
 // ============================================
-// Telemetry 组件 Provider
-// 依赖：Config, Logger
+// Telemetry Component Provider
+// Dependencies: Config, Logger
 // ============================================
 
-// ProvideTelemetryManager 创建 telemetry.Manager 的独立 Provider
+// CreateTelemetryManager creates an independent Provider for telemetry.Manager
 func ProvideTelemetryManager(i do.Injector) (*telemetry.Manager, error) {
 	loader, err := do.Invoke[*config.Loader](i)
 	if err != nil {
 		return nil, err
 	}
 
-	// 读取 Telemetry 配置
+	// Read Telemetry configuration
 	var cfg telemetry.Config
 	if loader.IsSet("telemetry") {
 		if err := loader.GetViper().UnmarshalKey("telemetry", &cfg); err != nil {
@@ -332,7 +332,7 @@ func ProvideTelemetryManager(i do.Injector) (*telemetry.Manager, error) {
 	}
 
 	if !cfg.Enabled {
-		return nil, nil // Telemetry 未启用
+		return nil, nil // Telemetry is not enabled
 	}
 
 	log, _ := do.Invoke[*logger.CtxZapLogger](i)
@@ -340,7 +340,7 @@ func ProvideTelemetryManager(i do.Injector) (*telemetry.Manager, error) {
 		log = logger.GetLogger("yogan")
 	}
 
-	// 创建并启动 Manager
+	// Create and start Manager
 	mgr := telemetry.NewManager(cfg, log)
 	if err := mgr.Start(context.Background()); err != nil {
 		return nil, err
@@ -349,50 +349,50 @@ func ProvideTelemetryManager(i do.Injector) (*telemetry.Manager, error) {
 }
 
 // ============================================
-// Health 组件 Provider
-// 依赖：Config, Logger
+// Health component provider
+// Dependencies: Config, Logger
 // ============================================
 
-// ProvideHealthAggregator 创建 health.Aggregator 的独立 Provider
+// ProvideHealthAggregator creates an independent Provider for health.Aggregator
 func ProvideHealthAggregator(i do.Injector) (*health.Aggregator, error) {
 	loader, err := do.Invoke[*config.Loader](i)
 	if err != nil {
 		return nil, err
 	}
 
-	// 读取 Health 配置
+	// Read Health configuration
 	cfg := health.DefaultConfig()
 	if loader.IsSet("health") {
 		_ = loader.GetViper().UnmarshalKey("health", &cfg)
 	}
 
 	if !cfg.Enabled {
-		return nil, nil // Health 未启用
+		return nil, nil // Health not enabled
 	}
 
 	return health.NewAggregator(cfg.Timeout), nil
 }
 
 // ============================================
-// Cache 组件 Provider
-// 依赖：Config, Logger, Redis(可选), Event(可选)
+// Cache Component Provider
+// Dependencies: Config, Logger, Redis (optional), Event (optional)
 // ============================================
 
-// ProvideCacheOrchestrator 创建 cache.Orchestrator 的独立 Provider
+// ProvideCacheOrchestrator creates an independent Provider for cache.Orchestrator
 func ProvideCacheOrchestrator(i do.Injector) (*cache.DefaultOrchestrator, error) {
 	loader, err := do.Invoke[*config.Loader](i)
 	if err != nil {
 		return nil, err
 	}
 
-	// 读取 Cache 配置
+	// Read cache configuration
 	var cfg cache.Config
 	if err := loader.GetViper().UnmarshalKey("cache", &cfg); err != nil {
-		return nil, nil // Cache 未配置
+		return nil, nil // Cache not configured
 	}
 
 	if !cfg.Enabled {
-		return nil, nil // Cache 未启用
+		return nil, nil // Cache not enabled
 	}
 
 	log, _ := do.Invoke[*logger.CtxZapLogger](i)
@@ -400,32 +400,32 @@ func ProvideCacheOrchestrator(i do.Injector) (*cache.DefaultOrchestrator, error)
 		log = logger.GetLogger("yogan")
 	}
 
-	// 尝试获取 Event Dispatcher
+	// Try to get the Event Dispatcher
 	dispatcher, _ := do.Invoke[event.Dispatcher](i)
 
 	return cache.NewOrchestrator(&cfg, dispatcher, log), nil
 }
 
 // ============================================
-// Limiter 组件 Provider
-// 依赖：Config, Logger, Redis
+// Limiter Component Provider
+// Dependencies: Config, Logger, Redis
 // ============================================
 
-// ProvideLimiterManager 创建 limiter.Manager 的独立 Provider
+// ProvideLimiterManager creates an independent Provider for limiter.Manager
 func ProvideLimiterManager(i do.Injector) (*limiter.Manager, error) {
 	loader, err := do.Invoke[*config.Loader](i)
 	if err != nil {
 		return nil, err
 	}
 
-	// 读取 Limiter 配置
+	// Read Limiter configuration
 	var cfg limiter.Config
 	if err := loader.GetViper().UnmarshalKey("limiter", &cfg); err != nil {
-		return nil, nil // Limiter 未配置
+		return nil, nil // Limiter not configured
 	}
 
 	if !cfg.Enabled {
-		return nil, nil // Limiter 未启用
+		return nil, nil // Limiter not enabled
 	}
 
 	log, _ := do.Invoke[*logger.CtxZapLogger](i)
@@ -433,7 +433,7 @@ func ProvideLimiterManager(i do.Injector) (*limiter.Manager, error) {
 		log = logger.GetLogger("yogan")
 	}
 
-	// 尝试获取 Redis Client
+	// Try to get Redis client
 	redisMgr, _ := do.Invoke[*redis.Manager](i)
 	var redisClient *goredis.Client
 	if redisMgr != nil && cfg.Redis.Instance != "" {
@@ -444,25 +444,25 @@ func ProvideLimiterManager(i do.Injector) (*limiter.Manager, error) {
 }
 
 // ============================================
-// gRPC 组件 Provider
-// 依赖：Config, Logger, Limiter(可选), Telemetry(可选)
+// gRPC Component Provider
+// Dependencies: Config, Logger, Limiter (optional), Telemetry (optional)
 // ============================================
 
-// ProvideGRPCServer 创建 grpc.Server 的独立 Provider
+// ProvideGRPCServer creates an independent Provider for grpc.Server
 func ProvideGRPCServer(i do.Injector) (*grpc.Server, error) {
 	loader, err := do.Invoke[*config.Loader](i)
 	if err != nil {
 		return nil, err
 	}
 
-	// 读取 gRPC 配置
+	// Read gRPC configuration
 	var cfg grpc.Config
 	if err := loader.GetViper().UnmarshalKey("grpc", &cfg); err != nil {
-		return nil, nil // gRPC 未配置
+		return nil, nil // gRPC not configured
 	}
 
 	if !cfg.Server.Enabled {
-		return nil, nil // gRPC Server 未启用
+		return nil, nil // gRPC Server is not enabled
 	}
 
 	log, _ := do.Invoke[*logger.CtxZapLogger](i)
@@ -473,21 +473,21 @@ func ProvideGRPCServer(i do.Injector) (*grpc.Server, error) {
 	return grpc.NewServer(cfg.Server, log), nil
 }
 
-// ProvideGRPCClientManager 创建 grpc.ClientManager 的独立 Provider
+// ProvideGRPCClientManager creates an independent Provider for grpc.ClientManager
 func ProvideGRPCClientManager(i do.Injector) (*grpc.ClientManager, error) {
 	loader, err := do.Invoke[*config.Loader](i)
 	if err != nil {
 		return nil, err
 	}
 
-	// 读取 gRPC 配置
+	// Read gRPC configuration
 	var cfg grpc.Config
 	if err := loader.GetViper().UnmarshalKey("grpc", &cfg); err != nil {
-		return nil, nil // gRPC 未配置
+		return nil, nil // gRPC not configured
 	}
 
 	if len(cfg.Clients) == 0 {
-		return nil, nil // gRPC Client 未配置
+		return nil, nil // gRPC client not configured
 	}
 
 	log, _ := do.Invoke[*logger.CtxZapLogger](i)

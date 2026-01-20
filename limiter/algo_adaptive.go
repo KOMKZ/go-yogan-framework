@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// adaptiveAlgorithm 自适应限流算法实现
+// adaptiveAlgorithm implementation of adaptive rate limiting algorithm
 type adaptiveAlgorithm struct {
 	provider       AdaptiveProvider
 	currentLimit   int64
@@ -14,7 +14,7 @@ type adaptiveAlgorithm struct {
 	mu             sync.RWMutex
 }
 
-// NewAdaptiveAlgorithm 创建自适应限流算法
+// Create new adaptive rate limiting algorithm
 func NewAdaptiveAlgorithm(provider AdaptiveProvider) Algorithm {
 	return &adaptiveAlgorithm{
 		provider:       provider,
@@ -23,30 +23,30 @@ func NewAdaptiveAlgorithm(provider AdaptiveProvider) Algorithm {
 	}
 }
 
-// Name 返回算法名称
+// Name Returns algorithm name
 func (a *adaptiveAlgorithm) Name() string {
 	return string(AlgorithmAdaptive)
 }
 
-// Allow 检查是否允许请求
+// Allow check if the request is permitted
 func (a *adaptiveAlgorithm) Allow(ctx context.Context, store Store, resource string, n int64, cfg ResourceConfig) (*Response, error) {
-	// 调整限流阈值
+	// Adjust rate limiting threshold
 	a.adjustLimit(cfg)
 
-	// 获取当前限流值
+	// Get current rate limit value
 	a.mu.RLock()
 	limit := a.currentLimit
 	a.mu.RUnlock()
 
-	// 如果没有provider或限流值无效，使用最大限流值
+	// If there is no provider or the rate limit value is invalid, use the maximum rate limit value
 	if limit <= 0 {
 		limit = cfg.MaxLimit
 	}
 
-	// 使用令牌桶算法实现
+	// Implement using token bucket algorithm
 	tokenBucket := NewTokenBucketAlgorithm()
 
-	// 临时修改配置使用自适应限流值
+	// Temporarily modify the configuration to use adaptive rate limiting values
 	tempCfg := cfg
 	tempCfg.Rate = limit
 	tempCfg.Capacity = limit * 2
@@ -54,12 +54,12 @@ func (a *adaptiveAlgorithm) Allow(ctx context.Context, store Store, resource str
 	return tokenBucket.Allow(ctx, store, resource, n, tempCfg)
 }
 
-// Wait 等待获取许可
+// Wait for permission to be acquired
 func (a *adaptiveAlgorithm) Wait(ctx context.Context, store Store, resource string, n int64, cfg ResourceConfig, timeout time.Duration) error {
-	// 调整限流阈值
+	// Adjust rate limiting threshold
 	a.adjustLimit(cfg)
 
-	// 获取当前限流值
+	// Get current rate limit value
 	a.mu.RLock()
 	limit := a.currentLimit
 	a.mu.RUnlock()
@@ -68,7 +68,7 @@ func (a *adaptiveAlgorithm) Wait(ctx context.Context, store Store, resource stri
 		limit = cfg.MaxLimit
 	}
 
-	// 使用令牌桶算法实现
+	// Implement using token bucket algorithm
 	tokenBucket := NewTokenBucketAlgorithm()
 
 	tempCfg := cfg
@@ -78,7 +78,7 @@ func (a *adaptiveAlgorithm) Wait(ctx context.Context, store Store, resource stri
 	return tokenBucket.Wait(ctx, store, resource, n, tempCfg, timeout)
 }
 
-// GetMetrics 获取当前指标
+// GetMetrics获取当前指标
 func (a *adaptiveAlgorithm) GetMetrics(ctx context.Context, store Store, resource string) (*AlgorithmMetrics, error) {
 	a.mu.RLock()
 	limit := a.currentLimit
@@ -92,42 +92,42 @@ func (a *adaptiveAlgorithm) GetMetrics(ctx context.Context, store Store, resourc
 	}, nil
 }
 
-// Reset 重置状态
+// Reset reset status
 func (a *adaptiveAlgorithm) Reset(ctx context.Context, store Store, resource string) error {
-	// 使用令牌桶算法重置
+	// Reset using token bucket algorithm
 	tokenBucket := NewTokenBucketAlgorithm()
 	return tokenBucket.Reset(ctx, store, resource)
 }
 
-// adjustLimit 根据系统负载调整限流阈值
+// adjustLimit Adjusts the rate limiting threshold based on system load
 func (a *adaptiveAlgorithm) adjustLimit(cfg ResourceConfig) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	// 检查是否需要调整
+	// Check if adjustment is needed
 	if time.Since(a.lastAdjustTime) < cfg.AdjustInterval {
 		return
 	}
 
 	a.lastAdjustTime = time.Now()
 
-	// 如果没有provider，使用最大限流值
+	// If there is no provider, use the maximum rate limit value
 	if a.provider == nil {
 		a.currentLimit = cfg.MaxLimit
 		return
 	}
 
-	// 初始化当前限流值
+	// Initialize current rate limit value
 	if a.currentLimit == 0 {
 		a.currentLimit = (cfg.MinLimit + cfg.MaxLimit) / 2
 	}
 
-	// 获取系统负载数据
+	// Get system load data
 	cpuUsage := a.provider.GetCPUUsage()
 	memoryUsage := a.provider.GetMemoryUsage()
 	systemLoad := a.provider.GetSystemLoad()
 
-	// 计算平均负载（优先级：CPU > Memory > Load）
+	// Calculate average load (priority: CPU > Memory > Load)
 	var avgLoad float64
 	if cfg.TargetCPU > 0 {
 		avgLoad = cpuUsage / cfg.TargetCPU
@@ -136,23 +136,23 @@ func (a *adaptiveAlgorithm) adjustLimit(cfg ResourceConfig) {
 	} else if cfg.TargetLoad > 0 {
 		avgLoad = systemLoad / cfg.TargetLoad
 	} else {
-		// 没有配置目标值，使用最大限流
+		// No target value configured, using maximum rate limiting
 		a.currentLimit = cfg.MaxLimit
 		return
 	}
 
-	// 根据负载调整限流值
+	// Adjust throttling values based on load
 	oldLimit := a.currentLimit
 
 	if avgLoad > 1.2 {
-		// 负载过高，降低限流值10%
+		// High load, reduce rate limiting value by 10%
 		a.currentLimit = maxInt64(cfg.MinLimit, int64(float64(a.currentLimit)*0.9))
 	} else if avgLoad < 0.8 {
-		// 负载较低，提高限流值10%
+		// Low load, increase rate limit by 10%
 		a.currentLimit = minInt64(cfg.MaxLimit, int64(float64(a.currentLimit)*1.1))
 	}
 
-	// 限制在配置范围内
+	// Limit within configuration range
 	if a.currentLimit < cfg.MinLimit {
 		a.currentLimit = cfg.MinLimit
 	}
@@ -160,11 +160,11 @@ func (a *adaptiveAlgorithm) adjustLimit(cfg ResourceConfig) {
 		a.currentLimit = cfg.MaxLimit
 	}
 
-	// 如果限流值有变化，可以通过事件通知
-	_ = oldLimit // 后续可用于事件通知
+	// If the rate limit value changes, it can be notified via events
+	_ = oldLimit // To be used for event notifications later
 }
 
-// minInt64 返回最小的int64值
+// returns the minimum int64 value
 func minInt64(a, b int64) int64 {
 	if a < b {
 		return a

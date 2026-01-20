@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// Manager 限流器管理器
+// Rate Limiter Manager
 type Manager struct {
 	config   Config
 	store    Store
@@ -22,7 +22,7 @@ type Manager struct {
 	mu       sync.RWMutex
 }
 
-// rateLimiter 单个资源的限流器
+// rateLimiter rate limiter for a single resource
 type rateLimiter struct {
 	resource  string
 	config    ResourceConfig
@@ -30,26 +30,26 @@ type rateLimiter struct {
 	metrics   MetricsCollector
 }
 
-// NewManager 创建限流器管理器
+// Create rate limiter manager
 func NewManager(config Config) (*Manager, error) {
 	return NewManagerWithLogger(config, nil, nil, nil)
 }
 
-// NewManagerWithLogger 创建带logger的限流器管理器
+// Create a rate limiter manager with logger
 func NewManagerWithLogger(config Config, ctxLogger *logger.CtxZapLogger, redisClient *redis.Client, provider AdaptiveProvider) (*Manager, error) {
-	// 验证配置
+	// Validate configuration
 	if err := config.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid config: %w", err)
 	}
 
-	// 如果没有提供logger，使用默认的
+	// If no logger is provided, use the default one
 	if ctxLogger == nil {
 		ctxLogger = logger.GetLogger("yogan")
 	}
 
 	ctx := context.Background()
 
-	// 如果未启用，返回空管理器
+	// If not enabled, return empty manager
 	if !config.Enabled {
 		ctxLogger.DebugCtx(ctx, "⏭️  限流器未启用，所有调用将直接执行")
 		return &Manager{
@@ -59,7 +59,7 @@ func NewManagerWithLogger(config Config, ctxLogger *logger.CtxZapLogger, redisCl
 		}, nil
 	}
 
-	// 创建存储
+	// Create storage
 	var store Store
 	switch StoreType(config.StoreType) {
 	case StoreTypeMemory:
@@ -76,7 +76,7 @@ func NewManagerWithLogger(config Config, ctxLogger *logger.CtxZapLogger, redisCl
 		return nil, fmt.Errorf("unsupported store type: %s", config.StoreType)
 	}
 
-	// 创建事件总线
+	// Create event bus
 	eventBus := NewEventBus(config.EventBusBuffer)
 
 	ctxLogger.DebugCtx(ctx, "🎯 限流器管理器初始化",
@@ -93,12 +93,12 @@ func NewManagerWithLogger(config Config, ctxLogger *logger.CtxZapLogger, redisCl
 	}, nil
 }
 
-// Allow 检查是否允许请求
+// Allow check if the request is permitted
 func (m *Manager) Allow(ctx context.Context, resource string) (bool, error) {
 	return m.AllowN(ctx, resource, 1)
 }
 
-// AllowN 检查是否允许N个请求
+// AllowN checks if N requests are permitted
 func (m *Manager) AllowN(ctx context.Context, resource string, n int64) (bool, error) {
 	if m.logger != nil {
 		m.logger.DebugCtx(ctx, "🔍 [LimiterManager] AllowN called",
@@ -107,19 +107,19 @@ func (m *Manager) AllowN(ctx context.Context, resource string, n int64) (bool, e
 			zap.Int64("n", n))
 	}
 
-	// 如果未启用，直接允许
+	// If not enabled, allow directly
 	if !m.config.Enabled {
 		return true, nil
 	}
 
-	// 🎯 检查资源是否在配置中定义
+	// 🎯 Check if the resource is defined in the configuration
 	_, exists := m.config.Resources[resource]
 
-	// 如果资源未配置
+	// If the resource is not configured
 	if !exists {
-		// 尝试使用 default 配置
+		// Try using default configuration
 		if err := m.config.Default.Validate(); err != nil {
-			// default 配置无效或未配置，直接放行
+			// default configuration is invalid or not set, allow directly
 			if m.logger != nil {
 				m.logger.DebugCtx(ctx, "🔓 [LimiterManager] Resource not configured and default config is invalid, auto-allowing",
 					zap.String("resource", resource))
@@ -127,30 +127,30 @@ func (m *Manager) AllowN(ctx context.Context, resource string, n int64) (bool, e
 			return true, nil
 		}
 
-		// default 配置有效，使用 default 配置限流
+		// default configuration is effective, rate limiting using default configuration
 		if m.logger != nil {
 			m.logger.DebugCtx(ctx, "🎯 [LimiterManager] Applying default config to unknown resource",
 				zap.String("resource", resource),
 				zap.String("algorithm", m.config.Default.Algorithm),
 				zap.Int64("rate", m.config.Default.Rate))
 		}
-		// 继续执行限流逻辑（使用 default 配置）
+		// Continue with rate limiting logic (using default configuration)
 	}
 
-	// 获取或创建限流器
+	// Get or create the rate limiter
 	limiter := m.getOrCreateLimiter(resource)
 
-	// 调用算法检查
+	// Call the algorithm to check
 	resp, err := limiter.algorithm.Allow(ctx, m.store, resource, n, limiter.config)
 	if err != nil {
 		return false, fmt.Errorf("algorithm allow failed: %w", err)
 	}
 
-	// 记录指标
+	// Record metrics
 	if resp.Allowed {
 		limiter.metrics.RecordAllowed(resp.Remaining)
 
-		// 发布允许事件
+		// Publish allow event
 		if m.eventBus != nil {
 			m.eventBus.Publish(&AllowedEvent{
 				BaseEvent: NewBaseEvent(EventAllowed, resource, ctx),
@@ -161,7 +161,7 @@ func (m *Manager) AllowN(ctx context.Context, resource string, n int64) (bool, e
 	} else {
 		limiter.metrics.RecordRejected("limit exceeded")
 
-		// 发布拒绝事件
+		// Publish rejection event
 		if m.eventBus != nil {
 			m.eventBus.Publish(&RejectedEvent{
 				BaseEvent:  NewBaseEvent(EventRejected, resource, ctx),
@@ -174,12 +174,12 @@ func (m *Manager) AllowN(ctx context.Context, resource string, n int64) (bool, e
 	return resp.Allowed, nil
 }
 
-// Wait 等待获取许可
+// Wait for permission to be acquired
 func (m *Manager) Wait(ctx context.Context, resource string) error {
 	return m.WaitN(ctx, resource, 1)
 }
 
-// WaitN 等待获取N个许可
+// Wait for N licenses to be acquired
 func (m *Manager) WaitN(ctx context.Context, resource string, n int64) error {
 	if m.logger != nil {
 		m.logger.DebugCtx(ctx, "🔍 [LimiterManager] WaitN called",
@@ -188,15 +188,15 @@ func (m *Manager) WaitN(ctx context.Context, resource string, n int64) error {
 			zap.Int64("n", n))
 	}
 
-	// 如果未启用，直接返回
+	// If not enabled, return directly
 	if !m.config.Enabled {
 		return nil
 	}
 
-	// 获取或创建限流器
+	// Get or create the rate limiter
 	limiter := m.getOrCreateLimiter(resource)
 
-	// 发布等待开始事件
+	// Publish wait start event
 	start := time.Now()
 	if m.eventBus != nil {
 		m.eventBus.Publish(&WaitEvent{
@@ -206,7 +206,7 @@ func (m *Manager) WaitN(ctx context.Context, resource string, n int64) error {
 		})
 	}
 
-	// 调用算法等待
+	// Call algorithm and wait
 	timeout := limiter.config.Timeout
 	if timeout <= 0 {
 		timeout = 1 * time.Second
@@ -215,7 +215,7 @@ func (m *Manager) WaitN(ctx context.Context, resource string, n int64) error {
 	err := limiter.algorithm.Wait(ctx, m.store, resource, n, limiter.config, timeout)
 	waited := time.Since(start)
 
-	// 发布等待结果事件
+	// Publish waiting result event
 	if m.eventBus != nil {
 		eventType := EventWaitSuccess
 		if err != nil {
@@ -237,7 +237,7 @@ func (m *Manager) WaitN(ctx context.Context, resource string, n int64) error {
 	return nil
 }
 
-// GetMetrics 获取限流器指标
+// GetMetrics获取流控指标
 func (m *Manager) GetMetrics(resource string) *MetricsSnapshot {
 	m.mu.RLock()
 	limiter, exists := m.limiters[resource]
@@ -252,7 +252,7 @@ func (m *Manager) GetMetrics(resource string) *MetricsSnapshot {
 
 	snapshot := limiter.metrics.GetSnapshot()
 
-	// 获取算法指标
+	// Get algorithm metrics
 	algoMetrics, err := limiter.algorithm.GetMetrics(context.Background(), m.store, resource)
 	if err == nil && algoMetrics != nil {
 		snapshot.CurrentValue = algoMetrics.Current
@@ -263,12 +263,12 @@ func (m *Manager) GetMetrics(resource string) *MetricsSnapshot {
 	return snapshot
 }
 
-// GetEventBus 获取事件总线
+// GetEventBus obtain event bus
 func (m *Manager) GetEventBus() EventBus {
 	return m.eventBus
 }
 
-// Reset 重置限流器状态
+// Reset the rate limiter status
 func (m *Manager) Reset(resource string) {
 	m.mu.RLock()
 	limiter, exists := m.limiters[resource]
@@ -278,21 +278,21 @@ func (m *Manager) Reset(resource string) {
 		return
 	}
 
-	// 重置算法状态
+	// Reset algorithm state
 	limiter.algorithm.Reset(context.Background(), m.store, resource)
 
-	// 重置指标
+	// Reset metrics
 	limiter.metrics.Reset()
 }
 
-// Close 关闭管理器
+// Close Manager
 func (m *Manager) Close() error {
-	// 关闭事件总线
+	// Close event bus
 	if m.eventBus != nil {
 		m.eventBus.Close()
 	}
 
-	// 关闭存储
+	// Close storage
 	if m.store != nil {
 		return m.store.Close()
 	}
@@ -300,24 +300,24 @@ func (m *Manager) Close() error {
 	return nil
 }
 
-// Shutdown 实现 samber/do.Shutdownable 接口
+// Implements the samber/do.Shutdownable interface for shutdown functionality
 func (m *Manager) Shutdown() error {
 	return m.Close()
 }
 
-// IsEnabled 检查限流器是否启用
+// Check if the rate limiter is enabled
 func (m *Manager) IsEnabled() bool {
 	return m.config.Enabled
 }
 
-// GetConfig 获取限流器配置
+// GetConfig retrieve rate limiter configuration
 func (m *Manager) GetConfig() Config {
 	return m.config
 }
 
-// getOrCreateLimiter 获取或创建限流器（线程安全）
+// Get or create limiter (thread-safe)
 func (m *Manager) getOrCreateLimiter(resource string) *rateLimiter {
-	// 先尝试读取
+	// Try to read first
 	m.mu.RLock()
 	if limiter, exists := m.limiters[resource]; exists {
 		m.mu.RUnlock()
@@ -325,7 +325,7 @@ func (m *Manager) getOrCreateLimiter(resource string) *rateLimiter {
 	}
 	m.mu.RUnlock()
 
-	// 需要创建，获取写锁
+	// Need to create, obtain write lock
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -334,16 +334,16 @@ func (m *Manager) getOrCreateLimiter(resource string) *rateLimiter {
 		return limiter
 	}
 
-	// 获取资源配置
+	// Get resource configuration
 	resourceConfig := m.config.GetResourceConfig(resource)
 
-	// 创建算法实例
+	// Create algorithm instance
 	algorithm := GetAlgorithm(resourceConfig, m.provider)
 
-	// 创建指标采集器
+	// Create metric collector
 	metrics := NewMetricsCollector(resource, resourceConfig.Algorithm)
 
-	// 创建新限流器
+	// Create new rate limiter
 	limiter := &rateLimiter{
 		resource:  resource,
 		config:    resourceConfig,

@@ -11,8 +11,8 @@ import (
 	"go.uber.org/zap"
 )
 
-// 集成测试需要真实的 Kafka 环境
-// 运行: go test -tags=integration -v ./...
+// Integration tests require a real Kafka environment
+// Run: go test -tags=integration -v ./...
 
 func getTestConfig() Config {
 	return Config{
@@ -45,7 +45,7 @@ func TestIntegration_Manager_Connect(t *testing.T) {
 	err = manager.Connect(context.Background())
 	assert.NoError(t, err)
 
-	// 验证生产者已创建
+	// Verify that the producer has been created
 	assert.NotNil(t, manager.GetProducer())
 }
 
@@ -146,7 +146,7 @@ func TestIntegration_Consumer_Create(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, consumer)
 
-	// 验证可以获取消费者
+	// Verify that the consumer can be retrieved
 	assert.Equal(t, consumer, manager.GetConsumer("test-consumer"))
 }
 

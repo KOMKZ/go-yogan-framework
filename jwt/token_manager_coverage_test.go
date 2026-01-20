@@ -9,10 +9,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// 测试不支持的算法
+// Test for unsupported algorithms
 func TestTokenManager_UnsupportedAlgorithm(t *testing.T) {
 	config := newTestConfig()
-	config.Algorithm = "ES256" // 不支持的算法
+	config.Algorithm = "ES256" // Unsupported algorithm
 
 	log := logger.NewCtxZapLogger("yogan")
 	tokenStore := NewMemoryTokenStore(0, log)
@@ -23,7 +23,7 @@ func TestTokenManager_UnsupportedAlgorithm(t *testing.T) {
 	assert.Nil(t, manager)
 }
 
-// 测试带 NotBefore 的 Token
+// Test token with NotBefore attribute
 func TestTokenManager_TokenWithNotBefore(t *testing.T) {
 	config := newTestConfig()
 	config.Security.EnableNotBefore = true
@@ -33,14 +33,14 @@ func TestTokenManager_TokenWithNotBefore(t *testing.T) {
 	token, err := manager.GenerateAccessToken(ctx, "user123", nil)
 	require.NoError(t, err)
 
-	// Token 应该立即有效（nbf = now）
+	// The token should be immediately valid (nbf = now)
 	claims, err := manager.VerifyToken(ctx, token)
 	assert.NoError(t, err)
 	assert.NotNil(t, claims)
 	assert.False(t, claims.NotBefore.IsZero())
 }
 
-// 测试不带 JTI 的 Token
+// Test token without JTI
 func TestTokenManager_TokenWithoutJTI(t *testing.T) {
 	config := newTestConfig()
 	config.Security.EnableJTI = false
@@ -55,7 +55,7 @@ func TestTokenManager_TokenWithoutJTI(t *testing.T) {
 	assert.Empty(t, claims.JTI)
 }
 
-// 测试不带 Audience 的 Token
+// Test without an Audience in the Token
 func TestTokenManager_TokenWithoutAudience(t *testing.T) {
 	config := newTestConfig()
 	config.AccessToken.Audience = ""
@@ -70,7 +70,7 @@ func TestTokenManager_TokenWithoutAudience(t *testing.T) {
 	assert.Empty(t, claims.Audience)
 }
 
-// 测试所有自定义 Claims
+// Test all custom claims
 func TestTokenManager_AllCustomClaims(t *testing.T) {
 	config := newTestConfig()
 	manager := newTestTokenManager(t, config)
@@ -94,7 +94,7 @@ func TestTokenManager_AllCustomClaims(t *testing.T) {
 	assert.Equal(t, "tenant-001", claims.TenantID)
 }
 
-// 测试 RefreshToken 完整流程
+// Test the complete process of RefreshToken
 func TestTokenManager_RefreshTokenFlow(t *testing.T) {
 	config := newTestConfig()
 	config.RefreshToken.Enabled = true
@@ -109,19 +109,19 @@ func TestTokenManager_RefreshTokenFlow(t *testing.T) {
 		"tenant_id": "tenant-001",
 	}
 
-	// 生成 Refresh Token
+	// Generate Refresh Token
 	refreshToken, err := manager.GenerateRefreshToken(ctx, subject)
 	require.NoError(t, err)
 
-	// 验证 Refresh Token
+	// Validate Refresh Token
 	refreshClaims, err := manager.VerifyToken(ctx, refreshToken)
 	assert.NoError(t, err)
 	assert.Equal(t, "refresh", refreshClaims.TokenType)
 	assert.Equal(t, subject, refreshClaims.Subject)
 
-	// 使用 Refresh Token 获取 Access Token
-	// 注意：实际应用中，refreshToken 会存储自定义 Claims
-	// 这里为了测试，直接生成带自定义 Claims 的 Access Token
+	// Use Refresh Token to obtain Access Token
+	// Note: In actual applications, refreshToken will store custom claims
+	// Here an Access Token with custom Claims is generated directly for testing purposes
 	accessToken, err := manager.GenerateAccessToken(ctx, subject, customClaims)
 	require.NoError(t, err)
 
@@ -131,7 +131,7 @@ func TestTokenManager_RefreshTokenFlow(t *testing.T) {
 	assert.Equal(t, int64(123), accessClaims.UserID)
 }
 
-// 测试黑名单未启用时的验证
+// Test validation when blacklist is not enabled
 func TestTokenManager_VerifyToken_BlacklistDisabled(t *testing.T) {
 	config := newTestConfig()
 	config.Blacklist.Enabled = false
@@ -141,13 +141,13 @@ func TestTokenManager_VerifyToken_BlacklistDisabled(t *testing.T) {
 	token, err := manager.GenerateAccessToken(ctx, "user123", nil)
 	require.NoError(t, err)
 
-	// 验证 Token（黑名单未启用，不检查）
+	// Verify Token (blacklist not enabled, no check)
 	claims, err := manager.VerifyToken(ctx, token)
 	assert.NoError(t, err)
 	assert.NotNil(t, claims)
 }
 
-// 测试 TokenStore 为 nil 时的验证
+// Test validation when TokenStore is nil
 func TestTokenManager_VerifyToken_NilTokenStore(t *testing.T) {
 	config := newTestConfig()
 	config.Blacklist.Enabled = true
@@ -160,13 +160,13 @@ func TestTokenManager_VerifyToken_NilTokenStore(t *testing.T) {
 	token, err := manager.GenerateAccessToken(ctx, "user123", nil)
 	require.NoError(t, err)
 
-	// 验证 Token（TokenStore 为 nil，跳过黑名单检查）
+	// Verify Token (TokenStore is nil, skip blacklist check)
 	claims, err := manager.VerifyToken(ctx, token)
 	assert.NoError(t, err)
 	assert.NotNil(t, claims)
 }
 
-// 测试格式错误的 Token
+// Test format incorrect Token
 func TestTokenManager_VerifyToken_MalformedToken(t *testing.T) {
 	config := newTestConfig()
 	manager := newTestTokenManager(t, config)
@@ -191,29 +191,29 @@ func TestTokenManager_VerifyToken_MalformedToken(t *testing.T) {
 	}
 }
 
-// 测试 Claims 解析错误
+// Test Claim parsing errors
 func TestTokenManager_ParseCustomClaims_InvalidTypes(t *testing.T) {
 	config := newTestConfig()
 	manager := newTestTokenManager(t, config)
 
 	ctx := context.Background()
 
-	// 生成一个正常的 Token，然后验证
+	// Generate a normal token, then verify
 	token, err := manager.GenerateAccessToken(ctx, "user123", map[string]interface{}{
-		"user_id":  "not_a_number", // 错误的类型
-		"roles":    "not_an_array",  // 错误的类型
+		"user_id":  "not_a_number", // Incorrect type
+		"roles":    "not_an_array",  // Incorrect type
 	})
 	require.NoError(t, err)
 
-	// 验证 Token（应该能解析，但某些字段会被忽略）
+	// Validate the Token (should be parseable, but some fields will be ignored)
 	claims, err := manager.VerifyToken(ctx, token)
 	assert.NoError(t, err)
 	assert.NotNil(t, claims)
-	assert.Equal(t, int64(0), claims.UserID) // 解析失败，使用零值
-	assert.Nil(t, claims.Roles)               // 解析失败，使用 nil
+	assert.Equal(t, int64(0), claims.UserID) // Parsing failed, use zero value
+	assert.Nil(t, claims.Roles)               // parse failed, use nil
 }
 
-// 测试 TruncateToken 函数
+// Test TruncateToken function
 func TestTruncateToken(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -233,7 +233,7 @@ func TestTruncateToken(t *testing.T) {
 	}
 }
 
-// 测试 RefreshToken 与 Access Token 的区别
+// Test the difference between RefreshToken and Access Token
 func TestTokenManager_RefreshToken_vs_AccessToken(t *testing.T) {
 	config := newTestConfig()
 	config.RefreshToken.Enabled = true
@@ -241,14 +241,14 @@ func TestTokenManager_RefreshToken_vs_AccessToken(t *testing.T) {
 
 	ctx := context.Background()
 
-	// 生成两种 Token
+	// Generate two types of Tokens
 	accessToken, err := manager.GenerateAccessToken(ctx, "user123", nil)
 	require.NoError(t, err)
 
 	refreshToken, err := manager.GenerateRefreshToken(ctx, "user123")
 	require.NoError(t, err)
 
-	// 验证两种 Token
+	// Validate two tokens
 	accessClaims, err := manager.VerifyToken(ctx, accessToken)
 	assert.NoError(t, err)
 	assert.Equal(t, "access", accessClaims.TokenType)
@@ -257,7 +257,7 @@ func TestTokenManager_RefreshToken_vs_AccessToken(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "refresh", refreshClaims.TokenType)
 
-	// Refresh Token 的 TTL 应该更长
+	// The TTL for the Refresh Token should be longer
 	assert.True(t, refreshClaims.ExpiresAt.After(accessClaims.ExpiresAt))
 }
 

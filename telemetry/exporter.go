@@ -12,20 +12,20 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-// createExporter 创建 Exporter（带熔断器包装）
+// createExporter creates an Exporter (wrapped with circuit breaker)
 func (m *Manager) createExporter(ctx context.Context) (trace.SpanExporter, error) {
-	// 创建主导出器
+	// Create main exporter
 	primaryExporter, err := m.createRawExporter(ctx, m.config.Exporter.Type)
 	if err != nil {
 		return nil, fmt.Errorf("create primary exporter failed: %w", err)
 	}
 
-	// 如果熔断器未启用，直接返回主导出器
+	// If the circuit breaker is not enabled, return the main outcome directly
 	if !m.config.CircuitBreaker.Enabled {
 		return primaryExporter, nil
 	}
 
-	// 创建降级导出器
+	// Create fallback exporter
 	fallbackExporter, err := m.createRawExporter(ctx, m.config.CircuitBreaker.FallbackExporterType)
 	if err != nil {
 		m.logger.WarnCtx(ctx, "Failed to create fallback exporter, using noop",
@@ -35,7 +35,7 @@ func (m *Manager) createExporter(ctx context.Context) (trace.SpanExporter, error
 		fallbackExporter = &noopExporter{}
 	}
 
-	// 包装熔断器
+	// Wrap fuse functionality
 	circuitBreaker := NewCircuitBreaker(
 		m.config.CircuitBreaker,
 		m.logger.GetZapLogger(),
@@ -55,7 +55,7 @@ func (m *Manager) createExporter(ctx context.Context) (trace.SpanExporter, error
 	return circuitBreaker, nil
 }
 
-// createRawExporter 创建原始 Exporter（不包装熔断器）
+// createRawExporter Creates the raw Exporter (without circuit breaker wrapping)
 func (m *Manager) createRawExporter(ctx context.Context, exporterType string) (trace.SpanExporter, error) {
 	switch exporterType {
 	case "otlp":
@@ -69,38 +69,38 @@ func (m *Manager) createRawExporter(ctx context.Context, exporterType string) (t
 	}
 }
 
-// createOTLPExporter 创建 OTLP Exporter
+// Create OTLP exporter
 func (m *Manager) createOTLPExporter(ctx context.Context) (trace.SpanExporter, error) {
 	opts := []otlptracegrpc.Option{
 		otlptracegrpc.WithEndpoint(m.config.Exporter.Endpoint),
 		otlptracegrpc.WithTimeout(m.config.Exporter.Timeout),
 	}
 
-	// 如果使用不安全连接
+	// If using an insecure connection
 	if m.config.Exporter.Insecure {
 		opts = append(opts, otlptracegrpc.WithTLSCredentials(insecure.NewCredentials()))
 	}
 
-	// 🎯 添加自定义 Headers（用于 OpenObserve 认证等）
+	// addTarget custom Headers (for OpenObserve authentication etc.)
 	if len(m.config.Exporter.Headers) > 0 {
 		opts = append(opts, otlptracegrpc.WithHeaders(m.config.Exporter.Headers))
 	}
 
-	// 创建 gRPC 客户端
+	// Create gRPC client
 	client := otlptracegrpc.NewClient(opts...)
 
-	// 创建 OTLP Exporter
+	// Create OTLP Exporter
 	return otlptrace.New(ctx, client)
 }
 
-// createStdoutExporter 创建 Stdout Exporter（调试用）
+// CreateStdoutExporter Create Stdout Exporter (for debugging)
 func (m *Manager) createStdoutExporter() (trace.SpanExporter, error) {
 	return stdouttrace.New(
-		stdouttrace.WithPrettyPrint(), // 格式化输出
+		stdouttrace.WithPrettyPrint(), // format output
 	)
 }
 
-// noopExporter 空导出器（什么都不做）
+// noopExporter dummy exporter (does nothing)
 type noopExporter struct{}
 
 func (n *noopExporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) error {

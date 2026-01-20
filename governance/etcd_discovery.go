@@ -12,7 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// EtcdDiscovery etcd 服务发现实现
+// EtcdDiscovery etcd service discovery implementation
 type EtcdDiscovery struct {
 	client      *etcdClient
 	serviceName string
@@ -24,7 +24,7 @@ type EtcdDiscovery struct {
 	watchCh     chan []*ServiceInstance
 }
 
-// NewEtcdDiscovery 创建 etcd 服务发现器
+// Create etcd service discoverer NewEtcdDiscovery
 func NewEtcdDiscovery(client *etcdClient, log *logger.CtxZapLogger) *EtcdDiscovery {
 	if log == nil {
 		log = logger.GetLogger("yogan")
@@ -42,12 +42,12 @@ func NewEtcdDiscovery(client *etcdClient, log *logger.CtxZapLogger) *EtcdDiscove
 	}
 }
 
-// Discover 发现服务实例
+// Discover service instances
 func (d *EtcdDiscovery) Discover(ctx context.Context, serviceName string) ([]*ServiceInstance, error) {
 	d.serviceName = serviceName
 	prefix := fmt.Sprintf("/services/%s/", serviceName)
 
-	// 查询当前所有实例
+	// Query all current instances
 	resp, err := d.client.GetClient().Get(ctx, prefix, clientv3.WithPrefix())
 	if err != nil {
 		return nil, fmt.Errorf("查询服务失败: %w", err)
@@ -77,20 +77,20 @@ func (d *EtcdDiscovery) Discover(ctx context.Context, serviceName string) ([]*Se
 	return instances, nil
 }
 
-// Watch 监听服务变更
+// Watch for service changes
 func (d *EtcdDiscovery) Watch(ctx context.Context, serviceName string) (<-chan []*ServiceInstance, error) {
-	// 先执行一次发现
+	// Perform discovery first
 	if _, err := d.Discover(ctx, serviceName); err != nil {
 		return nil, err
 	}
 
-	// 启动后台监听
+	// Start background listening
 	go d.watchChanges(serviceName)
 
 	return d.watchCh, nil
 }
 
-// watchChanges 监听服务变更
+// watchChanges listen for service changes
 func (d *EtcdDiscovery) watchChanges(serviceName string) {
 	prefix := fmt.Sprintf("/services/%s/", serviceName)
 
@@ -123,9 +123,9 @@ func (d *EtcdDiscovery) watchChanges(serviceName string) {
 				continue
 			}
 
-			// 处理变更事件
+			// Handle change events
 			if d.handleWatchEvents(watchResp.Events) {
-				// 发送更新后的实例列表
+				// Send updated instance list
 				d.mu.RLock()
 				instances := d.getInstanceList()
 				d.mu.RUnlock()
@@ -140,7 +140,7 @@ func (d *EtcdDiscovery) watchChanges(serviceName string) {
 	}
 }
 
-// handleWatchEvents 处理 Watch 事件
+// handleWatchEvents handles Watch events
 func (d *EtcdDiscovery) handleWatchEvents(events []*clientv3.Event) bool {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -153,7 +153,7 @@ func (d *EtcdDiscovery) handleWatchEvents(events []*clientv3.Event) bool {
 
 		switch event.Type {
 		case clientv3.EventTypePut:
-			// 服务上线或更新
+			// service launch or update
 			instance, err := d.parseServiceInstance(key, value)
 			if err != nil {
 				d.logger.WarnCtx(d.ctx, "解析服务实例失败",
@@ -173,7 +173,7 @@ func (d *EtcdDiscovery) handleWatchEvents(events []*clientv3.Event) bool {
 			changed = true
 
 		case clientv3.EventTypeDelete:
-			// 服务下线
+			// service offline
 			instanceID := extractInstanceIDFromKey(key)
 			if _, exists := d.instances[instanceID]; exists {
 				d.logger.WarnCtx(d.ctx, "🔴 服务实例下线",
@@ -188,16 +188,16 @@ func (d *EtcdDiscovery) handleWatchEvents(events []*clientv3.Event) bool {
 	return changed
 }
 
-// parseServiceInstance 解析服务实例信息
+// parseServiceInstance Parse service instance information
 func (d *EtcdDiscovery) parseServiceInstance(key, value string) (*ServiceInstance, error) {
-	// 从 key 提取 instanceID
-	// Key 格式: /services/{serviceName}/{instanceID}
+	// Extract instanceID from key
+	// Key format: /services/{ serviceName }/{ instanceID }
 	instanceID := extractInstanceIDFromKey(key)
 
-	// 尝试解析 JSON 格式的 ServiceInfo
+	// Try to parse the ServiceInfo in JSON format
 	var info ServiceInfo
 	if err := json.Unmarshal([]byte(value), &info); err != nil {
-		// 降级：如果不是 JSON，假设 value 就是地址
+		// Degradation: If not JSON, assume value is the address
 		return &ServiceInstance{
 			ID:       instanceID,
 			Service:  d.serviceName,
@@ -209,25 +209,25 @@ func (d *EtcdDiscovery) parseServiceInstance(key, value string) (*ServiceInstanc
 		}, nil
 	}
 
-	// 解析成功，转换为 ServiceInstance
+	// Parsing successful, convert to ServiceInstance
 	return &ServiceInstance{
 		ID:       instanceID,
 		Service:  info.ServiceName,
 		Address:  info.Address,
 		Port:     info.Port,
 		Metadata: info.Metadata,
-		Weight:   100, // 默认权重
+		Weight:   100, // Default weight
 		Healthy:  true,
 	}, nil
 }
 
-// Stop 停止服务发现
+// Stop Service discovery
 func (d *EtcdDiscovery) Stop() {
 	d.cancel()
 	d.logger.DebugCtx(context.Background(), "✅ 服务发现已停止", zap.String("service", d.serviceName))
 }
 
-// getInstanceList 获取实例列表（需要持有锁）
+// get instance list (lock required)
 func (d *EtcdDiscovery) getInstanceList() []*ServiceInstance {
 	instances := make([]*ServiceInstance, 0, len(d.instances))
 	for _, inst := range d.instances {
@@ -236,8 +236,8 @@ func (d *EtcdDiscovery) getInstanceList() []*ServiceInstance {
 	return instances
 }
 
-// extractInstanceIDFromKey 从 key 提取实例ID
-// Key 格式: /services/{serviceName}/{instanceID}
+// extract instance ID from key
+// Key format: /services/{ serviceName }/{ instanceID }
 func extractInstanceIDFromKey(key string) string {
 	parts := strings.Split(key, "/")
 	if len(parts) > 0 {
@@ -246,8 +246,8 @@ func extractInstanceIDFromKey(key string) string {
 	return key
 }
 
-// parseAddress 从地址字符串解析 IP
-// 格式: "127.0.0.1:9002" -> "127.0.0.1"
+// parseAddress parses the IP from the address string
+// Format: "127.0.0.1:9002" -> "127.0.0.1"
 func parseAddress(addr string) string {
 	if idx := strings.LastIndex(addr, ":"); idx > 0 {
 		return addr[:idx]
@@ -255,8 +255,8 @@ func parseAddress(addr string) string {
 	return addr
 }
 
-// parsePort 从地址字符串解析端口
-// 格式: "127.0.0.1:9002" -> 9002
+// parsePort parses the port from the address string
+// Format: "127.0.0.1:9002" -> 9002
 func parsePort(addr string) int {
 	if idx := strings.LastIndex(addr, ":"); idx > 0 && idx < len(addr)-1 {
 		portStr := addr[idx+1:]

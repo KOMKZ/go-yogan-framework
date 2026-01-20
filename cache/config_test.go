@@ -114,7 +114,7 @@ func TestConfig_ValidateStoreWithMissingType(t *testing.T) {
 	cfg := Config{
 		Enabled: true,
 		Stores: map[string]StoreConfig{
-			"empty": {}, // 无 type
+			"empty": {}, // No type
 		},
 	}
 

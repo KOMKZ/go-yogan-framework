@@ -11,21 +11,21 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// GRPCMetrics gRPC 层指标收集器
+// GRPCMetrics gRPC layer metric collector
 type GRPCMetrics struct {
-	requestsTotal       metric.Int64Counter     // 请求总数
-	requestDuration     metric.Float64Histogram // 请求耗时
-	requestsInFlight    metric.Int64UpDownCounter // 正在处理的请求数
-	requestMessageSize  metric.Int64Histogram   // 请求消息大小（可选）
-	responseMessageSize metric.Int64Histogram   // 响应消息大小（可选）
-	streamsActive       metric.Int64UpDownCounter // 活跃流数量（可选）
-	streamMessagesSent  metric.Int64Counter     // 流发送消息数（可选）
-	streamMessagesRecv  metric.Int64Counter     // 流接收消息数（可选）
+	requestsTotal       metric.Int64Counter     // Total request count
+	requestDuration     metric.Float64Histogram // request duration
+	requestsInFlight    metric.Int64UpDownCounter // The number of requests being processed
+	requestMessageSize  metric.Int64Histogram   // Request message size (optional)
+	responseMessageSize metric.Int64Histogram   // Response message size (optional)
+	streamsActive       metric.Int64UpDownCounter // Active stream count (optional)
+	streamMessagesSent  metric.Int64Counter     // Optional stream message send count
+	streamMessagesRecv  metric.Int64Counter     // Stream message reception count (optional)
 	recordMessageSize   bool
 	recordStreamMetrics bool
 }
 
-// NewGRPCMetrics 创建 gRPC 指标收集器
+// NewGRPCMetrics creates a gRPC metric collector
 func NewGRPCMetrics(recordMessageSize, recordStreamMetrics bool) (*GRPCMetrics, error) {
 	meter := otel.Meter("grpc-server")
 
@@ -64,7 +64,7 @@ func NewGRPCMetrics(recordMessageSize, recordStreamMetrics bool) (*GRPCMetrics, 
 		recordStreamMetrics: recordStreamMetrics,
 	}
 
-	// 可选：记录消息大小
+	// Optional: Log message size
 	if recordMessageSize {
 		requestMessageSize, err := meter.Int64Histogram(
 			"grpc_request_message_size_bytes",
@@ -87,7 +87,7 @@ func NewGRPCMetrics(recordMessageSize, recordStreamMetrics bool) (*GRPCMetrics, 
 		m.responseMessageSize = responseMessageSize
 	}
 
-	// 可选：记录流式传输指标
+	// Optional: Log streaming metrics
 	if recordStreamMetrics {
 		streamsActive, err := meter.Int64UpDownCounter(
 			"grpc_streams_active",
@@ -123,12 +123,12 @@ func NewGRPCMetrics(recordMessageSize, recordStreamMetrics bool) (*GRPCMetrics, 
 	return m, nil
 }
 
-// StatsHandler 返回 gRPC stats.Handler（用于 Server）
+// StatsHandler returns a gRPC stats.Handler (for Server)
 func (m *GRPCMetrics) StatsHandler() stats.Handler {
 	return &metricsStatsHandler{metrics: m}
 }
 
-// metricsStatsHandler gRPC stats.Handler 实现（仅用于 Metrics）
+// metricsStatsHandler gRPC stats.Handler implementation (for Metrics only)
 type metricsStatsHandler struct {
 	metrics *GRPCMetrics
 }
@@ -143,7 +143,7 @@ type metricsData struct {
 }
 
 func (h *metricsStatsHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) context.Context {
-	// 记录 RPC 元数据
+	// Log RPC metadata
 	data := &metricsData{
 		startTime: time.Now(),
 		service:   info.FullMethodName,
@@ -160,47 +160,47 @@ func (h *metricsStatsHandler) HandleRPC(ctx context.Context, s stats.RPCStats) {
 
 	switch s := s.(type) {
 	case *stats.Begin:
-		// RPC 开始
+		// RPC start
 		h.metrics.requestsInFlight.Add(ctx, 1)
 		
-		// 流式 RPC 开始
+		// StreamRPC start
 		if data.isStream && h.metrics.recordStreamMetrics && h.metrics.streamsActive != nil {
 			h.metrics.streamsActive.Add(ctx, 1)
 		}
 
 	case *stats.End:
-		// RPC 结束
+		// RPC end
 		h.metrics.requestsInFlight.Add(ctx, -1)
 
-		// 计算耗时
+		// calculate duration
 		duration := time.Since(data.startTime).Seconds()
 
-		// 获取状态码
+		// Get status code
 		statusCode := "OK"
 		if s.Error != nil {
 			st, _ := status.FromError(s.Error)
 			statusCode = st.Code().String()
 		}
 
-		// 构建标签
+		// Build label
 		attrs := []attribute.KeyValue{
 			attribute.String("method", data.method),
 			attribute.String("status_code", statusCode),
 		}
 
-		// 记录请求总数
+		// Record the total number of requests
 		h.metrics.requestsTotal.Add(ctx, 1, metric.WithAttributes(attrs...))
 
-		// 记录请求耗时
+		// Log request duration
 		h.metrics.requestDuration.Record(ctx, duration, metric.WithAttributes(attrs...))
 
-		// 流式 RPC 结束
+		// Streaming RPC ends
 		if data.isStream && h.metrics.recordStreamMetrics && h.metrics.streamsActive != nil {
 			h.metrics.streamsActive.Add(ctx, -1)
 		}
 
 	case *stats.InPayload:
-		// 接收到请求消息
+		// Received request message
 		if h.metrics.recordMessageSize && h.metrics.requestMessageSize != nil {
 			h.metrics.requestMessageSize.Record(ctx, int64(s.Length),
 				metric.WithAttributes(
@@ -209,7 +209,7 @@ func (h *metricsStatsHandler) HandleRPC(ctx context.Context, s stats.RPCStats) {
 			)
 		}
 
-		// 流式接收消息计数
+		// Stream message reception count
 		if data.isStream && h.metrics.recordStreamMetrics && h.metrics.streamMessagesRecv != nil {
 			h.metrics.streamMessagesRecv.Add(ctx, 1,
 				metric.WithAttributes(
@@ -219,7 +219,7 @@ func (h *metricsStatsHandler) HandleRPC(ctx context.Context, s stats.RPCStats) {
 		}
 
 	case *stats.OutPayload:
-		// 发送响应消息
+		// Send response message
 		if h.metrics.recordMessageSize && h.metrics.responseMessageSize != nil {
 			h.metrics.responseMessageSize.Record(ctx, int64(s.Length),
 				metric.WithAttributes(
@@ -228,7 +228,7 @@ func (h *metricsStatsHandler) HandleRPC(ctx context.Context, s stats.RPCStats) {
 			)
 		}
 
-		// 流式发送消息计数
+		// Streamed message count
 		if data.isStream && h.metrics.recordStreamMetrics && h.metrics.streamMessagesSent != nil {
 			h.metrics.streamMessagesSent.Add(ctx, 1,
 				metric.WithAttributes(
@@ -244,6 +244,6 @@ func (h *metricsStatsHandler) TagConn(ctx context.Context, info *stats.ConnTagIn
 }
 
 func (h *metricsStatsHandler) HandleConn(ctx context.Context, s stats.ConnStats) {
-	// 连接级别的统计（暂不实现）
+	// Connection level statistics (not yet implemented)
 }
 

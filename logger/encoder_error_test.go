@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// TestPrettyConsoleEncoder_ErrorField 测试 error 字段显示
+// TestPrettyConsoleEncoder_ErrorField test error field display
 func TestPrettyConsoleEncoder_ErrorField(t *testing.T) {
 	encoderCfg := zapcore.EncoderConfig{
 		TimeKey:      "time",
@@ -30,7 +30,7 @@ func TestPrettyConsoleEncoder_ErrorField(t *testing.T) {
 		Caller:  zapcore.NewEntryCaller(0, "db/connection.go", 45, true),
 	}
 
-	// 测试 zap.Error 字段
+	// Test the zap.Error field
 	testErr := errors.New("连接超时")
 	fields := []zapcore.Field{
 		zap.String("module", "database"),
@@ -44,12 +44,12 @@ func TestPrettyConsoleEncoder_ErrorField(t *testing.T) {
 	output := buf.String()
 	t.Logf("输出:\n%s", output)
 
-	// 验证 error 字段正确显示
+	// Verify that the error field is displayed correctly
 	assert.Contains(t, output, "[🔴ERRO]")
 	assert.Contains(t, output, "[database]")
 	assert.Contains(t, output, "数据库错误")
-	assert.Contains(t, output, `"error":"连接超时"`) // ✅ 关键验证
+	assert.Contains(t, output, `"error":"连接超时"`) // ✅ Key validation
 	assert.Contains(t, output, `"host":"localhost"`)
-	assert.NotContains(t, output, `"error":null`) // ❌ 不应该是 null
+	assert.NotContains(t, output, `"error":null`) // Should not be null
 }
 

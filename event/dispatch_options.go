@@ -1,33 +1,33 @@
 package event
 
-// dispatchOptions 分发选项
+// dispatchOptions dispatch options
 type dispatchOptions struct {
 	driver         string // "memory" | "kafka"
-	driverExplicit bool   // 驱动器是否由代码明确指定（优先级最高）
-	topic          string // Kafka topic（仅 Kafka 模式）
-	key            string // Kafka 消息键
-	async          bool   // 是否异步分发
+	driverExplicit bool   // Is the drive explicitly specified by the code (highest priority)
+	topic          string // Kafka topic (only for Kafka mode)
+	key            string // Kafka message key
+	async          bool   // Is asynchronous distribution
 }
 
-// DispatchOption 分发选项函数
+// DispatchOption function for distribution options
 type DispatchOption func(*dispatchOptions)
 
-// applyDefaults 应用默认值
+// apply defaults
 func (o *dispatchOptions) applyDefaults() {
 	if o.driver == "" {
 		o.driver = DriverMemory
 	}
 }
 
-// 驱动器常量
+// Driver constants
 const (
 	DriverMemory = "memory"
 	DriverKafka  = "kafka"
 )
 
-// WithKafka 使用 Kafka 驱动器发送事件
-// topic: Kafka topic 名称
-// 注意：代码指定的选项优先级最高，会覆盖配置路由
+// Using Kafka driver to send events
+// topic: Kafka topic name
+// Note: The options specified in the code have the highest priority and will override route configuration
 func WithKafka(topic string) DispatchOption {
 	return func(o *dispatchOptions) {
 		o.driver = DriverKafka
@@ -36,8 +36,8 @@ func WithKafka(topic string) DispatchOption {
 	}
 }
 
-// WithMemory 强制使用内存驱动器
-// 注意：代码指定的选项优先级最高，会覆盖配置路由
+// Force the use of memory driver
+// Note: The options specified in the code have the highest priority and will override route configuration
 func WithMemory() DispatchOption {
 	return func(o *dispatchOptions) {
 		o.driver = DriverMemory
@@ -45,16 +45,16 @@ func WithMemory() DispatchOption {
 	}
 }
 
-// WithKafkaKey 指定 Kafka 消息键
-// key: 消息键，用于分区路由
+// WithKafkaKey specifies the Kafka message key
+// key: message key for partition routing
 func WithKafkaKey(key string) DispatchOption {
 	return func(o *dispatchOptions) {
 		o.key = key
 	}
 }
 
-// WithDispatchAsync 异步分发事件
-// 事件将提交到协程池异步处理，立即返回
+// WithDispatchAsync Asynchronously dispatch event
+// The event will be submitted to the coroutine pool for asynchronous processing and immediately returned
 func WithDispatchAsync() DispatchOption {
 	return func(o *dispatchOptions) {
 		o.async = true

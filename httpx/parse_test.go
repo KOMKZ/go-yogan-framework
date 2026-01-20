@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestParse_QueryParams 测试 Query 参数解析
+// TestParse_QueryParams test query parameter parsing
 func TestParse_QueryParams(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -31,7 +31,7 @@ func TestParse_QueryParams(t *testing.T) {
 	assert.Equal(t, 30, req.Age)
 }
 
-// TestParse_JSONBody 测试 JSON Body 解析
+// TestParse_JSONBody test JSON body parsing
 func TestParse_JSONBody(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -55,7 +55,7 @@ func TestParse_JSONBody(t *testing.T) {
 	assert.Equal(t, "john@example.com", req.Email)
 }
 
-// TestParse_URIParams 测试 URI 参数解析
+// TestParse_URIParams test URI parameter parsing
 func TestParse_URIParams(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -80,7 +80,7 @@ func TestParse_URIParams(t *testing.T) {
 	assert.Equal(t, 123, req.ID)
 }
 
-// TestParse_CombinedParams 测试混合参数解析
+// TestParse_CombinedParams test combined parameter parsing
 func TestParse_CombinedParams(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -112,7 +112,7 @@ func TestParse_CombinedParams(t *testing.T) {
 	assert.Equal(t, "john", req.Name)
 }
 
-// TestParse_InvalidJSON 测试无效 JSON Body
+// TestParse_InvalidJSON test invalid JSON body
 func TestParse_InvalidJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -133,7 +133,7 @@ func TestParse_InvalidJSON(t *testing.T) {
 	assert.Error(t, err)
 }
 
-// TestParse_EmptyBody 测试空 Body
+// TestParse_EmptyBody test empty Body
 func TestParse_EmptyBody(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

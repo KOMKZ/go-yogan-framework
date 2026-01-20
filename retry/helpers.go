@@ -5,12 +5,12 @@ import (
 )
 
 // ============================================================
-// 预设配置
+// Default configuration
 // ============================================================
 
-// Presets 预设配置
+// Preset configurations
 var (
-	// GRPCDefaults gRPC 默认重试配置
+	// GRPCDefaults gRPC default retry configuration
 	GRPCDefaults = []Option{
 		MaxAttempts(3),
 		Condition(RetryOnGRPCCodes(
@@ -21,14 +21,14 @@ var (
 		Backoff(ExponentialBackoff(1 * 1000000000)), // 1s (time.Second)
 	}
 	
-	// HTTPDefaults HTTP 默认重试配置
+	// HTTP default retry configuration
 	HTTPDefaults = []Option{
 		MaxAttempts(3),
 		Condition(RetryOnHTTPStatus(429, 502, 503, 504)),
 		Backoff(ExponentialBackoff(1 * 1000000000)), // 1s
 	}
 	
-	// DatabaseDefaults 数据库默认重试配置
+	// DatabaseDefaults database default retry configuration
 	DatabaseDefaults = []Option{
 		MaxAttempts(3),
 		Condition(RetryOnTemporaryError()),

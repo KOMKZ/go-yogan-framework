@@ -6,36 +6,36 @@ import (
 	"time"
 )
 
-// MetricsSnapshot 指标快照
+// MetricsSnapshot metric snapshot
 type MetricsSnapshot struct {
 	Resource       string
 	Algorithm      string
 	TotalRequests  int64
 	Allowed        int64
 	Rejected       int64
-	CurrentValue   int64  // 当前值（并发数/令牌数/请求数）
-	Limit          int64  // 限制值
-	Remaining      int64  // 剩余配额
-	RejectRate     float64 // 拒绝率
+	CurrentValue   int64  // Current value (concurrency count/token count/request count)
+	Limit          int64  // Limit value
+	Remaining      int64  // remaining quota
+	RejectRate     float64 // rejection rate
 	LastResetAt    time.Time
 }
 
-// MetricsCollector 指标采集器接口
+// MetricsCollector metric collector interface
 type MetricsCollector interface {
-	// RecordAllowed 记录允许的请求
+	// RecordAllowed records allowed requests
 	RecordAllowed(remaining int64)
 
-	// RecordRejected 记录被拒绝的请求
+	// RecordRejected Request for record rejected
 	RecordRejected(reason string)
 
-	// GetSnapshot 获取指标快照
+	// GetSnapshot Retrieve metric snapshot
 	GetSnapshot() *MetricsSnapshot
 
-	// Reset 重置指标
+	// Reset metrics
 	Reset()
 }
 
-// metricsCollector 指标采集器实现
+// metricsCollector metric collector implementation
 type metricsCollector struct {
 	resource      string
 	algorithm     string
@@ -46,7 +46,7 @@ type metricsCollector struct {
 	mu            sync.RWMutex
 }
 
-// NewMetricsCollector 创建指标采集器
+// Create metric collector
 func NewMetricsCollector(resource string, algorithm string) MetricsCollector {
 	return &metricsCollector{
 		resource:    resource,
@@ -55,19 +55,19 @@ func NewMetricsCollector(resource string, algorithm string) MetricsCollector {
 	}
 }
 
-// RecordAllowed 记录允许的请求
+// RecordAllowed records allowed requests
 func (m *metricsCollector) RecordAllowed(remaining int64) {
 	atomic.AddInt64(&m.totalRequests, 1)
 	atomic.AddInt64(&m.allowed, 1)
 }
 
-// RecordRejected 记录被拒绝的请求
+// RecordRejected Request rejected
 func (m *metricsCollector) RecordRejected(reason string) {
 	atomic.AddInt64(&m.totalRequests, 1)
 	atomic.AddInt64(&m.rejected, 1)
 }
 
-// GetSnapshot 获取指标快照
+// GetSnapshot 获取 metric snapshot
 func (m *metricsCollector) GetSnapshot() *MetricsSnapshot {
 	total := atomic.LoadInt64(&m.totalRequests)
 	allowed := atomic.LoadInt64(&m.allowed)
@@ -93,7 +93,7 @@ func (m *metricsCollector) GetSnapshot() *MetricsSnapshot {
 	}
 }
 
-// Reset 重置指标
+// Reset metrics
 func (m *metricsCollector) Reset() {
 	atomic.StoreInt64(&m.totalRequests, 0)
 	atomic.StoreInt64(&m.allowed, 0)

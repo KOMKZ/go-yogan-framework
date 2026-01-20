@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-// Request HTTP 请求封装
+// HTTP request encapsulation
 type Request struct {
 	Method  string
 	URL     string
@@ -17,11 +17,11 @@ type Request struct {
 	Query   url.Values
 	Body    io.Reader
 	
-	// 内部字段
-	bodyBytes []byte // 缓存 Body（用于重试）
+	// Internal field
+	bodyBytes []byte // Cache Body (for retry)
 }
 
-// NewRequest 创建新的 Request
+// Create new Request
 func NewRequest(method, urlStr string) *Request {
 	return &Request{
 		Method:  method,
@@ -31,42 +31,42 @@ func NewRequest(method, urlStr string) *Request {
 	}
 }
 
-// NewGetRequest 创建 GET Request
+// Create GET Request
 func NewGetRequest(urlStr string) *Request {
 	return NewRequest(http.MethodGet, urlStr)
 }
 
-// NewPostRequest 创建 POST Request
+// Create POST Request
 func NewPostRequest(urlStr string) *Request {
 	return NewRequest(http.MethodPost, urlStr)
 }
 
-// NewPutRequest 创建 PUT Request
+// Create PUT Request
 func NewPutRequest(urlStr string) *Request {
 	return NewRequest(http.MethodPut, urlStr)
 }
 
-// NewDeleteRequest 创建 DELETE Request
+// Create DELETE Request
 func NewDeleteRequest(urlStr string) *Request {
 	return NewRequest(http.MethodDelete, urlStr)
 }
 
-// WithHeader 设置 Header
+// Set Header
 func (r *Request) WithHeader(key, value string) *Request {
 	r.Headers[key] = value
 	return r
 }
 
-// WithQuery 设置 Query 参数
+// WithQuery sets the Query parameters
 func (r *Request) WithQuery(key, value string) *Request {
 	r.Query.Set(key, value)
 	return r
 }
 
-// WithBody 设置 Body
+// WithBody sets the Body
 func (r *Request) WithBody(body io.Reader) *Request {
 	r.Body = body
-	// 尝试读取并缓存 Body（用于重试）
+	// Try to read and cache Body (for retry)
 	if body != nil {
 		if data, err := io.ReadAll(body); err == nil {
 			r.bodyBytes = data
@@ -76,7 +76,7 @@ func (r *Request) WithBody(body io.Reader) *Request {
 	return r
 }
 
-// WithJSON 设置 JSON Body
+// WithJSON sets the JSON Body
 func (r *Request) WithJSON(data interface{}) *Request {
 	if data == nil {
 		return r
@@ -94,7 +94,7 @@ func (r *Request) WithJSON(data interface{}) *Request {
 	return r
 }
 
-// WithForm 设置 Form Body
+// WithForm sets Form Body
 func (r *Request) WithForm(data map[string]string) *Request {
 	if data == nil {
 		return r
@@ -113,9 +113,9 @@ func (r *Request) WithForm(data map[string]string) *Request {
 	return r
 }
 
-// buildHTTPRequest 构建 http.Request
+// buildHTTPRequest builds http.Request
 func (r *Request) buildHTTPRequest() (*http.Request, error) {
-	// 构建 URL（包含 Query）
+	// Build URL (including query)
 	fullURL := r.URL
 	if len(r.Query) > 0 {
 		if strings.Contains(fullURL, "?") {
@@ -125,7 +125,7 @@ func (r *Request) buildHTTPRequest() (*http.Request, error) {
 		}
 	}
 	
-	// 重置 Body（用于重试）
+	// Reset Body (for retry)
 	var body io.Reader
 	if len(r.bodyBytes) > 0 {
 		body = bytes.NewReader(r.bodyBytes)
@@ -133,13 +133,13 @@ func (r *Request) buildHTTPRequest() (*http.Request, error) {
 		body = r.Body
 	}
 	
-	// 创建 http.Request
+	// Create http.Request
 	req, err := http.NewRequest(r.Method, fullURL, body)
 	if err != nil {
 		return nil, err
 	}
 	
-	// 设置 Headers
+	// Set Headers
 	for k, v := range r.Headers {
 		req.Header.Set(k, v)
 	}
@@ -147,7 +147,7 @@ func (r *Request) buildHTTPRequest() (*http.Request, error) {
 	return req, nil
 }
 
-// Clone 克隆 Request（用于重试）
+// Clone request (for retry)
 func (r *Request) Clone() *Request {
 	clone := &Request{
 		Method:    r.Method,
@@ -157,19 +157,19 @@ func (r *Request) Clone() *Request {
 		bodyBytes: r.bodyBytes,
 	}
 	
-	// 复制 Headers
+	// Copy Headers
 	for k, v := range r.Headers {
 		clone.Headers[k] = v
 	}
 	
-	// 复制 Query
+	// Copy Query
 	for k, vs := range r.Query {
 		for _, v := range vs {
 			clone.Query.Add(k, v)
 		}
 	}
 	
-	// 重置 Body
+	// Reset Body
 	if len(r.bodyBytes) > 0 {
 		clone.Body = bytes.NewReader(r.bodyBytes)
 	}

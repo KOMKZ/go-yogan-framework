@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestGinLogWriter 测试 Gin 日志适配器
+// TestGinLogWriter test Gin log adapter
 func TestGinLogWriter(t *testing.T) {
 	tmpDir := t.TempDir()
 	logDir := filepath.Join(tmpDir, "gin")
@@ -27,11 +27,11 @@ func TestGinLogWriter(t *testing.T) {
 		MaxSize:               10,
 	})
 
-	// 创建 GinLogWriter
+	// Create GinLogWriter
 	writer := NewGinLogWriter("gin")
 	assert.NotNil(t, writer)
 
-	// 写入日志
+	// Write log
 	n, err := writer.Write([]byte("[GIN-debug] GET /api/users --> handler.GetUsers (3 handlers)"))
 	assert.NoError(t, err)
 	assert.Greater(t, n, 0)
@@ -42,7 +42,7 @@ func TestGinLogWriter(t *testing.T) {
 
 	CloseAll()
 
-	// 验证日志文件
+	// Validate log file
 	content, _ := os.ReadFile(filepath.Join(logDir, "gin", "gin-info.log"))
 	contentStr := string(content)
 	assert.Contains(t, contentStr, "GIN-debug")

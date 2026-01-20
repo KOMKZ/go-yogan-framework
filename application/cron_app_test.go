@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestNewCron 测试创建 Cron 应用
+// TestNewCron test creating Cron application
 func TestNewCron(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -25,7 +25,7 @@ func TestNewCron(t *testing.T) {
 	assert.NotNil(t, app.GetScheduler())
 }
 
-// TestNewCronWithDefaults 测试使用默认配置创建 Cron 应用
+// TestNewCronWithDefaults tests creating a Cron application using default configuration
 func TestNewCronWithDefaults(t *testing.T) {
 	tmpDir := t.TempDir()
 	appDir := filepath.Join(tmpDir, "configs", "cron-app")
@@ -45,7 +45,7 @@ func TestNewCronWithDefaults(t *testing.T) {
 	assert.NotNil(t, app)
 }
 
-// TestCronApplication_Callbacks 测试回调注册
+// TestCronApplication_Callbacks test callback registration
 func TestCronApplication_Callbacks(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -80,7 +80,7 @@ func TestCronApplication_Callbacks(t *testing.T) {
 	_ = shutdownCalled
 }
 
-// TestCronApplication_RunNonBlocking 测试非阻塞运行
+// TestCronApplication_RunNonBlocking test non-blocking execution
 func TestCronApplication_RunNonBlocking(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -106,12 +106,12 @@ func TestCronApplication_RunNonBlocking(t *testing.T) {
 	assert.True(t, readyCalled)
 	assert.Equal(t, StateRunning, app.GetState())
 
-	// 关闭应用
+	// Close the application
 	app.Shutdown()
-	time.Sleep(100 * time.Millisecond) // 等待关闭完成
+	time.Sleep(100 * time.Millisecond) // wait for close to complete
 }
 
-// TestCronApplication_RegisterTask 测试注册任务
+// TestCronApplication_RegisterTask_test_task_registration
 func TestCronApplication_RegisterTask(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -120,16 +120,16 @@ func TestCronApplication_RegisterTask(t *testing.T) {
 	app, err := NewCron(tmpDir, "TEST")
 	require.NoError(t, err)
 
-	// 注册一个简单的任务
+	// Register a simple task
 	job, err := app.RegisterTask("*/5 * * * *", func() {
-		// 测试任务
+		// test task
 	})
 
 	assert.NoError(t, err)
 	assert.NotNil(t, job)
 }
 
-// mockTaskRegistrar 模拟任务注册器
+// mockTaskRegistrar simulated task registrar
 type mockTaskRegistrar struct {
 	registered bool
 }
@@ -139,7 +139,7 @@ func (m *mockTaskRegistrar) RegisterTasks(app *CronApplication) error {
 	return nil
 }
 
-// TestCronApplication_RegisterTasks 测试注册任务注册器
+// TestCronApplication_RegisterTasks test task registrar registration
 func TestCronApplication_RegisterTasks(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -153,7 +153,7 @@ func TestCronApplication_RegisterTasks(t *testing.T) {
 
 	assert.Equal(t, app, result)
 
-	// 运行应用，验证注册器被调用
+	// Run the application, verify that the registry is called
 	err = app.RunNonBlocking()
 	assert.NoError(t, err)
 	assert.True(t, registrar.registered)
@@ -162,7 +162,7 @@ func TestCronApplication_RegisterTasks(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 }
 
-// TestCronApplication_Shutdown 测试手动关闭
+// TestCronApplicationShutdown Test manual shutdown
 func TestCronApplication_Shutdown(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -179,13 +179,13 @@ func TestCronApplication_Shutdown(t *testing.T) {
 
 	select {
 	case <-ctx.Done():
-		// 预期行为
+		// Expected behavior
 	case <-time.After(1 * time.Second):
 		t.Fatal("context should be done after shutdown")
 	}
 }
 
-// TestCronApplication_GracefulShutdown 测试优雅关闭
+// TestCronApplication_GracefulShutdown graceful shutdown test
 func TestCronApplication_GracefulShutdown(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -204,14 +204,14 @@ func TestCronApplication_GracefulShutdown(t *testing.T) {
 	err = app.RunNonBlocking()
 	assert.NoError(t, err)
 
-	// 手动调用 gracefulShutdown
+	// Manually call gracefulShutdown
 	err = app.gracefulShutdown()
 	assert.NoError(t, err)
 	assert.True(t, shutdownCalled)
 	assert.Equal(t, StateStopped, app.GetState())
 }
 
-// TestCronApplication_Run 测试阻塞运行
+// TestCronApplication_Run test blocking run
 func TestCronApplication_Run(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -224,7 +224,7 @@ func TestCronApplication_Run(t *testing.T) {
 
 	app.OnReady(func(c *CronApplication) error {
 		readyCalled = true
-		// 在 OnReady 中触发关闭
+		// Trigger close in OnReady
 		go func() {
 			time.Sleep(50 * time.Millisecond)
 			c.Shutdown()
@@ -232,7 +232,7 @@ func TestCronApplication_Run(t *testing.T) {
 		return nil
 	})
 
-	// 在 goroutine 中运行以避免阻塞测试
+	// Run in a goroutine to avoid blocking the test
 	done := make(chan error, 1)
 	go func() {
 		done <- app.Run()
@@ -247,7 +247,7 @@ func TestCronApplication_Run(t *testing.T) {
 	}
 }
 
-// TestCronApplication_Run_SetupError 测试 Run 启动失败
+// TestCronApplication_Run_SetupError Run startup failed due to setup error
 func TestCronApplication_Run_SetupError(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -265,15 +265,15 @@ func TestCronApplication_Run_SetupError(t *testing.T) {
 	assert.Contains(t, err.Error(), "onSetup failed")
 }
 
-// TestNewCron_DefaultValues 测试默认值处理
+// TestNewCron_DefaultValues test default value handling
 func TestNewCron_DefaultValues(t *testing.T) {
-	// 测试空配置路径使用默认值
+	// Test empty configuration path using default values
 	app, err := NewCron("", "")
 	assert.NoError(t, err)
 	assert.NotNil(t, app)
 }
 
-// TestCronApplication_GracefulShutdown_WithShutdownError 测试关闭时回调返回错误
+// TestCronApplication_GracefulShutdown_WithShutdownError Test graceful shutdown with shutdown error returned
 func TestCronApplication_GracefulShutdown_WithShutdownError(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -283,18 +283,18 @@ func TestCronApplication_GracefulShutdown_WithShutdownError(t *testing.T) {
 	require.NoError(t, err)
 
 	app.OnShutdown(func(c *CronApplication) error {
-		return assert.AnError // 返回错误
+		return assert.AnError // Return error
 	})
 
 	err = app.RunNonBlocking()
 	assert.NoError(t, err)
 
-	// 调用 gracefulShutdown，即使回调返回错误也应该继续执行
+	// Call gracefulShutdown, continue execution even if the callback returns an error
 	err = app.gracefulShutdown()
-	assert.NoError(t, err) // Base shutdown 成功
+	assert.NoError(t, err) // Base shutdown successful
 }
 
-// TestCronApplication_Run_OnReadyError 测试 OnReady 返回错误
+// TestCronApplication_OnReady_Returns_Error
 func TestCronApplication_Run_OnReadyError(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -312,7 +312,7 @@ func TestCronApplication_Run_OnReadyError(t *testing.T) {
 	assert.Contains(t, err.Error(), "onReady failed")
 }
 
-// TestCronApplication_Run_TaskRegistrarError 测试任务注册器返回错误
+// TestCronApplication_Run_TaskRegistrarError Test task registrar returns error
 func TestCronApplication_Run_TaskRegistrarError(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -329,7 +329,7 @@ func TestCronApplication_Run_TaskRegistrarError(t *testing.T) {
 	assert.Contains(t, err.Error(), "register tasks failed")
 }
 
-// errorTaskRegistrar 模拟返回错误的任务注册器
+// errorTaskRegistrar simulates returning an erroneous task registrar
 type errorTaskRegistrar struct{}
 
 func (m *errorTaskRegistrar) RegisterTasks(app *CronApplication) error {

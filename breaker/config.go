@@ -4,65 +4,65 @@ import (
 	"time"
 )
 
-// Config 熔断器配置
+// Circuit breaker configuration
 type Config struct {
-	// Enabled 是否启用熔断器（false 时直接透传，不进行熔断判断）
+	// Enabled whether to enable circuit breaker (when false, bypass directly without circuit breaker judgment)
 	Enabled bool `mapstructure:"enabled"`
 
-	// EventBusBuffer 事件总线缓冲区大小
+	// EventBusBuffer event bus buffer size
 	EventBusBuffer int `mapstructure:"event_bus_buffer"`
 
-	// Default 默认资源配置
+	// Default resource configuration settings
 	Default ResourceConfig `mapstructure:"default"`
 
-	// Resources 资源级配置（覆盖 Default）
+	// Resources Configuration at the resource level (overrides Default)
 	Resources map[string]ResourceConfig `mapstructure:"resources"`
 }
 
-// ResourceConfig 资源级配置
+// ResourceConfig resource-level configuration
 type ResourceConfig struct {
-	// Strategy 熔断策略名称: error_rate, slow_call_rate, consecutive, adaptive
+	// Strategy Circuit breaker strategy name: error_rate, slow_call_rate, consecutive, adaptive
 	Strategy string `mapstructure:"strategy"`
 
-	// MinRequests 最小请求数（避免小流量误判）
+	// Minimum request threshold (to avoid misjudgment in low traffic scenarios)
 	MinRequests int `mapstructure:"min_requests"`
 
-	// ErrorRateThreshold 错误率阈值 (0.0-1.0)
+	// ErrorRateThreshold Error rate threshold (0.0-1.0)
 	ErrorRateThreshold float64 `mapstructure:"error_rate_threshold"`
 
-	// SlowCallThreshold 慢调用阈值
+	// SlowCallThreshold slow call threshold
 	SlowCallThreshold time.Duration `mapstructure:"slow_call_threshold"`
 
-	// SlowRateThreshold 慢调用比例阈值 (0.0-1.0)
+	// SlowRateThreshold slow call ratio threshold (0.0-1.0)
 	SlowRateThreshold float64 `mapstructure:"slow_rate_threshold"`
 
-	// ConsecutiveFailures 连续失败次数阈值
+	// ConsecutiveFailures consecutive failure threshold
 	ConsecutiveFailures int `mapstructure:"consecutive_failures"`
 
-	// Timeout 熔断超时时间（Open 状态持续时间）
+	// Timeout circuit breaker open state duration
 	Timeout time.Duration `mapstructure:"timeout"`
 
-	// HalfOpenRequests 半开状态允许的请求数
+	// HalfOpenRequests Number of requests allowed in half-open state
 	HalfOpenRequests int `mapstructure:"half_open_requests"`
 
-	// WindowSize 滑动窗口大小
+	// Window size of sliding window
 	WindowSize time.Duration `mapstructure:"window_size"`
 
-	// BucketSize 时间桶大小
+	// BucketSize bucket size
 	BucketSize time.Duration `mapstructure:"bucket_size"`
 }
 
-// DefaultConfig 返回默认配置
+// Return default configuration
 func DefaultConfig() Config {
 	return Config{
-		Enabled:        false, // 默认不启用
+		Enabled:        false, // Default disabled
 		EventBusBuffer: 500,
 		Default:        DefaultResourceConfig(),
 		Resources:      make(map[string]ResourceConfig),
 	}
 }
 
-// DefaultResourceConfig 返回默认资源配置
+// Returns default resource configuration
 func DefaultResourceConfig() ResourceConfig {
 	return ResourceConfig{
 		Strategy:            "error_rate",
@@ -78,24 +78,24 @@ func DefaultResourceConfig() ResourceConfig {
 	}
 }
 
-// Validate 验证配置
+// Validate configuration
 func (c *Config) Validate() error {
 	if !c.Enabled {
-		return nil // 未启用，不需要验证
+		return nil // Not enabled, verification not required
 	}
 
 	if c.EventBusBuffer <= 0 {
 		c.EventBusBuffer = 500
 	}
 
-	// 验证默认配置
+	// Verify default configuration
 	if err := c.Default.Validate(); err != nil {
 		return err
 	}
 
-	// 合并并验证资源配置
+	// Merge and validate resource configurations
 	for name, cfg := range c.Resources {
-		// 合并默认配置（资源配置中未设置的字段使用默认值）
+		// Merge default configuration (use default values for fields not set in resource configuration)
 		merged := c.Default.Merge(cfg)
 		c.Resources[name] = merged
 
@@ -110,11 +110,11 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-// Merge 合并配置（override 覆盖默认值）
+// Merge merge configuration (override override default values)
 func (rc ResourceConfig) Merge(override ResourceConfig) ResourceConfig {
-	result := rc // 从默认配置开始
+	result := rc // Start with default configuration
 
-	// 只覆盖非零值
+	// Only cover non-zero values
 	if override.Strategy != "" {
 		result.Strategy = override.Strategy
 	}
@@ -149,7 +149,7 @@ func (rc ResourceConfig) Merge(override ResourceConfig) ResourceConfig {
 	return result
 }
 
-// Validate 验证资源配置
+// Validate resource configuration
 func (rc *ResourceConfig) Validate() error {
 	if rc.MinRequests < 0 {
 		return &ValidationError{Field: "MinRequests", Message: "must be >= 0"}
@@ -190,7 +190,7 @@ func (rc *ResourceConfig) Validate() error {
 	return nil
 }
 
-// GetResourceConfig 获取资源配置（优先使用资源级，否则使用默认）
+// GetResourceConfig Retrieve resource configuration (prioritize resource-level configuration, fallback to default)
 func (c *Config) GetResourceConfig(resource string) ResourceConfig {
 	if cfg, ok := c.Resources[resource]; ok {
 		return cfg
@@ -198,7 +198,7 @@ func (c *Config) GetResourceConfig(resource string) ResourceConfig {
 	return c.Default
 }
 
-// ValidationError 配置验证错误
+// ValidationError configuration validation error
 type ValidationError struct {
 	Resource string
 	Field    string

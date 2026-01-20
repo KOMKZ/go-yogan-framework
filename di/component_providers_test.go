@@ -20,7 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestProvideConfigLoader 测试配置加载器 Provider
+// TestProvideConfigLoader test configuration loader provider
 func TestProvideConfigLoader(t *testing.T) {
 	t.Run("default options", func(t *testing.T) {
 		injector := do.New()
@@ -29,10 +29,10 @@ func TestProvideConfigLoader(t *testing.T) {
 		opts := ConfigOptions{}
 		do.Provide(injector, ProvideConfigLoader(opts))
 
-		// Provider 应该成功注册
-		// 即使配置加载可能失败，Provider 仍会返回 Loader 实例
+		// The provider should successfully register
+		// Even if the configuration loading fails, the Provider will still return a Loader instance
 		loader, err := do.Invoke[*config.Loader](injector)
-		// ConfigLoader 构建器即使没有配置文件也会返回实例
+		// ConfigLoader builder returns an instance even without a configuration file
 		if err == nil {
 			assert.NotNil(t, loader)
 		}
@@ -45,7 +45,7 @@ func TestProvideConfigLoader(t *testing.T) {
 			AppType:      "http",
 		}
 
-		// 验证默认值应用
+		// Verify default value application
 		assert.Equal(t, "../testdata", opts.ConfigPath)
 		assert.Equal(t, "TEST", opts.ConfigPrefix)
 		assert.Equal(t, "http", opts.AppType)
@@ -70,14 +70,14 @@ func TestProvideConfigLoader(t *testing.T) {
 		injector := do.New()
 		defer injector.Shutdown()
 
-		// 空选项，应该应用默认值
+		// Empty option, default value should be applied
 		opts := ConfigOptions{}
 		provider := ProvideConfigLoader(opts)
 		assert.NotNil(t, provider)
 	})
 }
 
-// TestProvideLoggerManager 测试 Logger Manager Provider
+// TestProvideLoggerManager test Logger Manager Provider
 func TestProvideLoggerManager(t *testing.T) {
 	t.Run("without config loader", func(t *testing.T) {
 		injector := do.New()
@@ -85,7 +85,7 @@ func TestProvideLoggerManager(t *testing.T) {
 
 		do.Provide(injector, ProvideLoggerManager)
 
-		// 没有 config.Loader，应该回退到默认配置
+		// Without config.Loader, fallback to default configuration
 		mgr, err := do.Invoke[*logger.Manager](injector)
 		require.NoError(t, err)
 		assert.NotNil(t, mgr)
@@ -105,7 +105,7 @@ func TestProvideLoggerManager(t *testing.T) {
 	})
 }
 
-// TestProvideCtxLogger 测试命名 Logger Provider
+// TestProvideCtxLogger test named Logger provider
 func TestProvideCtxLogger(t *testing.T) {
 	t.Run("without manager", func(t *testing.T) {
 		injector := do.New()
@@ -113,7 +113,7 @@ func TestProvideCtxLogger(t *testing.T) {
 
 		do.Provide(injector, ProvideCtxLogger("test-module"))
 
-		// 没有 Manager，应该回退到全局 logger
+		// Without a Manager, it should fallback to the global logger
 		log, err := do.Invoke[*logger.CtxZapLogger](injector)
 		require.NoError(t, err)
 		assert.NotNil(t, log)
@@ -132,7 +132,7 @@ func TestProvideCtxLogger(t *testing.T) {
 	})
 }
 
-// TestProvideDatabaseManager 测试数据库 Manager Provider
+// TestProvideDatabaseManager test database manager provider
 func TestProvideDatabaseManager(t *testing.T) {
 	t.Run("without config loader", func(t *testing.T) {
 		injector := do.New()
@@ -140,13 +140,13 @@ func TestProvideDatabaseManager(t *testing.T) {
 
 		do.Provide(injector, ProvideDatabaseManager)
 
-		// 没有 config.Loader，应该报错
+		// Without config.Loader, an error should be reported
 		_, err := do.Invoke[*struct{}](injector)
 		assert.Error(t, err)
 	})
 }
 
-// TestProvideRedisManager 测试 Redis Manager Provider
+// TestProvideRedisManager test Redis Manager Provider
 func TestProvideRedisManager(t *testing.T) {
 	t.Run("without config loader", func(t *testing.T) {
 		injector := do.New()
@@ -154,13 +154,13 @@ func TestProvideRedisManager(t *testing.T) {
 
 		do.Provide(injector, ProvideRedisManager)
 
-		// 没有 config.Loader，应该报错
+		// Without config.Loader, an error should be reported
 		_, err := do.Invoke[*struct{}](injector)
 		assert.Error(t, err)
 	})
 }
 
-// TestConfigOptions 测试配置选项结构
+// TestConfigOptions test configuration options structure
 func TestConfigOptions(t *testing.T) {
 	opts := ConfigOptions{
 		ConfigPath:   "/path/to/config",
@@ -175,7 +175,7 @@ func TestConfigOptions(t *testing.T) {
 	assert.Nil(t, opts.Flags)
 }
 
-// TestProvideConfigLoaderWithFlags 测试带 Flags 的配置加载
+// TestProvideConfigLoaderWithFlags test configuration loading with flags
 func TestProvideConfigLoaderWithFlags(t *testing.T) {
 	type TestFlags struct {
 		Debug bool
@@ -191,20 +191,20 @@ func TestProvideConfigLoaderWithFlags(t *testing.T) {
 	assert.NotNil(t, provider)
 }
 
-// TestProvideLoggerManagerIntegration 集成测试 Logger Manager
+// TestProvideLoggerManagerIntegration integration test for Logger Manager
 func TestProvideLoggerManagerIntegration(t *testing.T) {
 	injector := do.New()
 	defer injector.Shutdown()
 
-	// 注册 Logger Manager
+	// Register Logger Manager
 	do.Provide(injector, ProvideLoggerManager)
 
-	// 注册多个命名 Logger
+	// Register multiple named Loggers
 	do.ProvideNamed(injector, "api", ProvideCtxLogger("api"))
 	do.ProvideNamed(injector, "db", ProvideCtxLogger("db"))
 	do.ProvideNamed(injector, "auth", ProvideCtxLogger("auth"))
 
-	// 验证各模块 Logger 独立
+	// Verify independent logging for each module
 	apiLog, err := do.InvokeNamed[*logger.CtxZapLogger](injector, "api")
 	require.NoError(t, err)
 	assert.NotNil(t, apiLog)
@@ -218,45 +218,45 @@ func TestProvideLoggerManagerIntegration(t *testing.T) {
 	assert.NotNil(t, authLog)
 }
 
-// TestProvideDatabaseManagerWithMockConfig 测试带模拟配置的数据库 Provider
+// TestProvideDatabaseManagerWithMockConfig Test database provider with mock configuration
 func TestProvideDatabaseManagerWithMockConfig(t *testing.T) {
-	// 这个测试验证 Provider 的逻辑路径
-	// 实际数据库连接需要真实配置
+	// This test verifies the logic path of the Provider.
+	// Actual database connection requires real configuration
 	t.Run("provider function is callable", func(t *testing.T) {
 		injector := do.New()
 		defer injector.Shutdown()
 
-		// 注册 Database Provider
+		// Register Database Provider
 		do.Provide(injector, ProvideDatabaseManager)
 
-		// 没有配置，调用会失败
+		// Without configuration, the call will fail
 		_, err := do.Invoke[*struct{ Name string }](injector)
 		assert.Error(t, err)
 	})
 }
 
-// TestProvideRedisManagerWithMockConfig 测试带模拟配置的 Redis Provider
+// TestProvideRedisManagerWithMockConfig Test Redis Provider with mock configuration
 func TestProvideRedisManagerWithMockConfig(t *testing.T) {
 	t.Run("provider function is callable", func(t *testing.T) {
 		injector := do.New()
 		defer injector.Shutdown()
 
-		// 注册 Redis Provider
+		// Register Redis Provider
 		do.Provide(injector, ProvideRedisManager)
 
-		// 没有配置，调用会失败
+		// Without configuration, the call will fail
 		_, err := do.Invoke[*struct{ Name string }](injector)
 		assert.Error(t, err)
 	})
 }
 
-// TestProvideDatabaseManagerWithRealConfig 测试带真实配置的数据库 Provider
+// TestProvideDatabaseManagerWithRealConfig Test database provider with real configuration
 func TestProvideDatabaseManagerWithRealConfig(t *testing.T) {
 	t.Run("with config loader but no db config", func(t *testing.T) {
 		injector := do.New()
 		defer injector.Shutdown()
 
-		// 使用测试配置目录
+		// Use test configuration directory
 		opts := ConfigOptions{
 			ConfigPath: "./testdata",
 			AppType:    "http",
@@ -266,11 +266,11 @@ func TestProvideDatabaseManagerWithRealConfig(t *testing.T) {
 		do.Provide(injector, ProvideCtxLogger("yogan"))
 		do.Provide(injector, ProvideDatabaseManager)
 
-		// 尝试调用 - 因为没有数据库配置，返回 nil
+		// Try to call - returns nil because there is no database configuration
 		mgr, err := do.Invoke[*database.Manager](injector)
-		// 没有配置时应该返回 nil, nil
+		// should return nil, nil when not configured
 		if err == nil {
-			assert.Nil(t, mgr) // 未配置数据库返回 nil
+			assert.Nil(t, mgr) // database not configured returns nil
 		}
 	})
 
@@ -278,7 +278,7 @@ func TestProvideDatabaseManagerWithRealConfig(t *testing.T) {
 		injector := do.New()
 		defer injector.Shutdown()
 
-		// 只注册 ConfigLoader，不注册 Logger
+		// Only register ConfigLoader, do not register Logger
 		opts := ConfigOptions{
 			ConfigPath: "./testdata",
 			AppType:    "http",
@@ -286,7 +286,7 @@ func TestProvideDatabaseManagerWithRealConfig(t *testing.T) {
 		do.Provide(injector, ProvideConfigLoader(opts))
 		do.Provide(injector, ProvideDatabaseManager)
 
-		// 应该使用全局 logger 并返回 nil（无数据库配置）
+		// Should use global logger and return nil (no database configuration)
 		mgr, err := do.Invoke[*database.Manager](injector)
 		if err == nil {
 			assert.Nil(t, mgr)
@@ -294,13 +294,13 @@ func TestProvideDatabaseManagerWithRealConfig(t *testing.T) {
 	})
 }
 
-// TestProvideRedisManagerWithRealConfig 测试带真实配置的 Redis Provider
+// TestProvideRedisManagerWithRealConfig test Redis provider with real configuration
 func TestProvideRedisManagerWithRealConfig(t *testing.T) {
 	t.Run("with config loader but no redis config", func(t *testing.T) {
 		injector := do.New()
 		defer injector.Shutdown()
 
-		// 使用测试配置目录
+		// Use test configuration directory
 		opts := ConfigOptions{
 			ConfigPath: "./testdata",
 			AppType:    "http",
@@ -310,11 +310,11 @@ func TestProvideRedisManagerWithRealConfig(t *testing.T) {
 		do.Provide(injector, ProvideCtxLogger("yogan"))
 		do.Provide(injector, ProvideRedisManager)
 
-		// 尝试调用 - 因为没有 Redis 配置，返回 nil
+		// Try to call - returns nil because there is no Redis configuration
 		mgr, err := do.Invoke[*redis.Manager](injector)
-		// 没有配置时应该返回 nil, nil
+		// should return nil, nil when not configured
 		if err == nil {
-			assert.Nil(t, mgr) // 未配置 Redis 返回 nil
+			assert.Nil(t, mgr) // Redis not configured returns nil
 		}
 	})
 
@@ -322,7 +322,7 @@ func TestProvideRedisManagerWithRealConfig(t *testing.T) {
 		injector := do.New()
 		defer injector.Shutdown()
 
-		// 只注册 ConfigLoader，不注册 Logger
+		// Only register ConfigLoader, do not register Logger
 		opts := ConfigOptions{
 			ConfigPath: "./testdata",
 			AppType:    "http",
@@ -330,7 +330,7 @@ func TestProvideRedisManagerWithRealConfig(t *testing.T) {
 		do.Provide(injector, ProvideConfigLoader(opts))
 		do.Provide(injector, ProvideRedisManager)
 
-		// 应该使用全局 logger 并返回 nil（无 Redis 配置）
+		// Should use global logger and return nil (no Redis configuration)
 		mgr, err := do.Invoke[*redis.Manager](injector)
 		if err == nil {
 			assert.Nil(t, mgr)
@@ -338,13 +338,13 @@ func TestProvideRedisManagerWithRealConfig(t *testing.T) {
 	})
 }
 
-// TestProvideLoggerManagerWithConfig 测试带配置的 Logger Manager
+// TestProvideLoggerManagerWithConfig test Logger Manager with configuration
 func TestProvideLoggerManagerWithConfig(t *testing.T) {
 	t.Run("with config loader", func(t *testing.T) {
 		injector := do.New()
 		defer injector.Shutdown()
 
-		// 使用测试配置目录
+		// Use test configuration directory
 		opts := ConfigOptions{
 			ConfigPath: "./testdata",
 			AppType:    "http",
@@ -352,7 +352,7 @@ func TestProvideLoggerManagerWithConfig(t *testing.T) {
 		do.Provide(injector, ProvideConfigLoader(opts))
 		do.Provide(injector, ProvideLoggerManager)
 
-		// 应该成功获取 Manager
+		// Should successfully obtain Manager
 		mgr, err := do.Invoke[*logger.Manager](injector)
 		require.NoError(t, err)
 		assert.NotNil(t, mgr)
@@ -373,17 +373,17 @@ func TestProvideLoggerManagerWithConfig(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, mgr)
 
-		// 验证可以获取 logger
+		// Verify that the logger can be obtained
 		log := mgr.GetLogger("test")
 		assert.NotNil(t, log)
 	})
 }
 
 // ============================================
-// JWT Provider 测试
+// JWT Provider test
 // ============================================
 
-// TestProvideJWTTokenManagerIndependent 测试 JWT TokenManager 独立 Provider
+// TestJWTTokenManagerIndependentProvider	tests the independent provider for JWT TokenManager
 func TestProvideJWTTokenManagerIndependent(t *testing.T) {
 	t.Run("without config loader", func(t *testing.T) {
 		injector := do.New()
@@ -391,7 +391,7 @@ func TestProvideJWTTokenManagerIndependent(t *testing.T) {
 
 		do.Provide(injector, ProvideJWTTokenManagerIndependent)
 
-		// 没有 config.Loader，应该报错
+		// Without config.Loader, an error should be reported
 		_, err := do.Invoke[jwt.TokenManager](injector)
 		assert.Error(t, err)
 	})
@@ -400,7 +400,7 @@ func TestProvideJWTTokenManagerIndependent(t *testing.T) {
 		injector := do.New()
 		defer injector.Shutdown()
 
-		// 使用测试配置（JWT 未启用）
+		// Using test configuration (JWT disabled)
 		opts := ConfigOptions{
 			ConfigPath: "./testdata",
 			AppType:    "http",
@@ -410,9 +410,9 @@ func TestProvideJWTTokenManagerIndependent(t *testing.T) {
 		do.Provide(injector, ProvideCtxLogger("yogan"))
 		do.Provide(injector, ProvideJWTTokenManagerIndependent)
 
-		// JWT 未启用，返回 nil
+		// JWT is not enabled, return nil
 		mgr, err := do.Invoke[jwt.TokenManager](injector)
-		// 可能返回 nil, nil（未启用）
+		// May return nil, nil (disabled)
 		if err == nil {
 			assert.Nil(t, mgr)
 		}
@@ -420,10 +420,10 @@ func TestProvideJWTTokenManagerIndependent(t *testing.T) {
 }
 
 // ============================================
-// Event Provider 测试
+// Event Provider test
 // ============================================
 
-// TestProvideEventDispatcherIndependent 测试 Event Dispatcher 独立 Provider
+// TestProvideEventDispatcherIndependent tests the independent Provider of Event Dispatcher
 func TestProvideEventDispatcherIndependent(t *testing.T) {
 	t.Run("without config loader", func(t *testing.T) {
 		injector := do.New()
@@ -431,7 +431,7 @@ func TestProvideEventDispatcherIndependent(t *testing.T) {
 
 		do.Provide(injector, ProvideEventDispatcherIndependent)
 
-		// 没有 config.Loader，应该报错
+		// Without config.Loader, an error should be reported
 		_, err := do.Invoke[event.Dispatcher](injector)
 		assert.Error(t, err)
 	})
@@ -440,7 +440,7 @@ func TestProvideEventDispatcherIndependent(t *testing.T) {
 		injector := do.New()
 		defer injector.Shutdown()
 
-		// 使用测试配置（Event 未启用）
+		// Using test configuration (Event not enabled)
 		opts := ConfigOptions{
 			ConfigPath: "./testdata",
 			AppType:    "http",
@@ -450,9 +450,9 @@ func TestProvideEventDispatcherIndependent(t *testing.T) {
 		do.Provide(injector, ProvideCtxLogger("yogan"))
 		do.Provide(injector, ProvideEventDispatcherIndependent)
 
-		// Event 未启用，返回 nil
+		// Event not enabled, return nil
 		dispatcher, err := do.Invoke[event.Dispatcher](injector)
-		// 可能返回 nil, nil（未启用）
+		// May return nil, nil (disabled)
 		if err == nil {
 			assert.Nil(t, dispatcher)
 		}
@@ -460,10 +460,10 @@ func TestProvideEventDispatcherIndependent(t *testing.T) {
 }
 
 // ============================================
-// Kafka Provider 测试
+// Kafka Provider test
 // ============================================
 
-// TestProvideKafkaManager 测试 Kafka Manager Provider
+// TestProvideKafkaManager test Kafka Manager Provider
 func TestProvideKafkaManager(t *testing.T) {
 	t.Run("without config loader", func(t *testing.T) {
 		injector := do.New()
@@ -471,7 +471,7 @@ func TestProvideKafkaManager(t *testing.T) {
 
 		do.Provide(injector, ProvideKafkaManager)
 
-		// 没有 config.Loader，应该报错
+		// Without config.Loader, an error should be reported
 		_, err := do.Invoke[*kafka.Manager](injector)
 		assert.Error(t, err)
 	})
@@ -489,7 +489,7 @@ func TestProvideKafkaManager(t *testing.T) {
 		do.Provide(injector, ProvideCtxLogger("yogan"))
 		do.Provide(injector, ProvideKafkaManager)
 
-		// Kafka 未配置，返回 nil
+		// Kafka not configured, return nil
 		mgr, err := do.Invoke[*kafka.Manager](injector)
 		if err == nil {
 			assert.Nil(t, mgr)
@@ -498,10 +498,10 @@ func TestProvideKafkaManager(t *testing.T) {
 }
 
 // ============================================
-// Telemetry Provider 测试
+// Telemetry Provider test
 // ============================================
 
-// TestProvideTelemetryComponent 测试 Telemetry Component Provider
+// TestProvideTelemetryComponent tests the Telemetry Component Provider
 func TestProvideTelemetryComponent(t *testing.T) {
 	t.Run("without config loader", func(t *testing.T) {
 		injector := do.New()
@@ -509,7 +509,7 @@ func TestProvideTelemetryComponent(t *testing.T) {
 
 		do.Provide(injector, ProvideTelemetryComponent)
 
-		// 没有 config.Loader，应该报错
+		// Without config.Loader, an error should be reported
 		_, err := do.Invoke[*telemetry.Component](injector)
 		assert.Error(t, err)
 	})
@@ -525,7 +525,7 @@ func TestProvideTelemetryComponent(t *testing.T) {
 		do.Provide(injector, ProvideConfigLoader(opts))
 		do.Provide(injector, ProvideTelemetryComponent)
 
-		// Telemetry 未启用，返回 nil
+		// Telemetry is not enabled, return nil
 		comp, err := do.Invoke[*telemetry.Component](injector)
 		if err == nil {
 			assert.Nil(t, comp)
@@ -534,10 +534,10 @@ func TestProvideTelemetryComponent(t *testing.T) {
 }
 
 // ============================================
-// Health Provider 测试
+// Health Provider test
 // ============================================
 
-// TestProvideHealthAggregator 测试 Health Aggregator Provider
+// TestProvideHealthAggregator tests Health Aggregator Provider
 func TestProvideHealthAggregator(t *testing.T) {
 	t.Run("without config loader", func(t *testing.T) {
 		injector := do.New()
@@ -545,7 +545,7 @@ func TestProvideHealthAggregator(t *testing.T) {
 
 		do.Provide(injector, ProvideHealthAggregator)
 
-		// 没有 config.Loader，应该报错
+		// Without config.Loader, an error should be reported
 		_, err := do.Invoke[*health.Aggregator](injector)
 		assert.Error(t, err)
 	})
@@ -561,7 +561,7 @@ func TestProvideHealthAggregator(t *testing.T) {
 		do.Provide(injector, ProvideConfigLoader(opts))
 		do.Provide(injector, ProvideHealthAggregator)
 
-		// Health 默认启用
+		// Health is enabled by default
 		agg, err := do.Invoke[*health.Aggregator](injector)
 		require.NoError(t, err)
 		assert.NotNil(t, agg)
@@ -569,10 +569,10 @@ func TestProvideHealthAggregator(t *testing.T) {
 }
 
 // ============================================
-// Cache Provider 测试
+// Cache Provider test
 // ============================================
 
-// TestProvideCacheOrchestrator 测试 Cache Orchestrator Provider
+// TestProvideCacheOrchestrator tests Cache Orchestrator Provider
 func TestProvideCacheOrchestrator(t *testing.T) {
 	t.Run("without config loader", func(t *testing.T) {
 		injector := do.New()
@@ -580,7 +580,7 @@ func TestProvideCacheOrchestrator(t *testing.T) {
 
 		do.Provide(injector, ProvideCacheOrchestrator)
 
-		// 没有 config.Loader，应该报错
+		// Without config.Loader, an error should be reported
 		_, err := do.Invoke[*cache.DefaultOrchestrator](injector)
 		assert.Error(t, err)
 	})
@@ -598,7 +598,7 @@ func TestProvideCacheOrchestrator(t *testing.T) {
 		do.Provide(injector, ProvideCtxLogger("yogan"))
 		do.Provide(injector, ProvideCacheOrchestrator)
 
-		// Cache 未配置/未启用，返回 nil
+		// Cache not configured/enabled, return nil
 		orch, err := do.Invoke[*cache.DefaultOrchestrator](injector)
 		if err == nil {
 			assert.Nil(t, orch)
@@ -607,10 +607,10 @@ func TestProvideCacheOrchestrator(t *testing.T) {
 }
 
 // ============================================
-// Limiter Provider 测试
+// Limiter Provider test
 // ============================================
 
-// TestProvideLimiterManager 测试 Limiter Manager Provider
+// TestProvideLimiterManager test Limiter Manager Provider
 func TestProvideLimiterManager(t *testing.T) {
 	t.Run("without config loader", func(t *testing.T) {
 		injector := do.New()
@@ -618,7 +618,7 @@ func TestProvideLimiterManager(t *testing.T) {
 
 		do.Provide(injector, ProvideLimiterManager)
 
-		// 没有 config.Loader，应该报错
+		// Without config.Loader, an error should be reported
 		_, err := do.Invoke[*limiter.Manager](injector)
 		assert.Error(t, err)
 	})
@@ -636,7 +636,7 @@ func TestProvideLimiterManager(t *testing.T) {
 		do.Provide(injector, ProvideCtxLogger("yogan"))
 		do.Provide(injector, ProvideLimiterManager)
 
-		// Limiter 未配置/未启用，返回 nil
+		// Limiter not configured/enabled, return nil
 		mgr, err := do.Invoke[*limiter.Manager](injector)
 		if err == nil {
 			assert.Nil(t, mgr)
@@ -645,10 +645,10 @@ func TestProvideLimiterManager(t *testing.T) {
 }
 
 // ============================================
-// gRPC Provider 测试
+// gRPC Provider test
 // ============================================
 
-// TestProvideGRPCServer 测试 gRPC Server Provider
+// TestProvideGRPCServer tests gRPC Server Provider
 func TestProvideGRPCServer(t *testing.T) {
 	t.Run("without config loader", func(t *testing.T) {
 		injector := do.New()
@@ -656,7 +656,7 @@ func TestProvideGRPCServer(t *testing.T) {
 
 		do.Provide(injector, ProvideGRPCServer)
 
-		// 没有 config.Loader，应该报错
+		// Without config.Loader, an error should be reported
 		_, err := do.Invoke[*grpc.Server](injector)
 		assert.Error(t, err)
 	})
@@ -674,7 +674,7 @@ func TestProvideGRPCServer(t *testing.T) {
 		do.Provide(injector, ProvideCtxLogger("yogan"))
 		do.Provide(injector, ProvideGRPCServer)
 
-		// gRPC Server 未配置/未启用，返回 nil
+		// gRPC server not configured/enabled, return nil
 		srv, err := do.Invoke[*grpc.Server](injector)
 		if err == nil {
 			assert.Nil(t, srv)
@@ -682,7 +682,7 @@ func TestProvideGRPCServer(t *testing.T) {
 	})
 }
 
-// TestProvideGRPCClientManager 测试 gRPC ClientManager Provider
+// TestProvideGRPCClientManager test gRPC ClientManager Provider
 func TestProvideGRPCClientManager(t *testing.T) {
 	t.Run("without config loader", func(t *testing.T) {
 		injector := do.New()
@@ -690,7 +690,7 @@ func TestProvideGRPCClientManager(t *testing.T) {
 
 		do.Provide(injector, ProvideGRPCClientManager)
 
-		// 没有 config.Loader，应该报错
+		// Without config.Loader, an error should be reported
 		_, err := do.Invoke[*grpc.ClientManager](injector)
 		assert.Error(t, err)
 	})
@@ -708,7 +708,7 @@ func TestProvideGRPCClientManager(t *testing.T) {
 		do.Provide(injector, ProvideCtxLogger("yogan"))
 		do.Provide(injector, ProvideGRPCClientManager)
 
-		// gRPC Clients 未配置，返回 nil
+		// gRPC clients not configured, return nil
 		mgr, err := do.Invoke[*grpc.ClientManager](injector)
 		if err == nil {
 			assert.Nil(t, mgr)

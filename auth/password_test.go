@@ -19,17 +19,17 @@ func TestPasswordService_HashPassword(t *testing.T) {
 		t.Fatalf("HashPassword() error = %v", err)
 	}
 
-	// 验证 hash 不为空
+	// Validate that the hash is not empty
 	if hash == "" {
 		t.Error("HashPassword() returned empty hash")
 	}
 
-	// 验证 hash 可以被验证
+	// verify that the hash can be verified
 	if !service.CheckPassword(password, hash) {
 		t.Error("CheckPassword() failed for valid password")
 	}
 
-	// 验证错误密码不能通过
+	// Verify that incorrect passwords do not pass
 	if service.CheckPassword("WrongPassword", hash) {
 		t.Error("CheckPassword() passed for invalid password")
 	}

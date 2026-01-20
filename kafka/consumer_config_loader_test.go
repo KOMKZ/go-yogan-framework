@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// testConfigLoader 测试用配置加载器
+// testConfigLoader configuration loader for testing
 type testConfigLoader struct {
 	data map[string]interface{}
 }
@@ -79,10 +79,10 @@ func TestLoadConsumerRunnerConfig_Empty(t *testing.T) {
 	loader := newTestConfigLoader()
 	cfg := LoadConsumerRunnerConfig(loader, "test")
 
-	// 空配置应该返回零值
+	// An empty configuration should return zero values
 	assert.Equal(t, "", cfg.GroupID)
 	assert.Equal(t, 0, cfg.Workers)
-	assert.True(t, cfg.AutoCommit) // 默认 true
+	assert.True(t, cfg.AutoCommit) // Default true
 }
 
 func TestLoadConsumerRunnerConfig_Full(t *testing.T) {
@@ -124,21 +124,21 @@ func TestMergeConfigWithHandler(t *testing.T) {
 		topics: []string{"handler-topic"},
 	}
 
-	// 场景1：配置中有 topics
+	// Scene 1: Configuration contains topics
 	loader := newTestConfigLoader()
 	loader.set("kafka.consumers.demo.topics", []string{"config-topic"})
 	loader.set("kafka.consumers.demo.workers", 3)
 
 	topics, cfg := MergeConfigWithHandler(handler, loader)
-	assert.Equal(t, []string{"config-topic"}, topics) // 配置优先
+	assert.Equal(t, []string{"config-topic"}, topics) // configuration priority
 	assert.Equal(t, 3, cfg.Workers)
 
-	// 场景2：配置中没有 topics
+	// Scenario 2: No topics specified in configuration
 	loader2 := newTestConfigLoader()
 	loader2.set("kafka.consumers.demo.workers", 2)
 
 	topics2, cfg2 := MergeConfigWithHandler(handler, loader2)
-	assert.Equal(t, []string{"handler-topic"}, topics2) // Handler 兜底
+	assert.Equal(t, []string{"handler-topic"}, topics2) // Handler fallback保障措施
 	assert.Equal(t, 2, cfg2.Workers)
 }
 
@@ -153,7 +153,7 @@ func TestConsumerConfigOverride(t *testing.T) {
 	assert.Equal(t, "original", override.Name())
 	assert.Equal(t, []string{"override-topic"}, override.Topics())
 
-	// 测试 Handle 代理
+	// Test Proxy Handler
 	err := override.Handle(context.Background(), &ConsumedMessage{})
 	assert.NoError(t, err)
 }
@@ -164,7 +164,7 @@ func TestConsumerConfigOverride_EmptyTopics(t *testing.T) {
 		topics: []string{"handler-topic"},
 	}
 
-	// 空 topics 应该回退到 handler
+	// Empty topics should rollback to handler
 	override := NewConsumerConfigOverride(handler, nil)
 	assert.Equal(t, []string{"handler-topic"}, override.Topics())
 

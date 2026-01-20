@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// eventBus 事件总线实现
+// Event bus implementation
 type eventBus struct {
 	listeners map[SubscriptionID]*subscription
 	buffer    chan Event
@@ -15,17 +15,17 @@ type eventBus struct {
 	ctx       context.Context
 	cancel    context.CancelFunc
 	wg        sync.WaitGroup
-	closed    int32 // 使用atomic标记是否已关闭
+	closed    int32 // Use atomic flag to indicate if already closed
 }
 
-// subscription 订阅信息
+// subscription information
 type subscription struct {
 	id       SubscriptionID
 	listener EventListener
 	filters  map[EventType]bool
 }
 
-// NewEventBus 创建事件总线
+// Create event bus
 func NewEventBus(bufferSize int) EventBus {
 	ctx, cancel := context.WithCancel(context.Background())
 	
@@ -36,14 +36,14 @@ func NewEventBus(bufferSize int) EventBus {
 		cancel:    cancel,
 	}
 	
-	// 启动事件分发协程
+	// Start event distribution coroutine
 	bus.wg.Add(1)
 	go bus.dispatch()
 	
 	return bus
 }
 
-// Subscribe 订阅事件
+// Subscribe to event
 func (eb *eventBus) Subscribe(listener EventListener, filters ...EventType) SubscriptionID {
 	eb.mu.Lock()
 	defer eb.mu.Unlock()
@@ -66,7 +66,7 @@ func (eb *eventBus) Subscribe(listener EventListener, filters ...EventType) Subs
 	return id
 }
 
-// Unsubscribe 取消订阅
+// Unsubscribe from subscription
 func (eb *eventBus) Unsubscribe(id SubscriptionID) {
 	eb.mu.Lock()
 	defer eb.mu.Unlock()
@@ -74,37 +74,37 @@ func (eb *eventBus) Unsubscribe(id SubscriptionID) {
 	delete(eb.listeners, id)
 }
 
-// Publish 发布事件
+// Publish event
 func (eb *eventBus) Publish(event Event) {
-	// 检查是否已关闭
+	// Check if closed
 	if atomic.LoadInt32(&eb.closed) == 1 {
 		return
 	}
 	
 	select {
 	case eb.buffer <- event:
-		// 成功发布
+		// Successful publication
 	case <-eb.ctx.Done():
-		// 总线已关闭，静默忽略
+		// Bus is closed, silently ignore
 		return
 	default:
-		// 缓冲区满，丢弃事件（或者可以选择阻塞）
+		// Buffer full, discard event (or可以选择阻塞)
 	}
 }
 
-// Close 关闭事件总线
+// Close event bus
 func (eb *eventBus) Close() {
-	// 标记为已关闭
+	// marked as closed
 	atomic.StoreInt32(&eb.closed, 1)
-	// 先取消context，触发dispatch退出
+	// First cancel the context, then trigger dispatch to exit
 	eb.cancel()
-	// 等待dispatch处理完剩余事件
+	// wait for dispatch to finish processing remaining events
 	eb.wg.Wait()
-	// 最后关闭channel（此时dispatch已经退出，不会再读取）
+	// Finally close the channel (at this point, dispatch has exited and will not read anymore)
 	close(eb.buffer)
 }
 
-// dispatch 分发事件给订阅者
+// dispatch events to subscribers
 func (eb *eventBus) dispatch() {
 	defer eb.wg.Done()
 	
@@ -117,7 +117,7 @@ func (eb *eventBus) dispatch() {
 			eb.notifyListeners(event)
 			
 		case <-eb.ctx.Done():
-			// 处理剩余事件
+			// Handle remaining events
 			for {
 				select {
 				case event, ok := <-eb.buffer:
@@ -133,10 +133,10 @@ func (eb *eventBus) dispatch() {
 	}
 }
 
-// notifyListeners 通知所有匹配的监听者
+// notifyListeners notifies all matching listeners
 func (eb *eventBus) notifyListeners(event Event) {
 	eb.mu.RLock()
-	// 复制监听者列表，避免持有锁太久
+	// Copy the list of listeners to avoid holding the lock for too long
 	listeners := make([]*subscription, 0, len(eb.listeners))
 	for _, sub := range eb.listeners {
 		listeners = append(listeners, sub)
@@ -146,17 +146,17 @@ func (eb *eventBus) notifyListeners(event Event) {
 	eventType := event.Type()
 	
 	for _, sub := range listeners {
-		// 检查过滤器
+		// Check filter
 		if len(sub.filters) > 0 && !sub.filters[eventType] {
 			continue
 		}
 		
-		// 异步通知（避免阻塞）
+		// Asynchronous notification (avoid blocking)
 		go func(l EventListener, e Event) {
 			defer func() {
-				// 捕获监听者panic
+				// Capture listener panic
 				if r := recover(); r != nil {
-					// 可以记录日志
+					// can log messages
 				}
 			}()
 			l.OnEvent(e)

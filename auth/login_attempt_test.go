@@ -42,11 +42,11 @@ func TestMemoryLoginAttemptStore_GetAttempts(t *testing.T) {
 	})
 
 	t.Run("expired attempts return zero", func(t *testing.T) {
-		// 直接操作内部状态模拟过期
+		// Directly manipulate internal state to simulate expiration
 		store.mu.Lock()
 		store.attempts["expired_user"] = &attemptRecord{
 			count:     5,
-			expiresAt: time.Now().Add(-1 * time.Minute), // 已过期
+			expiresAt: time.Now().Add(-1 * time.Minute), // expired
 		}
 		store.mu.Unlock()
 
@@ -80,7 +80,7 @@ func TestMemoryLoginAttemptStore_IncrementAttempts(t *testing.T) {
 	})
 
 	t.Run("increment after expiry resets count", func(t *testing.T) {
-		// 设置一个已过期的记录
+		// Set an expired record
 		store.mu.Lock()
 		store.attempts["expired_user2"] = &attemptRecord{
 			count:     10,
@@ -88,12 +88,12 @@ func TestMemoryLoginAttemptStore_IncrementAttempts(t *testing.T) {
 		}
 		store.mu.Unlock()
 
-		// 增加尝试次数
+		// Increase retry attempts
 		err := store.IncrementAttempts(ctx, "expired_user2", 5*time.Minute)
 		assert.NoError(t, err)
 
 		attempts, _ := store.GetAttempts(ctx, "expired_user2")
-		assert.Equal(t, 1, attempts) // 重新从 1 开始
+		assert.Equal(t, 1, attempts) // Reset from 1 onwards
 	})
 }
 
@@ -102,14 +102,14 @@ func TestMemoryLoginAttemptStore_ResetAttempts(t *testing.T) {
 	store := NewMemoryLoginAttemptStore(log)
 	ctx := context.Background()
 
-	// 先增加一些尝试
+	// Increase the number of attempts first
 	store.IncrementAttempts(ctx, "user1", 5*time.Minute)
 	store.IncrementAttempts(ctx, "user1", 5*time.Minute)
 
 	attempts, _ := store.GetAttempts(ctx, "user1")
 	assert.Equal(t, 2, attempts)
 
-	// 重置
+	// Reset
 	err := store.ResetAttempts(ctx, "user1")
 	assert.NoError(t, err)
 

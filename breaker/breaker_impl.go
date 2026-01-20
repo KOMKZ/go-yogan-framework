@@ -12,14 +12,14 @@ import (
 )
 
 var (
-	// ErrCircuitOpen 熔断器打开错误
+	// FusedOpenError
 	ErrCircuitOpen = errors.New("circuit breaker is open")
 
-	// ErrTooManyRequests 半开状态请求过多
+	// ErrTooManyRequests Too many requests in half-open state
 	ErrTooManyRequests = errors.New("too many requests in half-open state")
 )
 
-// circuitBreaker 熔断器实现
+// circuit breaker implementation
 type circuitBreaker struct {
 	resource string
 	config   ResourceConfig
@@ -31,7 +31,7 @@ type circuitBreaker struct {
 	mu       sync.RWMutex
 }
 
-// newCircuitBreaker 创建熔断器实例
+// Create circuit breaker instance
 func newCircuitBreaker(resource string, config ResourceConfig, eventBus EventBus, log *logger.CtxZapLogger) *circuitBreaker {
 	stateMgr := newStateManager()
 	metrics := newSlidingWindowMetrics(resource, config, stateMgr)
@@ -48,7 +48,7 @@ func newCircuitBreaker(resource string, config ResourceConfig, eventBus EventBus
 	}
 }
 
-// Execute 执行受保护的操作
+// Execute the protected operation
 func (cb *circuitBreaker) Execute(ctx context.Context, req *Request) (interface{}, error) {
 	currentState := cb.stateMgr.GetState()
 	snapshot := cb.metrics.GetSnapshot()
@@ -62,7 +62,7 @@ func (cb *circuitBreaker) Execute(ctx context.Context, req *Request) (interface{
 			zap.Int64("failures", snapshot.Failures))
 	}
 
-	// 检查是否允许执行
+	// Check if execution is allowed
 	if !cb.stateMgr.CanAttempt(cb.config) {
 		if cb.logger != nil {
 			cb.logger.WarnCtx(ctx, "⛔ [CircuitBreaker] Request rejected",
@@ -71,7 +71,7 @@ func (cb *circuitBreaker) Execute(ctx context.Context, req *Request) (interface{
 		}
 		cb.metrics.RecordRejection()
 
-		// 发布拒绝事件
+		// Publish rejection event
 		if cb.eventBus != nil {
 			cb.eventBus.Publish(&RejectedEvent{
 				BaseEvent:    NewBaseEvent(EventCallRejected, cb.resource, ctx),
@@ -79,7 +79,7 @@ func (cb *circuitBreaker) Execute(ctx context.Context, req *Request) (interface{
 			})
 		}
 
-		// 尝试执行降级
+		// Try to execute fallback scenario
 		if req.Fallback != nil {
 			return cb.executeFallback(ctx, req, ErrCircuitOpen)
 		}
@@ -93,7 +93,7 @@ func (cb *circuitBreaker) Execute(ctx context.Context, req *Request) (interface{
 			zap.String("state", currentState.String()))
 	}
 
-	// 执行实际操作
+	// Perform the actual operation
 	start := time.Now()
 	result, err := req.Execute(ctx)
 	duration := time.Since(start)
@@ -118,7 +118,7 @@ func (cb *circuitBreaker) Execute(ctx context.Context, req *Request) (interface{
 	return result, err
 }
 
-// handleSuccess 处理成功
+// handle success
 func (cb *circuitBreaker) handleSuccess(ctx context.Context, duration time.Duration) {
 	if cb.logger != nil {
 		cb.logger.DebugCtx(ctx, "✅ [CircuitBreaker] handleSuccess",
@@ -128,7 +128,7 @@ func (cb *circuitBreaker) handleSuccess(ctx context.Context, duration time.Durat
 
 	cb.metrics.RecordSuccess(duration)
 
-	// 发布成功事件
+	// Publish successful event
 	if cb.eventBus != nil {
 		cb.eventBus.Publish(&CallEvent{
 			BaseEvent: NewBaseEvent(EventCallSuccess, cb.resource, ctx),
@@ -137,21 +137,21 @@ func (cb *circuitBreaker) handleSuccess(ctx context.Context, duration time.Durat
 		})
 	}
 
-	// 更新状态
+	// Update status
 	changed, fromState, toState := cb.stateMgr.RecordSuccess(cb.config)
 	if changed {
 		cb.publishStateChangedEvent(ctx, fromState, toState, "success threshold reached")
 	}
 
-	// 如果是连续失败策略，重置计数
+	// If it's a consecutive failure strategy, reset the counter
 	if s, ok := cb.strategy.(*consecutiveFailuresStrategy); ok {
 		s.RecordSuccess()
 	}
 }
 
-// handleFailure 处理失败
+// handleFailure Handle failure
 func (cb *circuitBreaker) handleFailure(ctx context.Context, duration time.Duration, err error) {
-	// 判断是否超时
+	// Check if timeout
 	isTimeout := errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled)
 
 	if cb.logger != nil {
@@ -161,11 +161,11 @@ func (cb *circuitBreaker) handleFailure(ctx context.Context, duration time.Durat
 			zap.Error(err))
 	}
 
-	// 记录指标
+	// Record metrics
 	if isTimeout {
 		cb.metrics.RecordTimeout(duration)
 
-		// 发布超时事件
+		// Publish timeout event
 		if cb.eventBus != nil {
 			cb.eventBus.Publish(&CallEvent{
 				BaseEvent: NewBaseEvent(EventCallTimeout, cb.resource, ctx),
@@ -177,7 +177,7 @@ func (cb *circuitBreaker) handleFailure(ctx context.Context, duration time.Durat
 	} else {
 		cb.metrics.RecordFailure(duration, err)
 
-		// 发布失败事件
+		// Publish failure event
 		if cb.eventBus != nil {
 			cb.eventBus.Publish(&CallEvent{
 				BaseEvent: NewBaseEvent(EventCallFailure, cb.resource, ctx),
@@ -188,19 +188,19 @@ func (cb *circuitBreaker) handleFailure(ctx context.Context, duration time.Durat
 		}
 	}
 
-	// 更新状态
+	// Update status
 	changed, fromState, toState := cb.stateMgr.RecordFailure()
 	if changed {
 		cb.publishStateChangedEvent(ctx, fromState, toState, "failure in half-open state")
 		return
 	}
 
-	// 如果是连续失败策略，记录失败
+	// If it's a consecutive failure strategy, record the failure
 	if s, ok := cb.strategy.(*consecutiveFailuresStrategy); ok {
 		s.RecordFailure()
 	}
 
-	// 检查是否应该触发熔断
+	// Check if the circuit breaker should be triggered
 	snapshot := cb.metrics.GetSnapshot()
 	shouldOpen := cb.strategy.ShouldOpen(snapshot, cb.config)
 
@@ -225,13 +225,13 @@ func (cb *circuitBreaker) handleFailure(ctx context.Context, duration time.Durat
 	}
 }
 
-// executeFallback 执行降级
+// executeFallback Execute fallback
 func (cb *circuitBreaker) executeFallback(ctx context.Context, req *Request, originalErr error) (interface{}, error) {
 	start := time.Now()
 	result, err := req.Fallback(ctx, originalErr)
 	duration := time.Since(start)
 
-	// 发布降级事件
+	// Publish degrading event
 	if cb.eventBus != nil {
 		eventType := EventFallbackSuccess
 		if err != nil {
@@ -249,7 +249,7 @@ func (cb *circuitBreaker) executeFallback(ctx context.Context, req *Request, ori
 	return result, err
 }
 
-// publishStateChangedEvent 发布状态变化事件
+// publishStateChangedEvent Publish state change event
 func (cb *circuitBreaker) publishStateChangedEvent(ctx context.Context, fromState, toState State, reason string) {
 	if cb.eventBus != nil {
 		cb.eventBus.Publish(&StateChangedEvent{
@@ -262,23 +262,23 @@ func (cb *circuitBreaker) publishStateChangedEvent(ctx context.Context, fromStat
 	}
 }
 
-// GetState 获取熔断器状态
+// GetState Retrieve circuit breaker status
 func (cb *circuitBreaker) GetState() State {
 	return cb.stateMgr.GetState()
 }
 
-// GetMetrics 获取指标快照
+// GetMetrics Retrieve metric snapshot
 func (cb *circuitBreaker) GetMetrics() *MetricsSnapshot {
 	return cb.metrics.GetSnapshot()
 }
 
-// Reset 重置熔断器状态和指标
+// Reset fuse status and metrics
 func (cb *circuitBreaker) Reset() {
 	cb.stateMgr.Reset()
 	cb.metrics.Reset()
 }
 
-// Manager 熔断器管理器
+// Circuit breaker manager
 type Manager struct {
 	config   Config
 	breakers map[string]*circuitBreaker
@@ -287,26 +287,26 @@ type Manager struct {
 	mu       sync.RWMutex
 }
 
-// NewManager 创建熔断器管理器
+// Create circuit breaker manager
 func NewManager(config Config) (*Manager, error) {
 	return NewManagerWithLogger(config, nil)
 }
 
-// NewManagerWithLogger 创建带logger的熔断器管理器
+// Create a circuit breaker manager with logger
 func NewManagerWithLogger(config Config, ctxLogger *logger.CtxZapLogger) (*Manager, error) {
-	// 验证配置
+	// Validate configuration
 	if err := config.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid config: %w", err)
 	}
 
-	// 如果没有提供 logger，使用默认的
+	// If no logger is provided, use the default one
 	if ctxLogger == nil {
 		ctxLogger = logger.GetLogger("yogan")
 	}
 
 	ctx := context.Background()
 
-	// 如果未启用，返回空管理器
+	// If not enabled, return empty manager
 	if !config.Enabled {
 		ctxLogger.DebugCtx(ctx, "⏭️  熔断器未启用，所有调用将直接执行")
 		return &Manager{
@@ -316,7 +316,7 @@ func NewManagerWithLogger(config Config, ctxLogger *logger.CtxZapLogger) (*Manag
 		}, nil
 	}
 
-	// 创建事件总线
+	// Create event bus
 	eventBus := NewEventBus(config.EventBusBuffer)
 
 	ctxLogger.DebugCtx(ctx, "🎯 熔断器管理器初始化",
@@ -330,7 +330,7 @@ func NewManagerWithLogger(config Config, ctxLogger *logger.CtxZapLogger) (*Manag
 	}, nil
 }
 
-// Execute 执行受保护的操作
+// Execute the protected operation
 func (m *Manager) Execute(ctx context.Context, req *Request) (interface{}, error) {
 	if m.logger != nil {
 		m.logger.DebugCtx(ctx, "🔍 [BreakerManager] Execute called",
@@ -338,7 +338,7 @@ func (m *Manager) Execute(ctx context.Context, req *Request) (interface{}, error
 			zap.String("resource", req.Resource))
 	}
 
-	// 如果未启用，直接执行
+	// If not enabled, execute directly
 	if !m.config.Enabled {
 		if m.logger != nil {
 			m.logger.DebugCtx(ctx, "🔍 [BreakerManager] Not enabled, executing directly",
@@ -347,7 +347,7 @@ func (m *Manager) Execute(ctx context.Context, req *Request) (interface{}, error
 		return req.Execute(ctx)
 	}
 
-	// 获取或创建熔断器
+	// Get or create the circuit breaker
 	breaker := m.getOrCreateBreaker(req.Resource)
 	if m.logger != nil {
 		m.logger.DebugCtx(ctx, "🔍 [BreakerManager] Getting circuit breaker",
@@ -355,7 +355,7 @@ func (m *Manager) Execute(ctx context.Context, req *Request) (interface{}, error
 			zap.String("state", breaker.GetState().String()))
 	}
 
-	// 执行操作
+	// Perform operation
 	result, err := breaker.Execute(ctx, req)
 	if m.logger != nil {
 		m.logger.DebugCtx(ctx, "🔍 [BreakerManager] Execution completed",
@@ -365,46 +365,46 @@ func (m *Manager) Execute(ctx context.Context, req *Request) (interface{}, error
 	return result, err
 }
 
-// GetBreaker 获取指定资源的熔断器实例(内部类型)
+// GetBreaker Get the circuit breaker instance for the specified resource (internal type)
 func (m *Manager) GetBreaker(resource string) *circuitBreaker {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.breakers[resource]
 }
 
-// GetState 获取熔断器状态
+// GetState Retrieve circuit breaker status
 func (m *Manager) GetState(resource string) State {
 	breaker := m.getOrCreateBreaker(resource)
 	return breaker.GetState()
 }
 
-// GetMetrics 获取熔断器指标
+// GetMetrics获取circuit breaker metrics
 func (m *Manager) GetMetrics(resource string) *MetricsSnapshot {
 	breaker := m.getOrCreateBreaker(resource)
 	return breaker.GetMetrics()
 }
 
-// GetEventBus 获取事件总线
+// GetEventBus obtain event bus
 func (m *Manager) GetEventBus() EventBus {
 	return m.eventBus
 }
 
-// SubscribeMetrics 订阅指标更新
+// SubscribeMetrics subscribe metric updates
 func (m *Manager) SubscribeMetrics(resource string, observer MetricsObserver) ObserverID {
 	breaker := m.getOrCreateBreaker(resource)
 	return breaker.metrics.Subscribe(observer)
 }
 
-// Close 关闭管理器
+// Close Manager
 func (m *Manager) Close() {
 	if m.eventBus != nil {
 		m.eventBus.Close()
 	}
 }
 
-// getOrCreateBreaker 获取或创建熔断器（线程安全）
+// getOrCreateBreaker Get or create breaker (thread-safe)
 func (m *Manager) getOrCreateBreaker(resource string) *circuitBreaker {
-	// 先尝试读取
+	// Try to read first
 	m.mu.RLock()
 	if breaker, exists := m.breakers[resource]; exists {
 		m.mu.RUnlock()
@@ -412,7 +412,7 @@ func (m *Manager) getOrCreateBreaker(resource string) *circuitBreaker {
 	}
 	m.mu.RUnlock()
 
-	// 需要创建，获取写锁
+	// Need to create, obtain write lock
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -421,10 +421,10 @@ func (m *Manager) getOrCreateBreaker(resource string) *circuitBreaker {
 		return breaker
 	}
 
-	// 获取资源配置
+	// Get resource configuration
 	resourceConfig := m.config.GetResourceConfig(resource)
 
-	// 创建新熔断器（传入 logger）
+	// Create new circuit breaker (pass in logger)
 	breaker := newCircuitBreaker(resource, resourceConfig, m.eventBus, m.logger)
 	m.breakers[resource] = breaker
 

@@ -8,7 +8,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// TestPrettyConsoleEncoder_KeyValueStyle 测试键值对渲染样式
+// TestPrettyConsoleEncoder_KeyValueStyle test key-value style rendering
 func TestPrettyConsoleEncoder_KeyValueStyle(t *testing.T) {
 	encoderConfig := zapcore.EncoderConfig{
 		TimeKey:       "time",
@@ -23,7 +23,7 @@ func TestPrettyConsoleEncoder_KeyValueStyle(t *testing.T) {
 		EncodeCaller:  zapcore.ShortCallerEncoder,
 	}
 
-	// 创建键值对样式编码器
+	// Create key-value pair style encoder
 	encoder := NewPrettyConsoleEncoderWithStyle(encoderConfig, RenderStyleKeyValue)
 
 	entry := zapcore.Entry{
@@ -40,7 +40,7 @@ func TestPrettyConsoleEncoder_KeyValueStyle(t *testing.T) {
 	fields := []zapcore.Field{
 		{Key: "module", Type: zapcore.StringType, String: "gin-route"},
 		{Key: "order_id", Type: zapcore.StringType, String: "001"},
-		{Key: "amount", Type: zapcore.Int64Type, Integer: 99}, // 使用整数
+		{Key: "amount", Type: zapcore.Int64Type, Integer: 99}, // Use integer
 	}
 
 	buf, err := encoder.EncodeEntry(entry, fields)
@@ -49,7 +49,7 @@ func TestPrettyConsoleEncoder_KeyValueStyle(t *testing.T) {
 	output := buf.String()
 	t.Logf("输出:\n%s", output)
 
-	// 验证输出格式
+	// Verify output format
 	assert.Contains(t, output, "🔵 INFO | 2025-12-23 01:10:01.165")
 	assert.Contains(t, output, "trace: -")
 	assert.Contains(t, output, "module: gin-route")
@@ -58,7 +58,7 @@ func TestPrettyConsoleEncoder_KeyValueStyle(t *testing.T) {
 	assert.Contains(t, output, `fields: {"order_id":"001","amount":99}`)
 }
 
-// TestPrettyConsoleEncoder_KeyValueStyle_WithTraceID 测试带 TraceID 的键值对渲染
+// TestPrettyConsoleEncoder_KeyValueStyle_WithTraceID_Test key-value rendering with TraceID
 func TestPrettyConsoleEncoder_KeyValueStyle_WithTraceID(t *testing.T) {
 	encoderConfig := zapcore.EncoderConfig{
 		TimeKey:       "time",
@@ -98,13 +98,13 @@ func TestPrettyConsoleEncoder_KeyValueStyle_WithTraceID(t *testing.T) {
 	output := buf.String()
 	t.Logf("输出:\n%s", output)
 
-	// 验证 TraceID 被正确渲染
+	// Verify that the TraceID is rendered correctly
 	assert.Contains(t, output, "trace: 47dfd756-254f-4f")
 	assert.Contains(t, output, "module: auth")
 	assert.Contains(t, output, `fields: {"user_id":123}`)
 }
 
-// TestPrettyConsoleEncoder_KeyValueStyle_NoFields 测试无字段的键值对渲染
+// TestPrettyConsoleEncoder_KeyValueStyle_NoFields_TestKeyValueRenderingWithNoFields
 func TestPrettyConsoleEncoder_KeyValueStyle_NoFields(t *testing.T) {
 	encoderConfig := zapcore.EncoderConfig{
 		TimeKey:       "time",
@@ -142,14 +142,14 @@ func TestPrettyConsoleEncoder_KeyValueStyle_NoFields(t *testing.T) {
 	output := buf.String()
 	t.Logf("输出:\n%s", output)
 
-	// 验证无字段时不显示 fields 行
+	// Do not display fields row when there are no fields
 	assert.Contains(t, output, "🟢 DEBU")
 	assert.Contains(t, output, "module: core")
 	assert.Contains(t, output, "message: 简单的调试信息")
 	assert.NotContains(t, output, "fields:")
 }
 
-// TestPrettyConsoleEncoder_KeyValueStyle_WithStack 测试带栈追踪的键值对渲染
+// TestPrettyConsoleEncoder_KeyValueStyle_WithStack_TestKeyValueRenderingWithStackTrace
 func TestPrettyConsoleEncoder_KeyValueStyle_WithStack(t *testing.T) {
 	encoderConfig := zapcore.EncoderConfig{
 		TimeKey:       "time",
@@ -189,7 +189,7 @@ func TestPrettyConsoleEncoder_KeyValueStyle_WithStack(t *testing.T) {
 	output := buf.String()
 	t.Logf("输出:\n%s", output)
 
-	// 验证栈追踪被正确渲染
+	// Verify that the stack trace is rendered correctly
 	assert.Contains(t, output, "🔴 ERRO")
 	assert.Contains(t, output, "module: database")
 	assert.Contains(t, output, "message: 数据库连接失败")
@@ -197,7 +197,7 @@ func TestPrettyConsoleEncoder_KeyValueStyle_WithStack(t *testing.T) {
 	assert.Contains(t, output, "goroutine 1 [running]:")
 }
 
-// TestParseRenderStyle 测试渲染样式解析
+// TestParseRenderStyle test render style parsing
 func TestParseRenderStyle(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -219,7 +219,7 @@ func TestParseRenderStyle(t *testing.T) {
 	}
 }
 
-// TestPrettyConsoleEncoder_ModernCompactStyle 测试现代紧凑风格渲染
+// TestPrettyConsoleEncoder_ModernCompactStyle test modern compact style rendering
 func TestPrettyConsoleEncoder_ModernCompactStyle(t *testing.T) {
 	encoderConfig := zapcore.EncoderConfig{
 		TimeKey:       "time",
@@ -258,7 +258,7 @@ func TestPrettyConsoleEncoder_ModernCompactStyle(t *testing.T) {
 	output := buf.String()
 	t.Logf("输出:\n%s", output)
 
-	// 验证格式：14:30:45 │ INFO  │ HTTP server started                          │ yogan        {"port":8080}
+	// Validate format: 14:30:45 │ INFO │ HTTP server started │ yogan {"port":8080}
 	assert.Contains(t, output, "14:30:45")
 	assert.Contains(t, output, "│")
 	assert.Contains(t, output, "INFO")
@@ -267,7 +267,7 @@ func TestPrettyConsoleEncoder_ModernCompactStyle(t *testing.T) {
 	assert.Contains(t, output, `"port":8080`)
 }
 
-// TestPrettyConsoleEncoder_ModernCompactStyle_AllLevels 测试所有日志级别
+// TestPrettyConsoleEncoder_ModernCompactStyle_AllLevels_test_all_log_levels
 func TestPrettyConsoleEncoder_ModernCompactStyle_AllLevels(t *testing.T) {
 	encoderConfig := zapcore.EncoderConfig{
 		TimeKey:       "time",
@@ -318,7 +318,7 @@ func TestPrettyConsoleEncoder_ModernCompactStyle_AllLevels(t *testing.T) {
 	}
 }
 
-// TestPrettyConsoleEncoder_ModernCompactStyle_LongMessage 测试长消息截断
+// TestPrettyConsoleEncoder_ModernCompactStyle_LongMessage test long message truncation
 func TestPrettyConsoleEncoder_ModernCompactStyle_LongMessage(t *testing.T) {
 	encoderConfig := zapcore.EncoderConfig{
 		TimeKey:       "time",
@@ -335,7 +335,7 @@ func TestPrettyConsoleEncoder_ModernCompactStyle_LongMessage(t *testing.T) {
 
 	encoder := NewPrettyConsoleEncoderWithStyle(encoderConfig, RenderStyleModernCompact)
 
-	// 创建一个超长消息
+	// Create a long message
 	longMessage := "This is a very long message that should be truncated because it exceeds the maximum width"
 
 	entry := zapcore.Entry{
@@ -354,12 +354,12 @@ func TestPrettyConsoleEncoder_ModernCompactStyle_LongMessage(t *testing.T) {
 	output := buf.String()
 	t.Logf("输出: %s", output)
 
-	// 验证消息被截断并添加省略号
+	// Verify that the message is truncated and an ellipsis is added
 	assert.Contains(t, output, "...")
 	assert.Contains(t, output, "database")
 }
 
-// TestPrettyConsoleEncoder_ModernCompactStyle_ChineseMessage 测试中文消息对齐
+// TestPrettyConsoleEncoder_ModernCompactStyle_ChineseMessage test Chinese message alignment
 func TestPrettyConsoleEncoder_ModernCompactStyle_ChineseMessage(t *testing.T) {
 	encoderConfig := zapcore.EncoderConfig{
 		TimeKey:       "time",
@@ -376,7 +376,7 @@ func TestPrettyConsoleEncoder_ModernCompactStyle_ChineseMessage(t *testing.T) {
 
 	encoder := NewPrettyConsoleEncoderWithStyle(encoderConfig, RenderStyleModernCompact)
 
-	// 测试多条中英文混合日志
+	// Test multiple mixed Chinese-English logs
 	entries := []struct {
 		level   zapcore.Level
 		message string
@@ -407,13 +407,13 @@ func TestPrettyConsoleEncoder_ModernCompactStyle_ChineseMessage(t *testing.T) {
 		output := buf.String()
 		t.Logf("%s", output)
 
-		// 验证输出包含关键元素
+		// Verify that the output contains key elements
 		assert.Contains(t, output, "│")
 		assert.Contains(t, output, e.module)
 	}
 }
 
-// TestPrettyConsoleEncoder_ModernCompactStyle_LongChineseMessage 测试长中文消息截断
+// TestPrettyConsoleEncoder_ModernCompactStyle_LongChineseMessage Test long Chinese message truncation
 func TestPrettyConsoleEncoder_ModernCompactStyle_LongChineseMessage(t *testing.T) {
 	encoderConfig := zapcore.EncoderConfig{
 		TimeKey:       "time",
@@ -430,7 +430,7 @@ func TestPrettyConsoleEncoder_ModernCompactStyle_LongChineseMessage(t *testing.T
 
 	encoder := NewPrettyConsoleEncoderWithStyle(encoderConfig, RenderStyleModernCompact)
 
-	// 创建一个超长中文消息
+	// Create a very long Chinese message
 	longMessage := "这是一条非常长的中文日志消息，应该被正确截断，不会破坏表格对齐"
 
 	entry := zapcore.Entry{
@@ -449,12 +449,12 @@ func TestPrettyConsoleEncoder_ModernCompactStyle_LongChineseMessage(t *testing.T
 	output := buf.String()
 	t.Logf("输出: %s", output)
 
-	// 验证消息被截断并添加省略号
+	// Verify that the message is truncated and an ellipsis is added
 	assert.Contains(t, output, "...")
 	assert.Contains(t, output, "database")
 }
 
-// TestPrettyConsoleEncoder_ModernCompactStyle_NoFields 测试无额外字段
+// TestPrettyConsoleEncoder_ModernCompactStyle_NoFields test with no additional fields
 func TestPrettyConsoleEncoder_ModernCompactStyle_NoFields(t *testing.T) {
 	encoderConfig := zapcore.EncoderConfig{
 		TimeKey:       "time",
@@ -477,7 +477,7 @@ func TestPrettyConsoleEncoder_ModernCompactStyle_NoFields(t *testing.T) {
 		Message: "Simple debug message",
 	}
 
-	// 只有 module 字段，没有其他业务字段
+	// Only the module field is present, no other business fields.
 	fields := []zapcore.Field{
 		{Key: "module", Type: zapcore.StringType, String: "core"},
 	}
@@ -488,7 +488,7 @@ func TestPrettyConsoleEncoder_ModernCompactStyle_NoFields(t *testing.T) {
 	output := buf.String()
 	t.Logf("输出: %s", output)
 
-	// 验证没有 JSON 字段输出
+	// Verify that there are no JSON fields outputted
 	assert.Contains(t, output, "DEBUG")
 	assert.Contains(t, output, "Simple debug message")
 	assert.Contains(t, output, "core")

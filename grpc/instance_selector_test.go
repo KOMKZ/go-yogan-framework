@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// 测试实例数据
+// Test instance data
 func createTestInstances() []*governance.ServiceInstance {
 	return []*governance.ServiceInstance{
 		{
@@ -29,7 +29,7 @@ func createTestInstances() []*governance.ServiceInstance {
 			Service: "test-service",
 			Address: "192.168.1.3:9000",
 			Port:    9000,
-			Healthy: false, // 不健康
+			Healthy: false, // unhealthy
 			Weight:  10,
 		},
 		{
@@ -78,7 +78,7 @@ func TestLoadBalancerSelector_RoundRobin(t *testing.T) {
 		selector := NewLoadBalancerSelector("round_robin")
 		instances := createTestInstances()
 
-		// 连续调用，验证轮询行为
+		// Consecutive calls, verify polling behavior
 		results := make([]string, 3)
 		for i := 0; i < 3; i++ {
 			selected := selector.Select(instances)
@@ -87,13 +87,13 @@ func TestLoadBalancerSelector_RoundRobin(t *testing.T) {
 			results[i] = selected.Address
 		}
 
-		// 验证地址在健康实例中
+		// Verify that the address is in a healthy instance
 		healthyAddrs := []string{"192.168.1.1:9000", "192.168.1.2:9000", "192.168.1.4:9000"}
 		for _, addr := range results {
 			assert.Contains(t, healthyAddrs, addr)
 		}
 
-		// 验证不包含不健康实例
+		// Verify no unhealthy instances are included
 		for _, addr := range results {
 			assert.NotEqual(t, "192.168.1.3:9000", addr)
 		}
@@ -122,7 +122,7 @@ func TestLoadBalancerSelector_Random(t *testing.T) {
 		selector := NewLoadBalancerSelector("random")
 		instances := createTestInstances()
 
-		// 多次调用，收集结果
+		// Multiple calls, collect results
 		results := make(map[string]int)
 		for i := 0; i < 100; i++ {
 			selected := selector.Select(instances)
@@ -131,7 +131,7 @@ func TestLoadBalancerSelector_Random(t *testing.T) {
 			results[selected.Address]++
 		}
 
-		// 验证只包含健康实例
+		// Verify that it contains only healthy instances
 		healthyAddrs := map[string]bool{
 			"192.168.1.1:9000": true,
 			"192.168.1.2:9000": true,
@@ -141,10 +141,10 @@ func TestLoadBalancerSelector_Random(t *testing.T) {
 			assert.True(t, healthyAddrs[addr], "地址应该是健康实例: %s", addr)
 		}
 
-		// 验证不包含不健康实例
+		// Validate no unhealthy instances
 		assert.NotContains(t, results, "192.168.1.3:9000")
 
-		// 验证有随机性（至少选中2个不同实例）
+		// Verify randomness (at least select 2 different instances)
 		assert.GreaterOrEqual(t, len(results), 2, "应该有多个不同实例被选中")
 	})
 }
@@ -154,26 +154,26 @@ func TestLoadBalancerSelector_Weighted(t *testing.T) {
 		selector := NewLoadBalancerSelector("weighted")
 		instances := createTestInstances()
 
-		// 多次调用，验证加权分配
+		// Multiple calls, verify weighted distribution
 		results := make(map[string]int)
-		for i := 0; i < 90; i++ { // 90 = 10+20+15+10+... (健康实例总权重的倍数)
+		for i := 0; i < 90; i++ { // 90 = 10+20+15+10+... (a multiple of the total weight of healthy instances)
 			selected := selector.Select(instances)
 			require.NotNil(t, selected)
 			assert.True(t, selected.Healthy)
 			results[selected.Address]++
 		}
 
-		// 验证只包含健康实例
+		// Verify that only healthy instances are included
 		healthyAddrs := map[string]bool{
-			"192.168.1.1:9000": true, // 权重10
-			"192.168.1.2:9000": true, // 权重20
-			"192.168.1.4:9000": true, // 权重15
+			"192.168.1.1:9000": true, // weight 10
+			"192.168.1.2:9000": true, // weight 20
+			"192.168.1.4:9000": true, // weight 15
 		}
 		for addr := range results {
 			assert.True(t, healthyAddrs[addr], "地址应该是健康实例: %s", addr)
 		}
 
-		// 验证不包含不健康实例
+		// Validate no unhealthy instances
 		assert.NotContains(t, results, "192.168.1.3:9000")
 	})
 }
@@ -182,7 +182,7 @@ func TestNewInstanceSelector(t *testing.T) {
 	tests := []struct {
 		name     string
 		strategy string
-		want     string // 选择器类型
+		want     string // selector type
 	}{
 		{
 			name:     "空策略使用默认",
@@ -221,7 +221,7 @@ func TestNewInstanceSelector(t *testing.T) {
 			selector := NewInstanceSelector(tt.strategy)
 			require.NotNil(t, selector)
 
-			// 验证类型
+			// Validate type
 			selectorType := getTypeName(selector)
 			assert.Equal(t, tt.want, selectorType)
 		})
@@ -238,7 +238,7 @@ func TestLoadBalancerSelector_OnlyHealthy(t *testing.T) {
 			{Address: "192.168.1.4:9000", Healthy: true},
 		}
 
-		// 多次调用，验证只选择健康实例
+		// Multiple calls, verify that only healthy instances are selected
 		for i := 0; i < 10; i++ {
 			selected := selector.Select(instances)
 			require.NotNil(t, selected)
@@ -248,7 +248,7 @@ func TestLoadBalancerSelector_OnlyHealthy(t *testing.T) {
 	})
 }
 
-// 辅助函数：获取类型名称
+// Helper function: get type name
 func getTypeName(v interface{}) string {
 	switch v.(type) {
 	case *FirstHealthySelector:
@@ -260,7 +260,7 @@ func getTypeName(v interface{}) string {
 	}
 }
 
-// 基准测试：对比不同选择器性能
+// Benchmark test: Compare performance of different selectors
 func BenchmarkSelectors(b *testing.B) {
 	instances := createTestInstances()
 

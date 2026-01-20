@@ -5,139 +5,139 @@ import (
 	"time"
 )
 
-// Config Kafka 配置
+// Configure Kafka settings
 type Config struct {
-	// Brokers Kafka 集群地址列表
+	// List of Kafka cluster addresses for brokers
 	Brokers []string `mapstructure:"brokers"`
 
-	// Version Kafka 版本（如 "3.8.0"）
+	// Kafka version (e.g., "3.8.0")
 	Version string `mapstructure:"version"`
 
-	// ClientID 客户端标识
+	// ClientID client identifier
 	ClientID string `mapstructure:"client_id"`
 
-	// Producer 生产者配置
+	// Producer configuration
 	Producer ProducerConfig `mapstructure:"producer"`
 
-	// Consumer 消费者配置
+	// Consumer configuration
 	Consumer ConsumerConfig `mapstructure:"consumer"`
 
-	// SASL 认证配置（可选）
+	// SASL authentication configuration (optional)
 	SASL *SASLConfig `mapstructure:"sasl"`
 
-	// TLS 配置（可选）
+	// TLS configuration (optional)
 	TLS *TLSConfig `mapstructure:"tls"`
 }
 
-// ProducerConfig 生产者配置
+// ProducerConfig producer configuration
 type ProducerConfig struct {
-	// Enabled 是否启用生产者
+	// Enabled whether the producer is activated
 	Enabled bool `mapstructure:"enabled"`
 
-	// RequiredAcks 确认级别：0=NoResponse, 1=WaitForLocal, -1=WaitForAll
+	// RequiredAcks acknowledgment level: 0=NoResponse, 1=WaitForLocal, -1=WaitForAll
 	RequiredAcks int `mapstructure:"required_acks"`
 
-	// Timeout 生产超时时间
+	// Timeout production timeout duration
 	Timeout time.Duration `mapstructure:"timeout"`
 
-	// RetryMax 最大重试次数
+	// Maximum number of retry attempts
 	RetryMax int `mapstructure:"retry_max"`
 
-	// RetryBackoff 重试间隔
+	// RetryBackoff retry interval
 	RetryBackoff time.Duration `mapstructure:"retry_backoff"`
 
-	// MaxMessageBytes 单条消息最大字节数
+	// Maximum message byte size for a single message
 	MaxMessageBytes int `mapstructure:"max_message_bytes"`
 
-	// Compression 压缩算法：none, gzip, snappy, lz4, zstd
+	// Compression algorithm: none, gzip, snappy, lz4, zstd
 	Compression string `mapstructure:"compression"`
 
-	// Idempotent 是否启用幂等生产者
+	// Whether the idempotent producer is enabled
 	Idempotent bool `mapstructure:"idempotent"`
 
-	// BatchSize 批量发送大小
+	// BatchSize batch sending size
 	BatchSize int `mapstructure:"batch_size"`
 
-	// FlushFrequency 刷新频率
+	// FlushFrequency flush frequency
 	FlushFrequency time.Duration `mapstructure:"flush_frequency"`
 }
 
-// ConsumerConfig 消费者配置
+// ConsumerConfig consumer configuration
 type ConsumerConfig struct {
-	// Enabled 是否启用消费者
+	// Enabled whether the consumer is activated
 	Enabled bool `mapstructure:"enabled"`
 
-	// GroupID 消费者组 ID
+	// GroupID consumer group ID
 	GroupID string `mapstructure:"group_id"`
 
-	// Topics 订阅的 Topic 列表
+	// List of Topics subscribed to by Topics
 	Topics []string `mapstructure:"topics"`
 
-	// OffsetInitial 初始 Offset：-1=Newest, -2=Oldest
+	// OffsetInitial Initial Offset: -1=Newest, -2=Oldest
 	OffsetInitial int64 `mapstructure:"offset_initial"`
 
-	// AutoCommit 是否自动提交 Offset
+	// Whether auto-commit of Offset is enabled
 	AutoCommit bool `mapstructure:"auto_commit"`
 
-	// AutoCommitInterval 自动提交间隔
+	// AutoCommitInterval auto commit interval
 	AutoCommitInterval time.Duration `mapstructure:"auto_commit_interval"`
 
-	// SessionTimeout 会话超时
+	// Session timeout
 	SessionTimeout time.Duration `mapstructure:"session_timeout"`
 
-	// HeartbeatInterval 心跳间隔
+	// HeartbeatInterval heartbeat interval
 	HeartbeatInterval time.Duration `mapstructure:"heartbeat_interval"`
 
-	// MaxProcessingTime 单条消息最大处理时间
+	// Maximum processing time for individual message
 	MaxProcessingTime time.Duration `mapstructure:"max_processing_time"`
 
-	// FetchMin 最小拉取字节数
+	// FetchMin minimum fetch byte count
 	FetchMin int32 `mapstructure:"fetch_min"`
 
-	// FetchMax 最大拉取字节数
+	// FetchMax maximum fetch byte count
 	FetchMax int32 `mapstructure:"fetch_max"`
 
-	// FetchDefault 默认拉取字节数
+	// FetchDefault: Default bytes to fetch
 	FetchDefault int32 `mapstructure:"fetch_default"`
 
-	// RebalanceStrategy 再平衡策略：range, roundrobin, sticky
+	// RebalanceStrategy rebalancing strategy: range, roundrobin, sticky
 	RebalanceStrategy string `mapstructure:"rebalance_strategy"`
 }
 
-// SASLConfig SASL 认证配置
+// SASLConfig SASL authentication configuration
 type SASLConfig struct {
-	// Enabled 是否启用
+	// Enabled whether to enable
 	Enabled bool `mapstructure:"enabled"`
 
-	// Mechanism 认证机制：PLAIN, SCRAM-SHA-256, SCRAM-SHA-512
+	// Authentication mechanism: PLAIN, SCRAM-SHA-256, SCRAM-SHA-512
 	Mechanism string `mapstructure:"mechanism"`
 
-	// Username 用户名
+	// Username
 	Username string `mapstructure:"username"`
 
-	// Password 密码
+	// PasswordPASSWORD
 	Password string `mapstructure:"password"`
 }
 
-// TLSConfig TLS 配置
+// TLS configuration
 type TLSConfig struct {
-	// Enabled 是否启用 TLS
+	// Enabled whether TLS is enabled
 	Enabled bool `mapstructure:"enabled"`
 
-	// CertFile 证书文件路径
+	// CertFile certificate file path
 	CertFile string `mapstructure:"cert_file"`
 
-	// KeyFile 密钥文件路径
+	// Path of the key file
 	KeyFile string `mapstructure:"key_file"`
 
-	// CAFile CA 证书文件路径
+	// CA file path for the CA certificate
 	CAFile string `mapstructure:"ca_file"`
 
-	// InsecureSkipVerify 是否跳过证书验证
+	// Whether to skip certificate verification
 	InsecureSkipVerify bool `mapstructure:"insecure_skip_verify"`
 }
 
-// Validate 验证配置
+// Validate configuration
 func (c *Config) Validate() error {
 	if len(c.Brokers) == 0 {
 		return fmt.Errorf("brokers cannot be empty")
@@ -149,21 +149,21 @@ func (c *Config) Validate() error {
 		}
 	}
 
-	// 验证生产者配置
+	// Validate producer configuration
 	if c.Producer.Enabled {
 		if err := c.Producer.Validate(); err != nil {
 			return fmt.Errorf("producer config invalid: %w", err)
 		}
 	}
 
-	// 验证消费者配置
+	// Validate consumer configuration
 	if c.Consumer.Enabled {
 		if err := c.Consumer.Validate(); err != nil {
 			return fmt.Errorf("consumer config invalid: %w", err)
 		}
 	}
 
-	// 验证 SASL 配置
+	// Validate SASL configuration
 	if c.SASL != nil && c.SASL.Enabled {
 		if err := c.SASL.Validate(); err != nil {
 			return fmt.Errorf("sasl config invalid: %w", err)
@@ -173,7 +173,7 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-// Validate 验证生产者配置
+// Validate producer configuration
 func (c *ProducerConfig) Validate() error {
 	if c.RequiredAcks < -1 || c.RequiredAcks > 1 {
 		return fmt.Errorf("required_acks must be -1, 0, or 1, got: %d", c.RequiredAcks)
@@ -198,7 +198,7 @@ func (c *ProducerConfig) Validate() error {
 	return nil
 }
 
-// Validate 验证消费者配置
+// Validate consumer configuration
 func (c *ConsumerConfig) Validate() error {
 	if c.GroupID == "" {
 		return fmt.Errorf("group_id cannot be empty")
@@ -227,7 +227,7 @@ func (c *ConsumerConfig) Validate() error {
 	return nil
 }
 
-// Validate 验证 SASL 配置
+// Validate SASL configuration
 func (c *SASLConfig) Validate() error {
 	if c.Username == "" {
 		return fmt.Errorf("username cannot be empty")
@@ -249,7 +249,7 @@ func (c *SASLConfig) Validate() error {
 	return nil
 }
 
-// ApplyDefaults 应用默认值
+// ApplyDefaults Apply default values
 func (c *Config) ApplyDefaults() {
 	if c.Version == "" {
 		c.Version = "3.8.0"
@@ -263,7 +263,7 @@ func (c *Config) ApplyDefaults() {
 	c.Consumer.ApplyDefaults()
 }
 
-// ApplyDefaults 应用生产者默认值
+// Apply defaults for producer values
 func (c *ProducerConfig) ApplyDefaults() {
 	if c.RequiredAcks == 0 && !c.Idempotent {
 		c.RequiredAcks = 1 // WaitForLocal
@@ -298,7 +298,7 @@ func (c *ProducerConfig) ApplyDefaults() {
 	}
 }
 
-// ApplyDefaults 应用消费者默认值
+// Apply defaults for consumer values
 func (c *ConsumerConfig) ApplyDefaults() {
 	if c.OffsetInitial == 0 {
 		c.OffsetInitial = -1 // Newest

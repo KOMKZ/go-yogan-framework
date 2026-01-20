@@ -11,58 +11,58 @@ import (
 	"go.uber.org/zap"
 )
 
-// Message 消息结构
+// Message structure
 type Message struct {
-	// Topic 目标 Topic
+	// Topic Objective Topic
 	Topic string
 
-	// Key 消息键（用于分区）
+	// Key message key (for partitioning)
 	Key []byte
 
-	// Value 消息值
+	// Message value
 	Value []byte
 
-	// Headers 消息头
+	// Headers header information
 	Headers map[string]string
 
-	// Partition 指定分区（-1 表示自动分配）
+	// Partition specifies the partition (-1 indicates automatic allocation)
 	Partition int32
 
-	// Timestamp 消息时间戳
+	// Timestamp Message timestamp
 	Timestamp time.Time
 }
 
-// ProducerResult 发送结果
+// ProducerResult send result
 type ProducerResult struct {
-	// Topic 发送的 Topic
+	// Topic sent Topic
 	Topic string
 
-	// Partition 发送的分区
+	// Partition sent partition
 	Partition int32
 
-	// Offset 消息 Offset
+	// Message Offset
 	Offset int64
 
-	// Timestamp 服务端时间戳
+	// Timestamp server timestamp
 	Timestamp time.Time
 }
 
-// Producer Kafka 生产者接口
+// Kafka producer interface
 type Producer interface {
-	// Send 同步发送消息
+	// Send synchronous message
 	Send(ctx context.Context, msg *Message) (*ProducerResult, error)
 
-	// SendAsync 异步发送消息
+	// SendAsync asynchronously send message
 	SendAsync(msg *Message, callback func(*ProducerResult, error))
 
-	// SendJSON 发送 JSON 消息
+	// SendJSON sends JSON message
 	SendJSON(ctx context.Context, topic string, key string, value interface{}) (*ProducerResult, error)
 
-	// Close 关闭生产者
+	// Close shutdown producer
 	Close() error
 }
 
-// SyncProducer 同步生产者实现
+// SyncProducer synchronous producer implementation
 type SyncProducer struct {
 	producer sarama.SyncProducer
 	config   ProducerConfig
@@ -71,7 +71,7 @@ type SyncProducer struct {
 	closed   bool
 }
 
-// NewSyncProducer 创建同步生产者
+// NewSyncProducer creates a synchronous producer
 func NewSyncProducer(brokers []string, cfg ProducerConfig, saramaCfg *sarama.Config, logger *zap.Logger) (*SyncProducer, error) {
 	if logger == nil {
 		return nil, fmt.Errorf("logger cannot be nil")
@@ -89,7 +89,7 @@ func NewSyncProducer(brokers []string, cfg ProducerConfig, saramaCfg *sarama.Con
 	}, nil
 }
 
-// Send 同步发送消息
+// Send synchronous message
 func (p *SyncProducer) Send(ctx context.Context, msg *Message) (*ProducerResult, error) {
 	p.mu.RLock()
 	if p.closed {
@@ -106,7 +106,7 @@ func (p *SyncProducer) Send(ctx context.Context, msg *Message) (*ProducerResult,
 		return nil, fmt.Errorf("topic cannot be empty")
 	}
 
-	// 构建 Sarama 消息
+	// Build Sarama message
 	saramaMsg := &sarama.ProducerMessage{
 		Topic: msg.Topic,
 		Value: sarama.ByteEncoder(msg.Value),
@@ -124,7 +124,7 @@ func (p *SyncProducer) Send(ctx context.Context, msg *Message) (*ProducerResult,
 		saramaMsg.Timestamp = msg.Timestamp
 	}
 
-	// 添加 Headers
+	// Add Headers
 	if len(msg.Headers) > 0 {
 		headers := make([]sarama.RecordHeader, 0, len(msg.Headers))
 		for k, v := range msg.Headers {
@@ -136,7 +136,7 @@ func (p *SyncProducer) Send(ctx context.Context, msg *Message) (*ProducerResult,
 		saramaMsg.Headers = headers
 	}
 
-	// 发送消息
+	// Send message
 	partition, offset, err := p.producer.SendMessage(saramaMsg)
 	if err != nil {
 		p.logger.Error("send message failed",
@@ -158,7 +158,7 @@ func (p *SyncProducer) Send(ctx context.Context, msg *Message) (*ProducerResult,
 	}, nil
 }
 
-// SendAsync 异步发送（同步生产者模拟异步）
+// SendAsync asynchronously sends (simulates asynchronous producer with a synchronous producer)
 func (p *SyncProducer) SendAsync(msg *Message, callback func(*ProducerResult, error)) {
 	go func() {
 		result, err := p.Send(context.Background(), msg)
@@ -168,7 +168,7 @@ func (p *SyncProducer) SendAsync(msg *Message, callback func(*ProducerResult, er
 	}()
 }
 
-// SendJSON 发送 JSON 消息
+// SendJSON sends JSON message
 func (p *SyncProducer) SendJSON(ctx context.Context, topic string, key string, value interface{}) (*ProducerResult, error) {
 	data, err := json.Marshal(value)
 	if err != nil {
@@ -188,7 +188,7 @@ func (p *SyncProducer) SendJSON(ctx context.Context, topic string, key string, v
 	return p.Send(ctx, msg)
 }
 
-// Close 关闭生产者
+// Close shutdown producer
 func (p *SyncProducer) Close() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -206,7 +206,7 @@ func (p *SyncProducer) Close() error {
 	return nil
 }
 
-// AsyncProducer 异步生产者实现
+// AsyncProducer asynchronous producer implementation
 type AsyncProducer struct {
 	producer   sarama.AsyncProducer
 	config     ProducerConfig
@@ -219,7 +219,7 @@ type AsyncProducer struct {
 	stopCh     chan struct{}
 }
 
-// NewAsyncProducer 创建异步生产者
+// Create asynchronous producer
 func NewAsyncProducer(brokers []string, cfg ProducerConfig, saramaCfg *sarama.Config, logger *zap.Logger) (*AsyncProducer, error) {
 	if logger == nil {
 		return nil, fmt.Errorf("logger cannot be nil")
@@ -239,14 +239,14 @@ func NewAsyncProducer(brokers []string, cfg ProducerConfig, saramaCfg *sarama.Co
 		stopCh:    make(chan struct{}),
 	}
 
-	// 启动结果处理协程
+	// Start result handling coroutine
 	p.wg.Add(1)
 	go p.handleResults()
 
 	return p, nil
 }
 
-// handleResults 处理异步结果
+// handleResults handle asynchronous results
 func (p *AsyncProducer) handleResults() {
 	defer p.wg.Done()
 
@@ -283,7 +283,7 @@ func (p *AsyncProducer) handleResults() {
 	}
 }
 
-// Send 同步发送（等待结果）
+// Send synchronously (wait for result)
 func (p *AsyncProducer) Send(ctx context.Context, msg *Message) (*ProducerResult, error) {
 	p.mu.RLock()
 	if p.closed {
@@ -300,7 +300,7 @@ func (p *AsyncProducer) Send(ctx context.Context, msg *Message) (*ProducerResult
 		return nil, fmt.Errorf("topic cannot be empty")
 	}
 
-	// 构建消息
+	// Build message
 	saramaMsg := &sarama.ProducerMessage{
 		Topic: msg.Topic,
 		Value: sarama.ByteEncoder(msg.Value),
@@ -310,10 +310,10 @@ func (p *AsyncProducer) Send(ctx context.Context, msg *Message) (*ProducerResult
 		saramaMsg.Key = sarama.ByteEncoder(msg.Key)
 	}
 
-	// 发送消息
+	// Send message
 	p.producer.Input() <- saramaMsg
 
-	// 等待结果
+	// wait for result
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -324,7 +324,7 @@ func (p *AsyncProducer) Send(ctx context.Context, msg *Message) (*ProducerResult
 	}
 }
 
-// SendAsync 异步发送消息
+// SendAsync asynchronously send message
 func (p *AsyncProducer) SendAsync(msg *Message, callback func(*ProducerResult, error)) {
 	p.mu.RLock()
 	if p.closed {
@@ -354,7 +354,7 @@ func (p *AsyncProducer) SendAsync(msg *Message, callback func(*ProducerResult, e
 
 	p.producer.Input() <- saramaMsg
 
-	// 如果有回调，启动协程等待结果
+	// If there is a callback, start a coroutine to wait for the result
 	if callback != nil {
 		go func() {
 			select {
@@ -367,7 +367,7 @@ func (p *AsyncProducer) SendAsync(msg *Message, callback func(*ProducerResult, e
 	}
 }
 
-// SendJSON 发送 JSON 消息
+// SendJSON send JSON message
 func (p *AsyncProducer) SendJSON(ctx context.Context, topic string, key string, value interface{}) (*ProducerResult, error) {
 	data, err := json.Marshal(value)
 	if err != nil {
@@ -384,17 +384,17 @@ func (p *AsyncProducer) SendJSON(ctx context.Context, topic string, key string, 
 	return p.Send(ctx, msg)
 }
 
-// Successes 返回成功通道
+// Successes return successful channels
 func (p *AsyncProducer) Successes() <-chan *ProducerResult {
 	return p.successCh
 }
 
-// Errors 返回错误通道
+// Errors return error channel
 func (p *AsyncProducer) Errors() <-chan error {
 	return p.errorCh
 }
 
-// Close 关闭生产者
+// Close the producer
 func (p *AsyncProducer) Close() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()

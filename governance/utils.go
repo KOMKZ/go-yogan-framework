@@ -6,7 +6,7 @@ import (
 	"strconv"
 )
 
-// GetLocalIP 获取本机IP地址
+// GetLocalIP Get local IP address
 func GetLocalIP() (string, error) {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
@@ -24,13 +24,13 @@ func GetLocalIP() (string, error) {
 	return "127.0.0.1", fmt.Errorf("no valid IP found")
 }
 
-// FormatServiceAddress 格式化服务地址
+// FormatServiceAddress Format service address
 func FormatServiceAddress(host string, port int) string {
 	return net.JoinHostPort(host, strconv.Itoa(port))
 }
 
-// ParseServiceAddress 解析服务地址
-// 格式: "127.0.0.1:9002" -> ("127.0.0.1", 9002)
+// Parse service address
+// Format: "127.0.0.1:9002" -> ("127.0.0.1", 9002)
 func ParseServiceAddress(address string) (string, int, error) {
 	host, portStr, err := net.SplitHostPort(address)
 	if err != nil {
@@ -45,7 +45,7 @@ func ParseServiceAddress(address string) (string, int, error) {
 	return host, port, nil
 }
 
-// GenerateInstanceID 生成实例ID
+// GenerateInstanceID Generate instance ID
 func GenerateInstanceID(serviceName, address string, port int) string {
 	return fmt.Sprintf("%s-%s-%d", serviceName, address, port)
 }

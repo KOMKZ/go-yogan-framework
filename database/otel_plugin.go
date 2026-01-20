@@ -12,22 +12,22 @@ import (
 )
 
 const (
-	// instrumentationName 仪器名称
+	// instrumentationName instrument name
 	instrumentationName = "gorm.io/plugin/opentelemetry"
-	// instrumentationVersion 仪器版本
+	// instrumentationVersion instrument version
 	instrumentationVersion = "0.1.0"
 )
 
-// OtelPlugin GORM OpenTelemetry 插件
+// OtelPlugin GORM OpenTelemetry plugin
 type OtelPlugin struct {
 	tracerProvider trace.TracerProvider
 	tracer         trace.Tracer
-	traceSQL       bool // 是否记录 SQL 语句到 Span
-	sqlMaxLen      int  // SQL 最大长度
+	traceSQL       bool // Whether to log SQL statements to Span
+	sqlMaxLen      int  // SQL maximum length
 }
 
-// NewOtelPlugin 创建 OpenTelemetry 插件
-// 如果 tracerProvider 为 nil，使用全局 TracerProvider
+// Create NewOtelPlugin for OpenTelemetry plugin
+// If tracerProvider is nil, use the global TracerProvider
 func NewOtelPlugin(tracerProvider trace.TracerProvider) *OtelPlugin {
 	if tracerProvider == nil {
 		tracerProvider = otel.GetTracerProvider()
@@ -36,18 +36,18 @@ func NewOtelPlugin(tracerProvider trace.TracerProvider) *OtelPlugin {
 	return &OtelPlugin{
 		tracerProvider: tracerProvider,
 		tracer:         tracerProvider.Tracer(instrumentationName, trace.WithInstrumentationVersion(instrumentationVersion)),
-		traceSQL:       false, // 默认不记录 SQL
-		sqlMaxLen:      1000,  // 默认最大长度 1000
+		traceSQL:       false, // By default, do not record SQL
+		sqlMaxLen:      1000,  // Default maximum length 1000
 	}
 }
 
-// WithTraceSQL 设置是否记录 SQL 语句
+// WithTraceSQL setting whether to record SQL statements
 func (p *OtelPlugin) WithTraceSQL(enabled bool) *OtelPlugin {
 	p.traceSQL = enabled
 	return p
 }
 
-// WithSQLMaxLen 设置 SQL 最大长度
+// WithSQLMaxLen sets the maximum length of SQL
 func (p *OtelPlugin) WithSQLMaxLen(maxLen int) *OtelPlugin {
 	if maxLen > 0 {
 		p.sqlMaxLen = maxLen
@@ -55,14 +55,14 @@ func (p *OtelPlugin) WithSQLMaxLen(maxLen int) *OtelPlugin {
 	return p
 }
 
-// Name 插件名称
+// Name Plugin Name
 func (p *OtelPlugin) Name() string {
 	return "otel"
 }
 
-// Initialize 初始化插件（注册回调）
+// Initialize plugin (register callbacks)
 func (p *OtelPlugin) Initialize(db *gorm.DB) error {
-	// 注册 Create 回调
+	// Register Create callback
 	if err := db.Callback().Create().Before("gorm:create").Register("otel:before_create", p.before); err != nil {
 		return err
 	}
@@ -70,7 +70,7 @@ func (p *OtelPlugin) Initialize(db *gorm.DB) error {
 		return err
 	}
 
-	// 注册 Query 回调
+	// Register Query callback
 	if err := db.Callback().Query().Before("gorm:query").Register("otel:before_query", p.before); err != nil {
 		return err
 	}
@@ -78,7 +78,7 @@ func (p *OtelPlugin) Initialize(db *gorm.DB) error {
 		return err
 	}
 
-	// 注册 Update 回调
+	// Register Update callback
 	if err := db.Callback().Update().Before("gorm:update").Register("otel:before_update", p.before); err != nil {
 		return err
 	}
@@ -86,7 +86,7 @@ func (p *OtelPlugin) Initialize(db *gorm.DB) error {
 		return err
 	}
 
-	// 注册 Delete 回调
+	// Register Delete callback
 	if err := db.Callback().Delete().Before("gorm:delete").Register("otel:before_delete", p.before); err != nil {
 		return err
 	}
@@ -94,7 +94,7 @@ func (p *OtelPlugin) Initialize(db *gorm.DB) error {
 		return err
 	}
 
-	// 注册 Row 回调
+	// Register Row Callback
 	if err := db.Callback().Row().Before("gorm:row").Register("otel:before_row", p.before); err != nil {
 		return err
 	}
@@ -102,7 +102,7 @@ func (p *OtelPlugin) Initialize(db *gorm.DB) error {
 		return err
 	}
 
-	// 注册 Raw 回调
+	// Register Raw callback
 	if err := db.Callback().Raw().Before("gorm:raw").Register("otel:before_raw", p.before); err != nil {
 		return err
 	}
@@ -113,18 +113,18 @@ func (p *OtelPlugin) Initialize(db *gorm.DB) error {
 	return nil
 }
 
-// before 在操作之前创建 Span
+// before creating Span for the operation
 func (p *OtelPlugin) before(db *gorm.DB) {
-	// 从 context 获取父 Span
+	// Get the parent Span from context
 	ctx := db.Statement.Context
 	if ctx == nil {
 		ctx = context.Background()
 	}
 
-	// 确定操作类型
+	// Determine the operation type
 	operation := p.determineOperation(db)
 
-	// 创建 Span
+	// Create Span
 	spanName := fmt.Sprintf("gorm.%s", operation)
 	if db.Statement.Table != "" {
 		spanName = fmt.Sprintf("gorm.%s %s", operation, db.Statement.Table)
@@ -132,7 +132,7 @@ func (p *OtelPlugin) before(db *gorm.DB) {
 
 	ctx, span := p.tracer.Start(ctx, spanName, trace.WithSpanKind(trace.SpanKindClient))
 
-	// 设置基础 Span 属性
+	// Set base Span attributes
 	attrs := []attribute.KeyValue{
 		attribute.String("db.system", "gorm"),
 		attribute.String("db.operation", operation),
@@ -144,14 +144,14 @@ func (p *OtelPlugin) before(db *gorm.DB) {
 
 	span.SetAttributes(attrs...)
 
-	// 将 Span 保存到 context（用于 after 回调）
+	// Save Span to context (for after callback)
 	db.Statement.Context = ctx
 	db.InstanceSet("otel:span", span)
 }
 
-// after 在操作之后结束 Span
+// English: end Span after operation
 func (p *OtelPlugin) after(db *gorm.DB) {
-	// 获取 Span
+	// Get Span
 	spanVal, ok := db.InstanceGet("otel:span")
 	if !ok {
 		return
@@ -164,29 +164,29 @@ func (p *OtelPlugin) after(db *gorm.DB) {
 
 	defer span.End()
 
-	// 🎯 根据配置决定是否记录 SQL 语句
+	// 🎯 Determine whether to log SQL statements based on configuration
 	if p.traceSQL {
 		sql := db.Statement.SQL.String()
 		if sql != "" {
-			// SQL 语句可能很长，根据配置截取
+			// The SQL statement may be long; trim according to configuration
 			if len(sql) > p.sqlMaxLen {
 				sql = sql[:p.sqlMaxLen] + "..."
 			}
 			span.SetAttributes(attribute.String("db.statement", sql))
 		}
 
-		// 记录绑定的 SQL 变量（vars）
+		// Record bound SQL variables (vars)
 		if len(db.Statement.Vars) > 0 {
 			span.SetAttributes(attribute.Int("db.vars_count", len(db.Statement.Vars)))
 		}
 	}
 
-	// 记录影响行数（始终记录，性能影响小）
+	// log the number of affected rows (always log, minimal performance impact)
 	span.SetAttributes(
 		attribute.Int64("db.rows_affected", db.Statement.RowsAffected),
 	)
 
-	// 记录错误（如果有）
+	// Record error if any
 	if db.Error != nil && db.Error != gorm.ErrRecordNotFound {
 		span.RecordError(db.Error)
 		span.SetStatus(codes.Error, db.Error.Error())
@@ -195,12 +195,12 @@ func (p *OtelPlugin) after(db *gorm.DB) {
 	}
 }
 
-// determineOperation 根据 Statement 判断操作类型
+// determineOperation determines the operation type based on Statement
 func (p *OtelPlugin) determineOperation(db *gorm.DB) string {
-	// 优先从 SQL 字符串判断
+	// Prioritize judgment from the SQL string
 	sql := db.Statement.SQL.String()
 	if sql != "" {
-		// 提取 SQL 的第一个单词（通常是操作类型）
+		// Extract the first word of the SQL (usually the operation type)
 		for i, char := range sql {
 			if char == ' ' || char == '\t' || char == '\n' {
 				if i > 0 {
@@ -211,6 +211,6 @@ func (p *OtelPlugin) determineOperation(db *gorm.DB) string {
 		}
 	}
 
-	// 回退到默认操作类型
+	// Fallback to default operation type
 	return "query"
 }

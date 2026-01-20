@@ -2,42 +2,42 @@ package governance
 
 import "errors"
 
-// 服务注册相关错误
+// Service registration related errors
 var (
-	// ErrInvalidServiceName 无效的服务名称
+	// ErrInvalidServiceName Invalid service name
 	ErrInvalidServiceName = errors.New("invalid service name")
 
-	// ErrInvalidAddress 无效的服务地址
+	// ErrInvalidAddress Invalid service address
 	ErrInvalidAddress = errors.New("invalid service address")
 
-	// ErrInvalidPort 无效的服务端口
+	// ErrInvalidPort Invalid service port
 	ErrInvalidPort = errors.New("invalid service port")
 
-	// ErrNotRegistered 服务未注册
+	// ErrNotRegistered service not registered
 	ErrNotRegistered = errors.New("service not registered")
 
-	// ErrAlreadyRegistered 服务已注册
+	// ErrAlreadyRegistered Service already registered
 	ErrAlreadyRegistered = errors.New("service already registered")
 
-	// ErrRegistryUnavailable 注册中心不可用
+	// ErrRegistryUnavailable Registry unavailable
 	ErrRegistryUnavailable = errors.New("registry unavailable")
 
-	// ErrHeartbeatFailed 心跳失败
+	// ErrHeartbeatFailed Heartbeat failed
 	ErrHeartbeatFailed = errors.New("heartbeat failed")
 
-	// ErrKeepAliveFailed 心跳保活失败
+	// Heartbeat keep-alive failed
 	ErrKeepAliveFailed = errors.New("keep alive failed")
 
-	// ErrMaxRetriesExceeded 超过最大重试次数
+	// ErrMaxRetriesExceeded Maximum retries exceeded
 	ErrMaxRetriesExceeded = errors.New("max retries exceeded")
 )
 
-// 健康检查相关错误
+// Health check related errors
 var (
-	// ErrHealthCheckFailed 健康检查失败
+	// ErrHealthCheckFailed Health check failed
 	ErrHealthCheckFailed = errors.New("health check failed")
 
-	// ErrHealthCheckTimeout 健康检查超时
+	// ErrHealthCheckTimeout Health check timeout
 	ErrHealthCheckTimeout = errors.New("health check timeout")
 )
 

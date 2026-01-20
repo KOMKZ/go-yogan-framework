@@ -1,11 +1,11 @@
 package config
 
-// Validator 配置验证接口（各模块实现）
+// Validator configuration validation interface (implemented by each module)
 type Validator interface {
 	Validate() error
 }
 
-// ValidateAll 批量验证多个配置
+// ValidateAll batch validate multiple configurations
 func ValidateAll(validators ...Validator) error {
 	for _, v := range validators {
 		if err := v.Validate(); err != nil {

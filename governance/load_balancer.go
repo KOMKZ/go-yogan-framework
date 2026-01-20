@@ -7,55 +7,55 @@ import (
 	"time"
 )
 
-// LoadBalancer 负载均衡器接口
+// LoadBalancer interface
 type LoadBalancer interface {
-	// Select 选择一个服务实例
+	// Select a service instance
 	Select(instances []*ServiceInstance) *ServiceInstance
 
-	// Name 负载均衡器名称
+	// Name Load balancer name
 	Name() string
 }
 
-// RoundRobinBalancer 轮询负载均衡器
+// RoundRobinBalancer round-robin load balancer
 type RoundRobinBalancer struct {
 	counter uint64
 }
 
-// NewRoundRobinBalancer 创建轮询负载均衡器
+// Create round-robin load balancer
 func NewRoundRobinBalancer() *RoundRobinBalancer {
 	return &RoundRobinBalancer{}
 }
 
-// Select 轮询选择实例
+// Select poll for instance choice
 func (b *RoundRobinBalancer) Select(instances []*ServiceInstance) *ServiceInstance {
 	if len(instances) == 0 {
 		return nil
 	}
 
-	// 原子递增计数器
+	// Atomic increment counter
 	idx := atomic.AddUint64(&b.counter, 1) - 1
 	return instances[int(idx)%len(instances)]
 }
 
-// Name 负载均衡器名称
+// Name Load Balancer Name
 func (b *RoundRobinBalancer) Name() string {
 	return "round_robin"
 }
 
-// RandomBalancer 随机负载均衡器
+// RandomBalancer random load balancer
 type RandomBalancer struct {
 	rand *rand.Rand
 	mu   sync.Mutex
 }
 
-// NewRandomBalancer 创建随机负载均衡器
+// Create random load balancer
 func NewRandomBalancer() *RandomBalancer {
 	return &RandomBalancer{
 		rand: rand.New(rand.NewSource(int64(time.Now().UnixNano()))),
 	}
 }
 
-// Select 随机选择实例
+// Select randomly choose instance
 func (b *RandomBalancer) Select(instances []*ServiceInstance) *ServiceInstance {
 	if len(instances) == 0 {
 		return nil
@@ -68,28 +68,28 @@ func (b *RandomBalancer) Select(instances []*ServiceInstance) *ServiceInstance {
 	return instances[idx]
 }
 
-// Name 负载均衡器名称
+// Name Load Balancer Name
 func (b *RandomBalancer) Name() string {
 	return "random"
 }
 
-// WeightedBalancer 加权负载均衡器
+// Weighted Load Balancer
 type WeightedBalancer struct {
 	counter uint64
 }
 
-// NewWeightedBalancer 创建加权负载均衡器
+// Create weighted load balancer
 func NewWeightedBalancer() *WeightedBalancer {
 	return &WeightedBalancer{}
 }
 
-// Select 根据权重选择实例
+// Select an instance based on weight
 func (b *WeightedBalancer) Select(instances []*ServiceInstance) *ServiceInstance {
 	if len(instances) == 0 {
 		return nil
 	}
 
-	// 计算总权重
+	// Calculate total weight
 	totalWeight := 0
 	for _, inst := range instances {
 		if inst.Healthy && inst.Weight > 0 {
@@ -98,12 +98,12 @@ func (b *WeightedBalancer) Select(instances []*ServiceInstance) *ServiceInstance
 	}
 
 	if totalWeight == 0 {
-		// 降级到轮询
+		// fallback to polling
 		idx := atomic.AddUint64(&b.counter, 1) - 1
 		return instances[int(idx)%len(instances)]
 	}
 
-	// 基于权重选择
+	// weight-based selection
 	idx := atomic.AddUint64(&b.counter, 1) - 1
 	target := int(idx) % totalWeight
 
@@ -119,16 +119,16 @@ func (b *WeightedBalancer) Select(instances []*ServiceInstance) *ServiceInstance
 		}
 	}
 
-	// 兜底：返回第一个
+	// Fallback: return the first one
 	return instances[0]
 }
 
-// Name 负载均衡器名称
+// Name Load Balancer Name
 func (b *WeightedBalancer) Name() string {
 	return "weighted"
 }
 
-// NewLoadBalancer 根据名称创建负载均衡器
+// Create load balancer according to name
 func NewLoadBalancer(name string) LoadBalancer {
 	switch name {
 	case "random":

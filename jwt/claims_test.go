@@ -132,7 +132,7 @@ func TestClaims_TTL(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := tt.claims.TTL()
-			// 允许 1 秒误差
+			// Allow 1 second error
 			assert.InDelta(t, tt.want.Seconds(), got.Seconds(), 1.0)
 		})
 	}

@@ -5,13 +5,13 @@ import (
 	"fmt"
 )
 
-// HealthChecker gRPC 健康检查器
+// HealthChecker gRPC health checker
 type HealthChecker struct {
 	server        *Server
 	clientManager *ClientManager
 }
 
-// NewHealthChecker 创建 gRPC 健康检查器
+// Create gRPC health checker
 func NewHealthChecker(server *Server, clientManager *ClientManager) *HealthChecker {
 	return &HealthChecker{
 		server:        server,
@@ -19,23 +19,23 @@ func NewHealthChecker(server *Server, clientManager *ClientManager) *HealthCheck
 	}
 }
 
-// Name 检查项名称
+// Name Check item name
 func (h *HealthChecker) Name() string {
 	return "grpc"
 }
 
-// Check 执行健康检查
+// Check execution health check
 func (h *HealthChecker) Check(ctx context.Context) error {
-	// gRPC 组件主要检查是否正常初始化即可
-	// Server 和 ClientManager 都可能为 nil（取决于配置）
+	// The gRPC component mainly checks if it has been properly initialized.
+	// The Server and ClientManager may be nil (depending on the configuration)
 	
 	if h.server == nil && h.clientManager == nil {
 		return fmt.Errorf("grpc component not initialized")
 	}
 
-	// gRPC Server 健康状态通过是否成功启动来判断
-	// gRPC Client 健康状态通过是否成功创建连接来判断
-	// 这里只做基础检查，不执行实际的 RPC 调用
+	// The health status of the gRPC Server is determined by whether it successfully starts up
+	// gRPC client health status is determined by whether a connection can be successfully established
+	// Here only basic checks are performed; actual RPC calls are not executed.
 
 	return nil
 }

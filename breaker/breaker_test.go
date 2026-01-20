@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestNewManager 测试创建管理器
+// TestNewManager test create manager
 func TestNewManager(t *testing.T) {
 	t.Run("创建启用的管理器", func(t *testing.T) {
 		config := DefaultConfig()
@@ -36,7 +36,7 @@ func TestNewManager(t *testing.T) {
 	t.Run("无效配置返回错误", func(t *testing.T) {
 		config := DefaultConfig()
 		config.Enabled = true
-		config.Default.MinRequests = -1 // 无效配置
+		config.Default.MinRequests = -1 // invalid configuration
 		
 		mgr, err := NewManager(config)
 		assert.Error(t, err)
@@ -44,7 +44,7 @@ func TestNewManager(t *testing.T) {
 	})
 }
 
-// TestManager_Execute_Disabled 测试未启用时直接透传
+// TestManager_Execute_Disabled Directly pass through when testing is not enabled
 func TestManager_Execute_Disabled(t *testing.T) {
 	config := DefaultConfig()
 	config.Enabled = false
@@ -67,7 +67,7 @@ func TestManager_Execute_Disabled(t *testing.T) {
 	assert.True(t, called)
 }
 
-// TestManager_Execute_Success 测试成功执行
+// TestManager_Execute_Success Execution successful
 func TestManager_Execute_Success(t *testing.T) {
 	config := DefaultConfig()
 	config.Enabled = true
@@ -87,12 +87,12 @@ func TestManager_Execute_Success(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "success", result)
 	
-	// 验证熔断器被创建
+	// Verify that the circuit breaker is created
 	state := mgr.GetState("test-service")
 	assert.Equal(t, StateClosed, state)
 }
 
-// TestManager_Execute_Failure 测试失败执行
+// TestManager_Execute_Failure Execution failed
 func TestManager_Execute_Failure(t *testing.T) {
 	config := DefaultConfig()
 	config.Enabled = true
@@ -115,7 +115,7 @@ func TestManager_Execute_Failure(t *testing.T) {
 	assert.Nil(t, result)
 }
 
-// TestManager_Execute_WithFallback 测试带降级的执行
+// TestManager_Execute_WithFallback test execution with fallback
 func TestManager_Execute_WithFallback(t *testing.T) {
 	config := DefaultConfig()
 	config.Enabled = true
@@ -135,18 +135,18 @@ func TestManager_Execute_WithFallback(t *testing.T) {
 		},
 	}
 	
-	// 触发足够多的失败使熔断器打开
+	// Trigger enough failures to open the circuit breaker
 	for i := 0; i < 10; i++ {
 		mgr.Execute(context.Background(), req)
 	}
 	
-	// 熔断器打开后，请求被拒绝，应该执行降级
+	// After the circuit breaker trips, requests are rejected, and degradation should be executed
 	result, err := mgr.Execute(context.Background(), req)
 	assert.NoError(t, err)
 	assert.Equal(t, "fallback result", result)
 }
 
-// TestCircuitBreaker_StateTransition 测试状态转换
+// TestCircuitBreaker_StateTransition Test state transition
 func TestCircuitBreaker_StateTransition(t *testing.T) {
 	config := DefaultConfig()
 	config.Enabled = true
@@ -157,11 +157,11 @@ func TestCircuitBreaker_StateTransition(t *testing.T) {
 	mgr, _ := NewManager(config)
 	defer mgr.Close()
 	
-	// 初始状态应该是 Closed
+	// The initial state should be Closed
 	breaker := mgr.getOrCreateBreaker("test")
 	assert.Equal(t, StateClosed, breaker.GetState())
 	
-	// 模拟10次请求，6次失败
+	// Simulate 10 requests, 6 failures
 	for i := 0; i < 4; i++ {
 		req := &Request{
 			Resource: "test",
@@ -182,10 +182,10 @@ func TestCircuitBreaker_StateTransition(t *testing.T) {
 		mgr.Execute(context.Background(), req)
 	}
 	
-	// 应该触发熔断，状态变为 Open
+	// Circuit breaker should be triggered, status changes to Open
 	assert.Equal(t, StateOpen, breaker.GetState())
 	
-	// 等待超时后，状态应该变为 HalfOpen
+	// After a timeout, the status should become HalfOpen
 	time.Sleep(150 * time.Millisecond)
 	
 	req := &Request{
@@ -199,7 +199,7 @@ func TestCircuitBreaker_StateTransition(t *testing.T) {
 	assert.Equal(t, StateHalfOpen, breaker.GetState())
 }
 
-// TestCircuitBreaker_EventPublish 测试事件发布
+// TestCircuitBreaker_EventPublish test event publication
 func TestCircuitBreaker_EventPublish(t *testing.T) {
 	config := DefaultConfig()
 	config.Enabled = true
@@ -216,7 +216,7 @@ func TestCircuitBreaker_EventPublish(t *testing.T) {
 		mu.Unlock()
 	}))
 	
-	// 执行成功
+	// Execution successful
 	req := &Request{
 		Resource: "test",
 		Execute: func(ctx context.Context) (interface{}, error) {
@@ -233,7 +233,7 @@ func TestCircuitBreaker_EventPublish(t *testing.T) {
 	assert.Contains(t, receivedEvents, EventCallSuccess)
 }
 
-// TestCircuitBreaker_MetricsCollection 测试指标采集
+// TestCircuitBreaker_MetricsCollection test metrics collection
 func TestCircuitBreaker_MetricsCollection(t *testing.T) {
 	config := DefaultConfig()
 	config.Enabled = true
@@ -241,7 +241,7 @@ func TestCircuitBreaker_MetricsCollection(t *testing.T) {
 	mgr, _ := NewManager(config)
 	defer mgr.Close()
 	
-	// 执行一些请求
+	// Execute some requests
 	for i := 0; i < 10; i++ {
 		req := &Request{
 			Resource: "test",
@@ -264,7 +264,7 @@ func TestCircuitBreaker_MetricsCollection(t *testing.T) {
 	assert.Equal(t, int64(3), metrics.Failures)
 }
 
-// TestCircuitBreaker_Reset 测试重置
+// TestCircuitBreaker_Reset Test reset
 func TestCircuitBreaker_Reset(t *testing.T) {
 	config := DefaultConfig()
 	config.Enabled = true
@@ -276,7 +276,7 @@ func TestCircuitBreaker_Reset(t *testing.T) {
 	
 	breaker := mgr.getOrCreateBreaker("test")
 	
-	// 触发熔断
+	// Trigger circuit breaker
 	for i := 0; i < 10; i++ {
 		req := &Request{
 			Resource: "test",
@@ -289,7 +289,7 @@ func TestCircuitBreaker_Reset(t *testing.T) {
 	
 	assert.Equal(t, StateOpen, breaker.GetState())
 	
-	// 重置
+	// Reset
 	breaker.Reset()
 	
 	assert.Equal(t, StateClosed, breaker.GetState())
@@ -297,7 +297,7 @@ func TestCircuitBreaker_Reset(t *testing.T) {
 	assert.Equal(t, int64(0), metrics.TotalRequests)
 }
 
-// TestCircuitBreaker_ConcurrentAccess 测试并发访问
+// TestConcurrentAccess Concurrent access test
 func TestCircuitBreaker_ConcurrentAccess(t *testing.T) {
 	config := DefaultConfig()
 	config.Enabled = true
@@ -308,7 +308,7 @@ func TestCircuitBreaker_ConcurrentAccess(t *testing.T) {
 	var successCount int32
 	var errorCount int32
 	
-	// 并发执行
+	// concurrent execution
 	var wg sync.WaitGroup
 	for i := 0; i < 100; i++ {
 		wg.Add(1)
@@ -336,12 +336,12 @@ func TestCircuitBreaker_ConcurrentAccess(t *testing.T) {
 	
 	wg.Wait()
 	
-	// 验证计数
+	// Verify count
 	total := atomic.LoadInt32(&successCount) + atomic.LoadInt32(&errorCount)
 	assert.True(t, total > 0)
 }
 
-// TestCircuitBreaker_MultipleResources 测试多资源
+// TestCircuitBreaker_MultipleResources test multiple resources
 func TestCircuitBreaker_MultipleResources(t *testing.T) {
 	config := DefaultConfig()
 	config.Enabled = true
@@ -349,7 +349,7 @@ func TestCircuitBreaker_MultipleResources(t *testing.T) {
 	mgr, _ := NewManager(config)
 	defer mgr.Close()
 	
-	// 为不同资源执行请求
+	// Make requests for different resources
 	resources := []string{"service-a", "service-b", "service-c"}
 	
 	for _, resource := range resources {
@@ -362,14 +362,14 @@ func TestCircuitBreaker_MultipleResources(t *testing.T) {
 		mgr.Execute(context.Background(), req)
 	}
 	
-	// 验证每个资源都有自己的熔断器
+	// Verify that each resource has its own circuit breaker
 	for _, resource := range resources {
 		state := mgr.GetState(resource)
 		assert.Equal(t, StateClosed, state)
 	}
 }
 
-// TestCircuitBreaker_Timeout 测试超时处理
+// TestCircuitBreaker_Timeout Test timeout handling
 func TestCircuitBreaker_Timeout(t *testing.T) {
 	config := DefaultConfig()
 	config.Enabled = true
@@ -383,7 +383,7 @@ func TestCircuitBreaker_Timeout(t *testing.T) {
 	req := &Request{
 		Resource: "test",
 		Execute: func(ctx context.Context) (interface{}, error) {
-			<-ctx.Done() // 等待context超时
+			<-ctx.Done() // wait for context timeout
 			return nil, ctx.Err()
 		},
 	}
@@ -392,10 +392,10 @@ func TestCircuitBreaker_Timeout(t *testing.T) {
 	
 	assert.Error(t, err)
 	
-	// 给指标采集器一些时间处理
+	// Give the metric collector some time to process
 	time.Sleep(50 * time.Millisecond)
 	
-	// 验证指标记录了超时
+	// The metric verifies if there was a timeout
 	metrics := mgr.GetMetrics("test")
 	assert.Equal(t, int64(1), metrics.Timeouts)
 }

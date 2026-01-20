@@ -150,10 +150,10 @@ func TestSimpleConsumer_Stop_NotRunning(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-// 注意：consumerGroupHandler 的 Setup/Cleanup/ConsumeClaim 需要真实的 session
-// 这些方法的测试依赖集成测试环境
+// Note: consumerGroupHandler's Setup/Cleanup/ConsumeClaim needs a real session
+// These methods' tests depend on the integrated testing environment
 
-// MockMessageHandler 用于测试
+// MockMessageHandler for testing
 type MockMessageHandler struct {
 	messages []*ConsumedMessage
 	err      error
@@ -192,7 +192,7 @@ func TestMockMessageHandler_WithError(t *testing.T) {
 	assert.Error(t, err)
 }
 
-// 真实 Kafka 消费者测试
+// Real Kafka consumer test
 func TestConsumerGroup_RealKafka(t *testing.T) {
 	logger := zap.NewNop()
 	cfg := Config{
@@ -222,7 +222,7 @@ func TestConsumerGroup_RealKafka(t *testing.T) {
 		t.Skip("Cannot create consumer:", err)
 	}
 
-	// 测试启动消费者
+	// Test start consumer
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
@@ -239,7 +239,7 @@ func TestConsumerGroup_RealKafka(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, consumer.IsRunning())
 
-	// 等待一段时间
+	// wait for some time
 	select {
 	case <-messageReceived:
 		t.Log("Message received!")
@@ -247,7 +247,7 @@ func TestConsumerGroup_RealKafka(t *testing.T) {
 		t.Log("No message received (normal if topic is empty)")
 	}
 
-	// 停止消费者
+	// Stop consumer
 	err = consumer.Stop()
 	assert.NoError(t, err)
 	assert.False(t, consumer.IsRunning())
@@ -256,7 +256,7 @@ func TestConsumerGroup_RealKafka(t *testing.T) {
 func TestSimpleConsumer_RealKafka(t *testing.T) {
 	logger := zap.NewNop()
 
-	// 创建 sarama 配置
+	// Create sarama configuration
 	saramaCfg := sarama.NewConfig()
 	saramaCfg.Version = sarama.V3_0_0_0
 	saramaCfg.Consumer.Return.Errors = true
@@ -269,7 +269,7 @@ func TestSimpleConsumer_RealKafka(t *testing.T) {
 	assert.NotNil(t, simpleConsumer)
 	assert.False(t, simpleConsumer.IsRunning())
 
-	// 消费分区
+	// consume partition
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
@@ -283,10 +283,10 @@ func TestSimpleConsumer_RealKafka(t *testing.T) {
 		}
 	}()
 
-	// 等待一段时间
+	// wait for some time
 	<-ctx.Done()
 
-	// 停止
+	// Stop
 	err = simpleConsumer.Stop()
 	assert.NoError(t, err)
 }
@@ -312,12 +312,12 @@ func TestConsumerGroup_Stop_NotRunning_RealKafka(t *testing.T) {
 		t.Skip("Cannot create consumer:", err)
 	}
 
-	// 停止未运行的消费者
+	// Stop idle consumers
 	err = consumer.Stop()
 	assert.NoError(t, err)
 }
 
-// 端到端测试：发送消息并消费
+// End-to-end test: send message and consume
 func TestConsumerGroup_ConsumeWithHandlerError(t *testing.T) {
 	logger := zap.NewNop()
 	cfg := Config{
@@ -357,14 +357,14 @@ func TestConsumerGroup_ConsumeWithHandlerError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// 启动消费者，handler 返回错误
+	// Start the consumer, handler returns an error
 	err = consumer.Start(ctx, func(ctx context.Context, msg *ConsumedMessage) error {
 		t.Logf("Received message, returning error")
 		return fmt.Errorf("handler error")
 	})
 	assert.NoError(t, err)
 
-	// 发送消息触发 handler
+	// send message triggers handler
 	producer := manager.GetProducer()
 	_, err = producer.Send(context.Background(), &Message{
 		Topic: "test-topic",
@@ -372,7 +372,7 @@ func TestConsumerGroup_ConsumeWithHandlerError(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	// 等待一段时间
+	// wait for some time
 	time.Sleep(3 * time.Second)
 
 	cancel()
@@ -381,7 +381,7 @@ func TestConsumerGroup_ConsumeWithHandlerError(t *testing.T) {
 
 func TestProducerConsumer_EndToEnd(t *testing.T) {
 	logger := zap.NewNop()
-	testTopic := "test-topic" // 使用已存在的 topic
+	testTopic := "test-topic" // Use existing topic
 
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
@@ -408,14 +408,14 @@ func TestProducerConsumer_EndToEnd(t *testing.T) {
 		t.Skip("Kafka not available:", err)
 	}
 
-	// 创建唯一的消费者组
+	// Create a unique consumer group
 	groupID := "e2e-group-" + time.Now().Format("150405999")
 
-	// 1. 先启动消费者
+	// 1. Start the consumer first
 	consumer, err := manager.CreateConsumer("e2e-consumer", ConsumerConfig{
 		GroupID:            groupID,
 		Topics:             []string{testTopic},
-		OffsetInitial:      -1, // Newest - 只消费新消息
+		OffsetInitial:      -1, // Only consume new messages
 		AutoCommit:         true,
 		AutoCommitInterval: 100 * time.Millisecond,
 	})
@@ -428,7 +428,7 @@ func TestProducerConsumer_EndToEnd(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	// 启动消费者
+	// Start consumer
 	err = consumer.Start(ctx, func(ctx context.Context, msg *ConsumedMessage) error {
 		mu.Lock()
 		received = append(received, string(msg.Value))
@@ -437,7 +437,7 @@ func TestProducerConsumer_EndToEnd(t *testing.T) {
 		cnt := len(received)
 		mu.Unlock()
 
-		// 收到足够消息后停止
+		// Stop after receiving sufficient messages
 		if cnt >= len(testMessages) {
 			cancel()
 		}
@@ -445,10 +445,10 @@ func TestProducerConsumer_EndToEnd(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	// 等待消费者准备好（分配分区）
+	// wait for consumer to be ready (assign partitions)
 	time.Sleep(3 * time.Second)
 
-	// 2. 发送消息
+	// Send message
 	producer := manager.GetProducer()
 	for i, msg := range testMessages {
 		result, err := producer.Send(context.Background(), &Message{
@@ -463,14 +463,14 @@ func TestProducerConsumer_EndToEnd(t *testing.T) {
 		t.Logf("Sent message %d: partition=%d, offset=%d", i, result.Partition, result.Offset)
 	}
 
-	// 等待消费完成或超时
+	// wait for consumption to complete or timeout
 	<-ctx.Done()
 
-	// 停止消费者
+	// Stop consumer
 	err = consumer.Stop()
 	assert.NoError(t, err)
 
-	// 验证
+	// Validate
 	mu.Lock()
 	t.Logf("Received %d messages: %v", len(received), received)
 	mu.Unlock()

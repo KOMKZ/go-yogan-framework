@@ -413,8 +413,8 @@ func TestOrchestrator_CallStoreNotFound(t *testing.T) {
 }
 
 func TestOrchestrator_CallCacheableItemDisabled(t *testing.T) {
-	// NewOrchestrator 内部调用 ApplyDefaults，会将 Enabled: false 改为 true
-	// 所以这里需要在创建后直接修改 orchestrator 内部的 cacheables
+	// NewOrchestrator internally calls ApplyDefaults, which changes Enabled: false to true
+	// So the internal cacheables of the orchestrator need to be modified directly after creation here.
 	cfg := &Config{
 		Enabled:      true,
 		DefaultStore: "memory",
@@ -426,7 +426,7 @@ func TestOrchestrator_CallCacheableItemDisabled(t *testing.T) {
 	o := NewOrchestrator(cfg, nil, nil)
 	o.RegisterStore("memory", NewMemoryStore("memory", 100))
 
-	// 在创建后禁用缓存项（由于是指针引用，直接修改即可）
+	// Disable cache item after creation (since it is a pointer reference, direct modification is possible)
 	o.cacheables["test"].Enabled = false
 
 	var loadCount int32
@@ -451,7 +451,7 @@ func TestOrchestrator_CallWithDefaultStore(t *testing.T) {
 		DefaultTTL:   time.Minute,
 		DefaultStore: "memory",
 		Cacheables: []CacheableConfig{
-			{Name: "test", KeyPattern: "test:{0}", Enabled: true}, // 不指定 Store，使用默认
+			{Name: "test", KeyPattern: "test:{0}", Enabled: true}, // Do not specify Store, use default
 		},
 	}
 
@@ -519,7 +519,7 @@ func TestOrchestrator_CallWithDefaultTTL(t *testing.T) {
 		DefaultTTL:   5 * time.Minute,
 		DefaultStore: "memory",
 		Cacheables: []CacheableConfig{
-			{Name: "test", KeyPattern: "test:{0}", TTL: 0, Enabled: true}, // TTL 为 0，使用默认
+			{Name: "test", KeyPattern: "test:{0}", TTL: 0, Enabled: true}, // TTL is 0, use default
 		},
 	}
 
@@ -579,7 +579,7 @@ func TestOrchestrator_InvalidateStoreError(t *testing.T) {
 	}
 
 	o := NewOrchestrator(cfg, nil, nil)
-	// 不注册存储
+	// Do not register storage
 
 	err := o.Invalidate(context.Background(), "test", 1)
 	if err == nil {
@@ -597,7 +597,7 @@ func TestOrchestrator_InvalidateByPatternStoreError(t *testing.T) {
 	}
 
 	o := NewOrchestrator(cfg, nil, nil)
-	// 不注册存储
+	// Do not register storage
 
 	err := o.InvalidateByPattern(context.Background(), "test", "test:")
 	if err == nil {
@@ -670,7 +670,7 @@ func TestOrchestrator_GetStoreForCacheableWithEmptyStore(t *testing.T) {
 		Enabled:      true,
 		DefaultStore: "memory",
 		Cacheables: []CacheableConfig{
-			{Name: "test", KeyPattern: "test:{0}", Store: "", Enabled: true}, // 空 store，使用默认
+			{Name: "test", KeyPattern: "test:{0}", Store: "", Enabled: true}, // empty store, use default
 		},
 	}
 

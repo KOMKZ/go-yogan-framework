@@ -12,23 +12,23 @@ import (
 	"github.com/KOMKZ/go-yogan-framework/retry"
 )
 
-// Client HTTP 客户端
+// Client HTTP client
 type Client struct {
 	httpClient *http.Client
 	config     *config
 }
 
-// NewClient 创建新的 HTTP Client
+// Create new HTTP client
 func NewClient(opts ...Option) *Client {
 	cfg := newConfig()
 	applyOptions(cfg, opts)
 	
-	// 设置默认 Transport
+	// Set default transport
 	if cfg.transport == nil {
 		cfg.transport = http.DefaultTransport.(*http.Transport).Clone()
 	}
 	
-	// 创建 http.Client
+	// Create HTTP client
 	httpClient := &http.Client{
 		Timeout:   cfg.timeout,
 		Transport: cfg.transport,
@@ -41,14 +41,14 @@ func NewClient(opts ...Option) *Client {
 	}
 }
 
-// Do 执行 HTTP 请求
+// Perform HTTP request
 func (c *Client) Do(ctx context.Context, req *Request, opts ...Option) (*Response, error) {
-	// 合并配置
+	// Merge configuration
 	reqCfg := newConfig()
 	applyOptions(reqCfg, opts)
 	finalCfg := c.config.merge(reqCfg)
 	
-	// 设置 Context
+	// Set Context
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -56,46 +56,46 @@ func (c *Client) Do(ctx context.Context, req *Request, opts ...Option) (*Respons
 		ctx = finalCfg.ctx
 	}
 	
-	// 构建 URL（拼接 baseURL）
+	// Build URL (concatenate baseURL)
 	fullURL := req.URL
 	if finalCfg.baseURL != "" && !strings.HasPrefix(req.URL, "http://") && !strings.HasPrefix(req.URL, "https://") {
 		fullURL = strings.TrimRight(finalCfg.baseURL, "/") + "/" + strings.TrimLeft(req.URL, "/")
 	}
 	req.URL = fullURL
 	
-	// 合并 Query 参数
+	// Merge query parameters
 	for k, vs := range finalCfg.queries {
 		for _, v := range vs {
 			req.Query.Add(k, v)
 		}
 	}
 	
-	// 合并 Headers
+	// Merge Headers
 	for k, v := range finalCfg.headers {
 		if _, exists := req.Headers[k]; !exists {
 			req.Headers[k] = v
 		}
 	}
 	
-	// 执行请求（带熔断器 + 重试）
+	// Execute request (with circuit breaker + retry)
 	var resp *Response
 	var err error
 	startTime := time.Now()
 	attempts := 1
 	
-	// 判断是否使用熔断器
+	// determine if circuit breaker is used
 	useBreaker := finalCfg.breakerManager != nil && 
 		!finalCfg.breakerDisabled && 
 		finalCfg.breakerManager.IsEnabled()
 	
 	if finalCfg.retryEnabled && len(finalCfg.retryOpts) > 0 {
-		// 使用重试
+		// Use retry
 		err = retry.Do(ctx, func() error {
 			if useBreaker {
-				// 使用熔断器保护
+				// Use circuit breaker for protection
 				resp, err = c.executeWithBreaker(ctx, req, finalCfg)
 			} else {
-				// 直接执行
+				// Execute directly
 				resp, err = c.doRequest(ctx, req, finalCfg)
 			}
 			
@@ -103,7 +103,7 @@ func (c *Client) Do(ctx context.Context, req *Request, opts ...Option) (*Respons
 				return err
 			}
 			
-			// 检查 HTTP 状态码是否需要重试
+			// Check if the HTTP status code requires a retry
 			if resp.IsServerError() || resp.StatusCode == 429 {
 				return fmt.Errorf("HTTP %d: %s", resp.StatusCode, resp.Status)
 			}
@@ -111,17 +111,17 @@ func (c *Client) Do(ctx context.Context, req *Request, opts ...Option) (*Respons
 			return nil
 		}, finalCfg.retryOpts...)
 		
-		// 记录重试次数（从 error 中提取）
+		// Record the number of retry attempts (extracted from the error)
 		if multiErr, ok := err.(*retry.MultiError); ok {
 			attempts = len(multiErr.Errors) + 1
 		}
 	} else {
-		// 不使用重试
+		// Do not use retries
 		if useBreaker {
-			// 使用熔断器保护
+			// Use circuit breaker for protection
 			resp, err = c.executeWithBreaker(ctx, req, finalCfg)
 		} else {
-			// 直接执行
+			// Execute directly
 			resp, err = c.doRequest(ctx, req, finalCfg)
 		}
 	}
@@ -130,11 +130,11 @@ func (c *Client) Do(ctx context.Context, req *Request, opts ...Option) (*Respons
 		return nil, err
 	}
 	
-	// 设置扩展字段
+	// Set extended fields
 	resp.Duration = time.Since(startTime)
 	resp.Attempts = attempts
 	
-	// 执行响应后钩子
+	// Execute response post-hook
 	if finalCfg.afterResponse != nil {
 		if err := finalCfg.afterResponse(resp); err != nil {
 			return resp, err
@@ -144,15 +144,15 @@ func (c *Client) Do(ctx context.Context, req *Request, opts ...Option) (*Respons
 	return resp, nil
 }
 
-// doRequest 执行单次 HTTP 请求（内部方法）
+// execute single HTTP request (internal method)
 func (c *Client) doRequest(ctx context.Context, req *Request, cfg *config) (*Response, error) {
-	// 构建 http.Request
+	// Build http.Request
 	httpReq, err := req.buildHTTPRequest()
 	if err != nil {
 		return nil, fmt.Errorf("build http request failed: %w", err)
 	}
 	
-	// 设置 Context（带超时）
+	// Set context (with timeout)
 	if cfg.timeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, cfg.timeout)
@@ -160,20 +160,20 @@ func (c *Client) doRequest(ctx context.Context, req *Request, cfg *config) (*Res
 	}
 	httpReq = httpReq.WithContext(ctx)
 	
-	// 执行请求前钩子
+	// Execute request pre-hook
 	if cfg.beforeRequest != nil {
 		if err := cfg.beforeRequest(httpReq); err != nil {
 			return nil, fmt.Errorf("before request hook failed: %w", err)
 		}
 	}
 	
-	// 执行 HTTP 请求
+	// Execute HTTP request
 	httpResp, err := c.httpClient.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("http request failed: %w", err)
 	}
 	
-	// 构建 Response
+	// Build Response
 	resp, err := newResponse(httpResp, 0, 0)
 	if err != nil {
 		return nil, fmt.Errorf("build response failed: %w", err)
@@ -182,21 +182,21 @@ func (c *Client) doRequest(ctx context.Context, req *Request, cfg *config) (*Res
 	return resp, nil
 }
 
-// Get 执行 GET 请求
+// Send GET request
 func (c *Client) Get(ctx context.Context, url string, opts ...Option) (*Response, error) {
 	req := NewGetRequest(url)
 	return c.Do(ctx, req, opts...)
 }
 
-// Post 执行 POST 请求
+// Execute POST request
 func (c *Client) Post(ctx context.Context, url string, opts ...Option) (*Response, error) {
 	req := NewPostRequest(url)
 	
-	// 解析 opts 中的 Body 配置
+	// Parse the Body configuration in opts
 	reqCfg := newConfig()
 	applyOptions(reqCfg, opts)
 	
-	// 应用 Body 配置到 Request
+	// Apply Body configuration to Request
 	if reqCfg.body != nil {
 		req.WithBody(reqCfg.body)
 	}
@@ -204,15 +204,15 @@ func (c *Client) Post(ctx context.Context, url string, opts ...Option) (*Respons
 	return c.Do(ctx, req, opts...)
 }
 
-// Put 执行 PUT 请求
+// Execute PUT request
 func (c *Client) Put(ctx context.Context, url string, opts ...Option) (*Response, error) {
 	req := NewPutRequest(url)
 	
-	// 解析 opts 中的 Body 配置
+	// Parse the Body configuration in opts
 	reqCfg := newConfig()
 	applyOptions(reqCfg, opts)
 	
-	// 应用 Body 配置到 Request
+	// Apply Body configuration to Request
 	if reqCfg.body != nil {
 		req.WithBody(reqCfg.body)
 	}
@@ -220,17 +220,17 @@ func (c *Client) Put(ctx context.Context, url string, opts ...Option) (*Response
 	return c.Do(ctx, req, opts...)
 }
 
-// Delete 执行 DELETE 请求
+// Delete Execute DELETE request
 func (c *Client) Delete(ctx context.Context, url string, opts ...Option) (*Response, error) {
 	req := NewDeleteRequest(url)
 	return c.Do(ctx, req, opts...)
 }
 
 // ============================================================
-// 泛型方法（自动反序列化）
+// Generic method (auto deserialization)
 // ============================================================
 
-// DoWithData 执行请求并自动反序列化（泛型）
+// DoWithData executes the request and automatically deserializes (generic)
 func DoWithData[T any](client *Client, ctx context.Context, req *Request, opts ...Option) (*T, error) {
 	resp, err := client.Do(ctx, req, opts...)
 	if err != nil {
@@ -250,17 +250,17 @@ func DoWithData[T any](client *Client, ctx context.Context, req *Request, opts .
 	return &result, nil
 }
 
-// Get 泛型版本
+// Get generic version
 func Get[T any](client *Client, ctx context.Context, url string, opts ...Option) (*T, error) {
 	req := NewGetRequest(url)
 	return DoWithData[T](client, ctx, req, opts...)
 }
 
-// Post 泛型版本
+// Post generic version
 func Post[T any](client *Client, ctx context.Context, url string, data interface{}, opts ...Option) (*T, error) {
 	req := NewPostRequest(url)
 	
-	// 序列化 data
+	// serialize data
 	if data != nil {
 		jsonData, err := json.Marshal(data)
 		if err != nil {
@@ -273,11 +273,11 @@ func Post[T any](client *Client, ctx context.Context, url string, data interface
 	return DoWithData[T](client, ctx, req, opts...)
 }
 
-// Put 泛型版本
+// Put generic version
 func Put[T any](client *Client, ctx context.Context, url string, data interface{}, opts ...Option) (*T, error) {
 	req := NewPutRequest(url)
 	
-	// 序列化 data
+	// serialize data
 	if data != nil {
 		jsonData, err := json.Marshal(data)
 		if err != nil {

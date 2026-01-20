@@ -2,18 +2,18 @@ package event
 
 import "context"
 
-// Listener 监听器接口
+// Listener interface
 type Listener interface {
-	// Handle 处理事件
-	// 返回 error 时，同步分发会停止后续监听器执行
-	// 返回 ErrStopPropagation 时，停止传播但不视为错误
+	// Handle event
+	// When returning an error, synchronous dispatch will stop further listener execution
+	// Return ErrStopPropagation stops propagation but is not considered an error
 	Handle(ctx context.Context, event Event) error
 }
 
-// ListenerFunc 函数式监听器适配器
+// ListenerFunc functional listener adapter
 type ListenerFunc func(ctx context.Context, event Event) error
 
-// Handle 实现 Listener 接口
+// Handle implements Listener interface
 func (f ListenerFunc) Handle(ctx context.Context, event Event) error {
 	return f(ctx, event)
 }

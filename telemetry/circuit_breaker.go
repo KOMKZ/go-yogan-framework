@@ -10,15 +10,15 @@ import (
 	"go.uber.org/zap"
 )
 
-// CircuitState 熔断器状态
+// CircuitState circuit breaker status
 type CircuitState int32
 
 const (
-	// StateClosed 闭合状态（正常工作）
+	// StateClosed closed state (operational)
 	StateClosed CircuitState = 0
-	// StateOpen 打开状态（熔断中）
+	// StateOpen Open state (circuit breaker tripped)
 	StateOpen CircuitState = 1
-	// StateHalfOpen 半开状态（尝试恢复）
+	// StateHalfOpen Half-open state (attempting recovery)
 	StateHalfOpen CircuitState = 2
 )
 
@@ -35,33 +35,33 @@ func (s CircuitState) String() string {
 	}
 }
 
-// CircuitBreakerConfig 熔断器配置
+// Circuit Breaker Configuration
 type CircuitBreakerConfig struct {
-	Enabled              bool          `mapstructure:"enabled"`                 // 是否启用熔断器
-	FailureThreshold     int           `mapstructure:"failure_threshold"`       // 失败阈值（连续失败多少次触发熔断）
-	SuccessThreshold     int           `mapstructure:"success_threshold"`       // 成功阈值（半开状态下连续成功多少次恢复）
-	Timeout              time.Duration `mapstructure:"timeout"`                 // 熔断超时时间（多久后尝试恢复）
-	HalfOpenMaxRequests  int           `mapstructure:"half_open_max_requests"`  // 半开状态允许的最大请求数
-	FallbackExporterType string        `mapstructure:"fallback_exporter_type"`  // 降级导出器类型（stdout/noop）
+	Enabled              bool          `mapstructure:"enabled"`                 // Whether to enable circuit breaker
+	FailureThreshold     int           `mapstructure:"failure_threshold"`       // Failure threshold (number of consecutive failures that trigger circuit breaking)
+	SuccessThreshold     int           `mapstructure:"success_threshold"`       // success threshold (how many consecutive successful recoveries in the half-open state)
+	Timeout              time.Duration `mapstructure:"timeout"`                 // circuit breaker timeout period (after how long to attempt recovery)
+	HalfOpenMaxRequests  int           `mapstructure:"half_open_max_requests"`  // maximum number of requests allowed in half-open state
+	FallbackExporterType string        `mapstructure:"fallback_exporter_type"`  // Degraded exporter type (stdout/noop)
 }
 
-// CircuitBreaker 熔断器
+// Circuit Breaker
 type CircuitBreaker struct {
 	config           CircuitBreakerConfig
 	logger           *zap.Logger
-	state            atomic.Int32 // 当前状态
-	failureCount     atomic.Int32 // 失败计数
-	successCount     atomic.Int32 // 成功计数（半开状态）
-	halfOpenRequests atomic.Int32 // 半开状态的请求计数
+	state            atomic.Int32 // Current status
+	failureCount     atomic.Int32 // failure count
+	successCount     atomic.Int32 // Successful count (half-open state)
+	halfOpenRequests atomic.Int32 // half-open state request count
 	lastStateChange  time.Time
 	mu               sync.RWMutex
 
-	// 原始导出器和降级导出器
+	// Original exporter and fallback exporter
 	primaryExporter  trace.SpanExporter
 	fallbackExporter trace.SpanExporter
 }
 
-// NewCircuitBreaker 创建熔断器
+// Create circuit breaker
 func NewCircuitBreaker(
 	config CircuitBreakerConfig,
 	logger *zap.Logger,
@@ -79,10 +79,10 @@ func NewCircuitBreaker(
 	return cb
 }
 
-// ExportSpans 导出 Spans（包装原始 Exporter）
+// ExportSpans export Spans (wrap raw Exporter)
 func (cb *CircuitBreaker) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) error {
 	if !cb.config.Enabled {
-		// 熔断器未启用，直接使用主导出器
+		// Circuit breaker is not enabled, directly use main provider
 		return cb.primaryExporter.ExportSpans(ctx, spans)
 	}
 
@@ -90,7 +90,7 @@ func (cb *CircuitBreaker) ExportSpans(ctx context.Context, spans []trace.ReadOnl
 
 	switch currentState {
 	case StateClosed:
-		// 闭合状态：尝试使用主导出器
+		// Closed state: attempt to use master ejector
 		err := cb.primaryExporter.ExportSpans(ctx, spans)
 		if err != nil {
 			cb.onFailure()
@@ -100,17 +100,17 @@ func (cb *CircuitBreaker) ExportSpans(ctx context.Context, spans []trace.ReadOnl
 		return nil
 
 	case StateOpen:
-		// 打开状态：检查是否该尝试恢复
+		// Open state: check if recovery should be attempted
 		if cb.shouldAttemptReset() {
 			cb.toHalfOpen()
-			// 在半开状态限流尝试
+			// Throttle attempt in half-open state
 			if !cb.canAttemptRequest() {
 				return cb.fallbackExporter.ExportSpans(ctx, spans)
 			}
 			
-			// 尝试使用主导出器
+			// Try using the master extractor
 			err := cb.primaryExporter.ExportSpans(ctx, spans)
-			// 不释放计数
+			// Do not release count
 			if err != nil {
 				cb.onFailure()
 				return cb.fallbackExporter.ExportSpans(ctx, spans)
@@ -118,19 +118,19 @@ func (cb *CircuitBreaker) ExportSpans(ctx context.Context, spans []trace.ReadOnl
 			cb.onSuccess()
 			return nil
 		}
-		// 继续熔断，使用降级导出器
+		// Continue circuit breaking, use fallback exporter
 		return cb.fallbackExporter.ExportSpans(ctx, spans)
 
 	case StateHalfOpen:
-		// 半开状态：限流尝试恢复
+		// Half-open state: rate limiting attempts recovery
 		if !cb.canAttemptRequest() {
-			// 超过半开状态的请求数限制，使用降级导出器
+			// request number limit exceeded for semi-open state, use degraded exporter
 			return cb.fallbackExporter.ExportSpans(ctx, spans)
 		}
 
-		// 尝试使用主导出器
+		// Try to use master extractor
 		err := cb.primaryExporter.ExportSpans(ctx, spans)
-		// 注意：这里不释放计数，因为我们需要累计成功次数来决定是否恢复
+		// Note: The count is not released here because we need to accumulate the success count to decide whether to recover
 		if err != nil {
 			cb.onFailure()
 			return cb.fallbackExporter.ExportSpans(ctx, spans)
@@ -143,7 +143,7 @@ func (cb *CircuitBreaker) ExportSpans(ctx context.Context, spans []trace.ReadOnl
 	}
 }
 
-// Shutdown 关闭导出器
+// Shut down exporter
 func (cb *CircuitBreaker) Shutdown(ctx context.Context) error {
 	var err1, err2 error
 	if cb.primaryExporter != nil {
@@ -158,9 +158,9 @@ func (cb *CircuitBreaker) Shutdown(ctx context.Context) error {
 	return err2
 }
 
-// onSuccess 处理成功
+// handle success
 func (cb *CircuitBreaker) onSuccess() {
-	cb.failureCount.Store(0) // 重置失败计数
+	cb.failureCount.Store(0) // Reset failure count
 
 	currentState := CircuitState(cb.state.Load())
 	if currentState == StateHalfOpen {
@@ -171,13 +171,13 @@ func (cb *CircuitBreaker) onSuccess() {
 	}
 }
 
-// onFailure 处理失败
+// handle failure
 func (cb *CircuitBreaker) onFailure() {
 	failureCount := cb.failureCount.Add(1)
 
 	currentState := CircuitState(cb.state.Load())
 	if currentState == StateHalfOpen {
-		// 半开状态任何失败都立即打开
+		// any failure immediately opens in half-open state
 		cb.toOpen()
 		return
 	}
@@ -187,7 +187,7 @@ func (cb *CircuitBreaker) onFailure() {
 	}
 }
 
-// toClosed 切换到闭合状态
+// switch to closed state
 func (cb *CircuitBreaker) toClosed() {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
@@ -210,7 +210,7 @@ func (cb *CircuitBreaker) toClosed() {
 	)
 }
 
-// toOpen 切换到打开状态
+// toOpen switch to open state
 func (cb *CircuitBreaker) toOpen() {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
@@ -234,7 +234,7 @@ func (cb *CircuitBreaker) toOpen() {
 	)
 }
 
-// toHalfOpen 切换到半开状态
+// switch to half-open state
 func (cb *CircuitBreaker) toHalfOpen() {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
@@ -257,29 +257,29 @@ func (cb *CircuitBreaker) toHalfOpen() {
 	)
 }
 
-// shouldAttemptReset 是否应该尝试恢复
+// whether a reset attempt should be made
 func (cb *CircuitBreaker) shouldAttemptReset() bool {
 	cb.mu.RLock()
 	defer cb.mu.RUnlock()
 	return time.Since(cb.lastStateChange) >= cb.config.Timeout
 }
 
-// canAttemptRequest 半开状态是否允许请求
+// canAttemptRequest whether requests are allowed in half-open state
 func (cb *CircuitBreaker) canAttemptRequest() bool {
 	current := cb.halfOpenRequests.Add(1)
 	if int(current) > cb.config.HalfOpenMaxRequests {
-		cb.halfOpenRequests.Add(-1) // 回退
+		cb.halfOpenRequests.Add(-1) // rollback
 		return false
 	}
 	return true
 }
 
-// GetState 获取当前状态
+// GetState Get current state
 func (cb *CircuitBreaker) GetState() CircuitState {
 	return CircuitState(cb.state.Load())
 }
 
-// GetStats 获取统计信息
+// GetStats Retrieve statistics
 func (cb *CircuitBreaker) GetStats() map[string]interface{} {
 	return map[string]interface{}{
 		"state":               cb.GetState().String(),

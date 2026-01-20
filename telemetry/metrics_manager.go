@@ -12,14 +12,14 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-// MetricsManager Metrics 管理器
+// Metrics Manager
 type MetricsManager struct {
 	meterProvider *sdkmetric.MeterProvider
 	config        MetricsConfig
 	enabled       bool
 }
 
-// NewMetricsManager 创建 Metrics 管理器
+// Create Metrics Manager
 func NewMetricsManager(cfg Config, res *resource.Resource) (*MetricsManager, error) {
 	if !cfg.Enabled || !cfg.Metrics.Enabled {
 		return &MetricsManager{
@@ -28,7 +28,7 @@ func NewMetricsManager(cfg Config, res *resource.Resource) (*MetricsManager, err
 		}, nil
 	}
 
-	// 创建 Exporter
+	// Create Exporter
 	var exporter sdkmetric.Exporter
 	var err error
 
@@ -44,7 +44,7 @@ func NewMetricsManager(cfg Config, res *resource.Resource) (*MetricsManager, err
 			opts = append(opts, otlpmetricgrpc.WithInsecure())
 		}
 
-		// 添加自定义 Headers（用于认证）
+		// Add custom headers (for authentication)
 		if len(cfg.Exporter.Headers) > 0 {
 			opts = append(opts, otlpmetricgrpc.WithHeaders(cfg.Exporter.Headers))
 		}
@@ -55,7 +55,7 @@ func NewMetricsManager(cfg Config, res *resource.Resource) (*MetricsManager, err
 		}
 
 	case "stdout":
-		// Stdout Exporter（用于调试）
+		// Stdout Exporter (for debugging)
 		exporter, err = stdoutmetric.New()
 		if err != nil {
 			return nil, fmt.Errorf("failed to create stdout metrics exporter: %w", err)
@@ -65,7 +65,7 @@ func NewMetricsManager(cfg Config, res *resource.Resource) (*MetricsManager, err
 		return nil, fmt.Errorf("unsupported metrics exporter type: %s", cfg.Exporter.Type)
 	}
 
-	// 创建 MeterProvider
+	// Create MeterProvider
 	mp := sdkmetric.NewMeterProvider(
 		sdkmetric.WithResource(res),
 		sdkmetric.WithReader(
@@ -77,7 +77,7 @@ func NewMetricsManager(cfg Config, res *resource.Resource) (*MetricsManager, err
 		),
 	)
 
-	// 设置全局 MeterProvider
+	// Set global MeterProvider
 	otel.SetMeterProvider(mp)
 
 	return &MetricsManager{
@@ -87,7 +87,7 @@ func NewMetricsManager(cfg Config, res *resource.Resource) (*MetricsManager, err
 	}, nil
 }
 
-// Shutdown 关闭 Metrics
+// Shut down metrics
 func (m *MetricsManager) Shutdown(ctx context.Context) error {
 	if m.meterProvider != nil {
 		return m.meterProvider.Shutdown(ctx)
@@ -95,32 +95,32 @@ func (m *MetricsManager) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-// GetMeter 获取 Meter（供应用使用）
+// GetMeter retrieve Meter (for application use)
 func (m *MetricsManager) GetMeter(name string) metric.Meter {
 	return otel.Meter(name)
 }
 
-// IsEnabled 是否启用
+// IsEnabled whether enabled
 func (m *MetricsManager) IsEnabled() bool {
 	return m.enabled
 }
 
-// GetConfig 获取配置
+// GetConfig Retrieve configuration
 func (m *MetricsManager) GetConfig() MetricsConfig {
 	return m.config
 }
 
-// IsHTTPMetricsEnabled HTTP 指标是否启用
+// IsHTTPMetricsEnabled Whether HTTP metrics are enabled
 func (m *MetricsManager) IsHTTPMetricsEnabled() bool {
 	return m.enabled && m.config.HTTP.Enabled
 }
 
-// IsDBMetricsEnabled 数据库指标是否启用
+// IsDBMetricsEnabled Database metrics enabled flag
 func (m *MetricsManager) IsDBMetricsEnabled() bool {
 	return m.enabled && m.config.Database.Enabled
 }
 
-// IsGRPCMetricsEnabled gRPC 指标是否启用
+// Is GRPC Metrics Enabled
 func (m *MetricsManager) IsGRPCMetricsEnabled() bool {
 	return m.enabled && m.config.GRPC.Enabled
 }

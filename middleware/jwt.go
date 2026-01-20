@@ -7,22 +7,22 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// JWTConfig JWT 中间件配置
+// JWTConfig JWT middleware configuration
 type JWTConfig struct {
-	// Skipper 跳过中间件的函数
+	// Skip function for middleware
 	Skipper func(*gin.Context) bool
 	
-	// TokenLookup Token 查找位置（格式：header:Authorization）
+	// Token lookup position (format: header:Authorization)
 	TokenLookup string
 	
-	// TokenHeadName Token 前缀（如 "Bearer"）
+	// TokenHeadName Token prefix (such as "Bearer")
 	TokenHeadName string
 	
-	// ErrorHandler 错误处理函数
+	// Error handler function
 	ErrorHandler func(*gin.Context, error)
 }
 
-// DefaultJWTConfig 默认配置
+// Default JWT Configuration
 var DefaultJWTConfig = JWTConfig{
 	Skipper:       nil,
 	TokenLookup:   "header:Authorization",
@@ -30,14 +30,14 @@ var DefaultJWTConfig = JWTConfig{
 	ErrorHandler:  defaultJWTErrorHandler,
 }
 
-// JWT 创建 JWT 中间件（使用默认配置）
+// Create JWT middleware (using default configuration)
 func JWT(tokenManager jwt.TokenManager) gin.HandlerFunc {
 	return JWTWithConfig(tokenManager, DefaultJWTConfig)
 }
 
-// JWTWithConfig 创建 JWT 中间件（自定义配置）
+// Create JWT middleware with custom configuration
 func JWTWithConfig(tokenManager jwt.TokenManager, config JWTConfig) gin.HandlerFunc {
-	// 设置默认值
+	// Set default values
 	if config.TokenLookup == "" {
 		config.TokenLookup = DefaultJWTConfig.TokenLookup
 	}
@@ -49,20 +49,20 @@ func JWTWithConfig(tokenManager jwt.TokenManager, config JWTConfig) gin.HandlerF
 	}
 
 	return func(c *gin.Context) {
-		// 检查是否跳过
+		// Check if skip
 		if config.Skipper != nil && config.Skipper(c) {
 			c.Next()
 			return
 		}
 
-		// 提取 Token
+		// Extract Token
 		token, err := extractToken(c, config.TokenLookup, config.TokenHeadName)
 		if err != nil {
 			config.ErrorHandler(c, err)
 			return
 		}
 
-		// 验证 Token
+		// Validate Token
 		ctx := c.Request.Context()
 		claims, err := tokenManager.VerifyToken(ctx, token)
 		if err != nil {
@@ -70,7 +70,7 @@ func JWTWithConfig(tokenManager jwt.TokenManager, config JWTConfig) gin.HandlerF
 			return
 		}
 
-		// 将 Claims 注入到 Context
+		// Inject Claims into Context
 		c.Set("jwt_claims", claims)
 		c.Set("user_id", claims.UserID)
 		c.Set("username", claims.Username)
@@ -80,9 +80,9 @@ func JWTWithConfig(tokenManager jwt.TokenManager, config JWTConfig) gin.HandlerF
 	}
 }
 
-// extractToken 从请求中提取 Token
+// extractToken: Extract the Token from the request
 func extractToken(c *gin.Context, tokenLookup, tokenHeadName string) (string, error) {
-	// 解析 TokenLookup（格式：header:Authorization）
+	// Parse TokenLookup (format: header:Authorization)
 	parts := strings.Split(tokenLookup, ":")
 	if len(parts) != 2 {
 		return "", jwt.ErrTokenMissing
@@ -107,7 +107,7 @@ func extractToken(c *gin.Context, tokenLookup, tokenHeadName string) (string, er
 		return "", jwt.ErrTokenMissing
 	}
 
-	// 移除 Token 前缀（如 "Bearer "）
+	// Remove token prefix (e.g., "Bearer ")
 	if tokenHeadName != "" {
 		prefix := tokenHeadName + " "
 		if strings.HasPrefix(token, prefix) {
@@ -118,9 +118,9 @@ func extractToken(c *gin.Context, tokenLookup, tokenHeadName string) (string, er
 	return token, nil
 }
 
-// defaultJWTErrorHandler 默认错误处理
+// defaultJWTErrorHandler default error handling
 func defaultJWTErrorHandler(c *gin.Context, err error) {
-	// 返回 401 错误
+	// Return 401 error
 	c.JSON(401, gin.H{
 		"code":    401,
 		"message": "Unauthorized",
@@ -129,7 +129,7 @@ func defaultJWTErrorHandler(c *gin.Context, err error) {
 	c.Abort()
 }
 
-// GetClaims 从 Context 获取 JWT Claims
+// GetClaims retrieves JWT Claims from Context
 func GetClaims(c *gin.Context) (*jwt.Claims, bool) {
 	claims, exists := c.Get("jwt_claims")
 	if !exists {
@@ -139,7 +139,7 @@ func GetClaims(c *gin.Context) (*jwt.Claims, bool) {
 	return jwtClaims, ok
 }
 
-// GetUserID 从 Context 获取用户 ID
+// Get user ID from context
 func GetUserID(c *gin.Context) (int64, bool) {
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -149,7 +149,7 @@ func GetUserID(c *gin.Context) (int64, bool) {
 	return id, ok
 }
 
-// GetUsername 从 Context 获取用户名
+// Get username from context
 func GetUsername(c *gin.Context) (string, bool) {
 	username, exists := c.Get("username")
 	if !exists {
@@ -159,7 +159,7 @@ func GetUsername(c *gin.Context) (string, bool) {
 	return name, ok
 }
 
-// HasRole 检查用户是否拥有指定角色
+// Check if the user has the specified role
 func HasRole(c *gin.Context, role string) bool {
 	roles, exists := c.Get("roles")
 	if !exists {

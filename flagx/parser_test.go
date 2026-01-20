@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// 测试用的 DTO
+// Test DTO
 type TestRequest struct {
 	Name  string `flag:"name"`
 	Email string `flag:"email"`
@@ -23,13 +23,13 @@ func TestParseFlags(t *testing.T) {
 	cmd.Flags().IntP("age", "a", 0, "年龄")
 	cmd.Flags().BoolP("active", "", false, "是否激活")
 
-	// 设置 flag 值
+	// Set flag value
 	cmd.Flags().Set("name", "张三")
 	cmd.Flags().Set("email", "zhangsan@test.com")
 	cmd.Flags().Set("age", "25")
 	cmd.Flags().Set("active", "true")
 
-	// 解析到结构体
+	// Parse to struct
 	var req TestRequest
 	err := ParseFlags(cmd, &req)
 
@@ -54,7 +54,7 @@ func TestBindFlags(t *testing.T) {
 
 	require.NoError(t, err)
 
-	// 验证 flags 已注册
+	// Verify that flags are registered
 	nameFlag := cmd.Flags().Lookup("name")
 	assert.NotNil(t, nameFlag)
 	assert.Equal(t, "用户名（必填）", nameFlag.Usage)
