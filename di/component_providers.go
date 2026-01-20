@@ -337,7 +337,7 @@ func ProvideTelemetryManager(i do.Injector) (*telemetry.Manager, error) {
 
 	log, _ := do.Invoke[*logger.CtxZapLogger](i)
 	if log == nil {
-		log = logger.GetLogger("telemetry")
+		log = logger.GetLogger("yogan")
 	}
 
 	// 创建并启动 Manager

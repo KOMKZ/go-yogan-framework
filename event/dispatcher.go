@@ -56,7 +56,7 @@ func NewDispatcher(opts ...DispatcherOption) *dispatcher {
 	d := &dispatcher{
 		listeners: make(map[string][]listenerEntry),
 		poolSize:  100,
-		logger:    logger.GetLogger("event"),
+		logger:    logger.GetLogger("yogan"),
 	}
 
 	for _, opt := range opts {

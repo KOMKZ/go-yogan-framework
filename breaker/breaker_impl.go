@@ -295,7 +295,7 @@ func NewManagerWithLogger(config Config, ctxLogger *logger.CtxZapLogger) (*Manag
 
 	// 如果没有提供 logger，使用默认的
 	if ctxLogger == nil {
-		ctxLogger = logger.GetLogger("breaker")
+		ctxLogger = logger.GetLogger("yogan")
 	}
 
 	ctx := context.Background()

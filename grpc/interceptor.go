@@ -107,7 +107,7 @@ func UnaryClientTimeoutInterceptor(timeout time.Duration, log *logger.CtxZapLogg
 // 注意：clientMgr 用于动态获取 breaker，因为 breaker 在 Component.Start() 时才注入
 func UnaryClientBreakerInterceptor(clientMgr *ClientManager, serviceName string) grpc.UnaryClientInterceptor {
 	// 创建专用 logger
-	log := logger.GetLogger("breaker-interceptor")
+	log := logger.GetLogger("yogan")
 
 	return func(ctx context.Context, method string, req, reply interface{},
 		cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {

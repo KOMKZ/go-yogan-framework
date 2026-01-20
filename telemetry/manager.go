@@ -26,7 +26,7 @@ type Manager struct {
 // NewManager 创建遥测管理器
 func NewManager(config Config, log *logger.CtxZapLogger) *Manager {
 	if log == nil {
-		log = logger.GetLogger("telemetry")
+		log = logger.GetLogger("yogan")
 	}
 	return &Manager{
 		config: config,
