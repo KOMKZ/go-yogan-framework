@@ -102,7 +102,7 @@ func TestUnaryRecoveryInterceptor(t *testing.T) {
 
 			if tt.expectedErr {
 				assert.Error(t, err)
-				assert.Contains(t, err.Error(), "服务内部错误")
+				assert.Contains(t, err.Error(), "English: Internal service error")
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, "success", resp)
@@ -201,7 +201,7 @@ func TestInterceptorChain(t *testing.T) {
 
 	// Should catch panics and return errors
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "服务内部错误")
+	assert.Contains(t, err.Error(), "English: Internal service error")
 	assert.Nil(t, resp)
 }
 

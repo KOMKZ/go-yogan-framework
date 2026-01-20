@@ -51,7 +51,7 @@ func NewManagerWithLogger(config Config, ctxLogger *logger.CtxZapLogger, redisCl
 
 	// If not enabled, return empty manager
 	if !config.Enabled {
-		ctxLogger.DebugCtx(ctx, "⏭️  限流器未启用，所有调用将直接执行")
+		ctxLogger.DebugCtx(ctx, "⏭️  English: Throttler not enabled, all calls will be executed directly，English: Throttler not enabled, all calls will be executed directly")
 		return &Manager{
 			config:   config,
 			limiters: make(map[string]*rateLimiter),
@@ -64,13 +64,13 @@ func NewManagerWithLogger(config Config, ctxLogger *logger.CtxZapLogger, redisCl
 	switch StoreType(config.StoreType) {
 	case StoreTypeMemory:
 		store = NewMemoryStore()
-		ctxLogger.DebugCtx(ctx, "✅ 使用内存存储")
+		ctxLogger.DebugCtx(ctx, "✅ English: ✔ Using in-memory storage")
 	case StoreTypeRedis:
 		if redisClient == nil {
 			return nil, fmt.Errorf("redis client is required for redis store")
 		}
 		store = NewRedisStore(redisClient, config.Redis.KeyPrefix)
-		ctxLogger.DebugCtx(ctx, "✅ 使用 Redis 存储",
+		ctxLogger.DebugCtx(ctx, "✅ English: √ Using Redis for storage Redis English: √ Using Redis for storage",
 			zap.String("key_prefix", config.Redis.KeyPrefix))
 	default:
 		return nil, fmt.Errorf("unsupported store type: %s", config.StoreType)
@@ -79,7 +79,7 @@ func NewManagerWithLogger(config Config, ctxLogger *logger.CtxZapLogger, redisCl
 	// Create event bus
 	eventBus := NewEventBus(config.EventBusBuffer)
 
-	ctxLogger.DebugCtx(ctx, "🎯 限流器管理器初始化",
+	ctxLogger.DebugCtx(ctx, "🎯 English: 🎲 Rate limiter manager initialization",
 		zap.String("store_type", config.StoreType),
 		zap.Int("event_bus_buffer", config.EventBusBuffer))
 
@@ -237,7 +237,7 @@ func (m *Manager) WaitN(ctx context.Context, resource string, n int64) error {
 	return nil
 }
 
-// GetMetrics获取流控指标
+// GetMetrics retrieves throttling metrics
 func (m *Manager) GetMetrics(resource string) *MetricsSnapshot {
 	m.mu.RLock()
 	limiter, exists := m.limiters[resource]

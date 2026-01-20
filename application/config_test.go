@@ -64,7 +64,7 @@ logger:
 	app := New(tmpDir, "TEST", nil)
 
 	app.OnReady(func(a *Application) error {
-		a.MustGetLogger().Debug("测试日志（用户配置）")
+		a.MustGetLogger().Debug("English: Test log (user configuration)（English: Test log (user configuration)）")
 		
 		go func() {
 			time.Sleep(100 * time.Millisecond)

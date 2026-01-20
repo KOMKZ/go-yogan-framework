@@ -152,7 +152,7 @@ func TestClientConfig_Validate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.config.Validate()
 			if tt.wantErr {
-				assert.Error(t, err, "应该返回错误")
+				assert.Error(t, err, "English: An error should be returned")
 			} else {
 				assert.NoError(t, err, "不应该返回错误")
 			}

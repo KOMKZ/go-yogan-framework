@@ -65,7 +65,7 @@ func putPrettyEncoder(enc *PrettyConsoleEncoder) {
 	_prettyEncoderPool.Put(enc)
 }
 
-// PrettyConsoleEncoder美化后的控制台编码器
+// PrettyConsoleEncoder enhanced console encoder
 // Supports multiple rendering styles: single line, key-value pairs, etc.
 type PrettyConsoleEncoder struct {
 	*zapcore.EncoderConfig

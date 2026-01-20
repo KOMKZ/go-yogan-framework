@@ -10,7 +10,7 @@ import (
 )
 
 // Manager Service governance manager
-// 统一 management of service registration, health checks, lifecycle, etc.
+// Unified management of service registration, health checks, lifecycle, etc.
 type Manager struct {
 	// Service registry
 	registry ServiceRegistry
@@ -155,7 +155,7 @@ func (m *Manager) PerformHealthCheck(ctx context.Context) error {
 	return m.healthChecker.Check(ctx)
 }
 
-// GetHealthStatus 获取健康状态英文为:Get Health Status
+// Get Health Status
 func (m *Manager) GetHealthStatus() HealthStatus {
 	return m.healthChecker.GetStatus()
 }

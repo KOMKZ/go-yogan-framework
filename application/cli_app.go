@@ -112,7 +112,7 @@ func (c *CLIApplication) gracefulShutdown() error {
 	return c.BaseApplication.Shutdown(5 * time.Second)
 }
 
-// GetRootCmd获取根命令（用于测试）
+// GetRootCmd obtains the root command (for testing)
 func (c *CLIApplication) GetRootCmd() *cobra.Command {
 	return c.rootCmd
 }

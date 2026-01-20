@@ -17,29 +17,29 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-// ClientManager gRPC 客户端连接池管理器（支持服务发现）
+// ClientManager gRPC client connection pool manager (supports service discovery)
 type ClientManager struct {
 	configs        map[string]ClientConfig
 	conns          map[string]*grpc.ClientConn
-	timeouts       map[string]time.Duration // 每个客户端的超时配置
+	timeouts       map[string]time.Duration // timeout configuration for each client
 	mu             sync.RWMutex
 	logger         *logger.CtxZapLogger
-	discovery      *governance.EtcdDiscovery // 服务发现器（可选）
-	selector       InstanceSelector          // 实例选择器（可选，默认 FirstHealthy）
-	breaker        *breaker.Manager          // 熔断器（可选）
-	limiter        *limiter.Manager          // 🎯 限速管理器（可选）
-	tracerProvider trace.TracerProvider      // 🎯 OpenTelemetry TracerProvider（可选）
-	// Watch相关
+	discovery      *governance.EtcdDiscovery // Service Discoverer (optional)
+	selector       InstanceSelector          // Instance selector (optional, default FirstHealthy)
+	breaker        *breaker.Manager          // circuit breaker (optional)
+	limiter        *limiter.Manager          // 🎯 Speed Limit Manager (optional)
+	tracerProvider trace.TracerProvider      // 🎯 OpenTelemetry TracerProvider (optional)
+	// Watch related
 	watchCtx    context.Context
 	watchCancel context.CancelFunc
 	watchWg     sync.WaitGroup
 }
 
-// NewClientManager 创建客户端管理器
+// Create client manager
 func NewClientManager(configs map[string]ClientConfig, log *logger.CtxZapLogger) *ClientManager {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// 预计算每个客户端的超时时间
+	// Precompute the timeout for each client
 	timeouts := make(map[string]time.Duration)
 	for name, cfg := range configs {
 		timeouts[name] = time.Duration(cfg.GetTimeout()) * time.Second
@@ -55,17 +55,17 @@ func NewClientManager(configs map[string]ClientConfig, log *logger.CtxZapLogger)
 	}
 }
 
-// SetDiscovery 设置服务发现器（组件层注入）
+// SetDiscovery set service discoverer (component layer injection)
 func (m *ClientManager) SetDiscovery(discovery *governance.EtcdDiscovery) {
 	m.discovery = discovery
 }
 
-// SetSelector 设置实例选择器（可选，默认 FirstHealthy）
+// SetSelector Sets the instance selector (optional, defaults to FirstHealthy)
 func (m *ClientManager) SetSelector(selector InstanceSelector) {
 	m.selector = selector
 }
 
-// SetBreaker 设置熔断器（由 gRPC 组件在 Start 时注入）
+// SetBreaker sets the circuit breaker (injected by the gRPC component at Start time)
 func (m *ClientManager) SetBreaker(b *breaker.Manager) {
 	m.breaker = b
 	ctx := context.Background()
@@ -74,12 +74,12 @@ func (m *ClientManager) SetBreaker(b *breaker.Manager) {
 	}
 }
 
-// GetBreaker 获取熔断器
+// GetBreaker get circuit breaker status
 func (m *ClientManager) GetBreaker() *breaker.Manager {
 	return m.breaker
 }
 
-// SetLimiter 设置限速管理器（由 gRPC 组件在 Start 时注入）
+// SetLimiter sets the rate limiter manager (injected by the gRPC component at Start)
 func (m *ClientManager) SetLimiter(lim *limiter.Manager) {
 	m.limiter = lim
 	ctx := context.Background()
@@ -88,7 +88,7 @@ func (m *ClientManager) SetLimiter(lim *limiter.Manager) {
 	}
 }
 
-// SetTracerProvider 设置 TracerProvider
+// SetTracerProvider set TracerProvider
 func (m *ClientManager) SetTracerProvider(tp trace.TracerProvider) {
 	m.tracerProvider = tp
 	ctx := context.Background()
@@ -97,32 +97,32 @@ func (m *ClientManager) SetTracerProvider(tp trace.TracerProvider) {
 	}
 }
 
-// SetMetricsHandler 设置 Metrics StatsHandler
-// 注意：当前实现会在连接创建时使用，需要在 PreConnect 之前调用
+// SetMetricsHandler sets the Metrics StatsHandler
+// Note: The current implementation uses it when creating a connection, needs to be called before PreConnect
 func (m *ClientManager) SetMetricsHandler(handler interface{}) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	// 暂时不存储 handler，因为客户端的 Metrics 通过 otelgrpc.NewClientHandler 集成
-	// 这里只是为了接口兼容性
+	// Temporarily not storing the handler, as the client's metrics are integrated through otelgrpc.NewClientHandler
+	// This is only for interface compatibility
 	ctx := context.Background()
 	m.logger.DebugCtx(ctx, "✅ Metrics StatsHandler set in ClientManager (placeholder)")
 }
 
-// GetLimiter 获取限速管理器
+// GetLimiter obtain speed limit manager
 func (m *ClientManager) GetLimiter() *limiter.Manager {
 	return m.limiter
 }
 
-// getSelector 获取选择器（带默认值）
+// getSelector Get selector (with default values)
 func (m *ClientManager) getSelector() InstanceSelector {
 	if m.selector == nil {
-		return NewFirstHealthySelector() // 默认策略
+		return NewFirstHealthySelector() // Default policy
 	}
 	return m.selector
 }
 
-// PreConnect 异步预连接所有配置的客户端（支持服务发现和直连）
+// PreConnect asynchronously pre-connects all configured clients (supports service discovery and direct connection)
 func (m *ClientManager) PreConnect(timeout time.Duration) {
 	ctx := context.Background()
 	if len(m.configs) == 0 {
@@ -139,7 +139,7 @@ func (m *ClientManager) PreConnect(timeout time.Duration) {
 		go func(name string, config ClientConfig) {
 			defer wg.Done()
 
-			// 🎯 根据配置选择连接模式
+			// 🎯 Select connection mode based on configuration
 			if config.DiscoveryMode != "" && config.ServiceName != "" {
 				m.preConnectWithDiscovery(name, config, timeout)
 			} else {
@@ -148,7 +148,7 @@ func (m *ClientManager) PreConnect(timeout time.Duration) {
 		}(serviceName, cfg)
 	}
 
-	// 等待所有连接完成（或超时）
+	// wait for all connections to complete (or timeout)
 	wg.Wait()
 	m.logger.DebugCtx(ctx, "🔗 Pre-connection completed",
 		zap.Int("conns", len(m.conns)),
@@ -156,49 +156,49 @@ func (m *ClientManager) PreConnect(timeout time.Duration) {
 }
 
 // ========================================
-// 公共方法：消除重复代码（DRY原则）
+// Public method: Eliminate duplicate code (DRY principle)
 // ========================================
 
-// discoverHealthyInstance 发现并选择健康实例
-// 返回：实例地址，错误信息
+// discover and select healthy instance
+// Return: instance address, error message
 func (m *ClientManager) discoverHealthyInstance(ctx context.Context, serviceName string) (string, error) {
 	if m.discovery == nil {
-		return "", fmt.Errorf("服务发现未初始化")
+		return "", fmt.Errorf("Service discovery not initialized")
 	}
 
 	instances, err := m.discovery.Discover(ctx, serviceName)
 	if err != nil {
-		return "", fmt.Errorf("服务发现查询失败: %w", err)
+		return "", fmt.Errorf("Service discovery query failed: %w: %w", err)
 	}
 
 	if len(instances) == 0 {
-		return "", fmt.Errorf("未发现服务实例: %s", serviceName)
+		return "", fmt.Errorf("Service instance not found: %s: %s", serviceName)
 	}
 
-	// 使用注入的选择器选择实例
+	// Use the injected selector to choose an instance
 	selected := m.getSelector().Select(instances)
 	if selected == nil {
-		return "", fmt.Errorf("没有健康的服务实例: %s", serviceName)
+		return "", fmt.Errorf("No healthy service instances: %s: %s", serviceName)
 	}
 
 	return selected.GetAddress(), nil
 }
 
-// dialWithOptions 建立 gRPC 连接（复用拨号逻辑）
+// dialWithOptions establishes a gRPC connection (reuses dialing logic)
 func (m *ClientManager) dialWithOptions(ctx context.Context, serviceName, targetAddr string, cfg ClientConfig) (*grpc.ClientConn, error) {
-	// 创建客户端拦截器专用的 logger
+	// Create a logger specific for client interceptors
 	clientLogger := logger.GetLogger("yogan")
 	enableLog := cfg.IsLogEnabled()
 
-	// 获取超时配置
+	// Get timeout configuration
 	timeout := m.timeouts[serviceName]
 
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithBlock(), // 阻塞等待连接成功
+		grpc.WithBlock(), // block waiting for connection success
 	}
 
-	// 🎯 1. 添加 StatsHandler（优先级最高，用于 OpenTelemetry）
+	// 🎯 1. Add StatsHandler (highest priority, for OpenTelemetry)
 	if m.tracerProvider != nil {
 		opts = append(opts, grpc.WithStatsHandler(
 			otelgrpc.NewClientHandler(
@@ -207,17 +207,17 @@ func (m *ClientManager) dialWithOptions(ctx context.Context, serviceName, target
 		))
 	}
 
-	// 🎯 2. 构建拦截器链（不包括 OTel，已由 StatsHandler 处理）
+	// 🎯 2. Build interceptor chain (excluding OTel, already handled by StatsHandler)
 	interceptors := []grpc.UnaryClientInterceptor{
-		UnaryClientTraceInterceptor(),                         // 1️⃣ TraceID 传播
-		UnaryClientRateLimitInterceptor(m, serviceName),       // 2️⃣ 限速检查
-		UnaryClientBreakerInterceptor(m, serviceName),         // 3️⃣ 熔断器
-		UnaryClientTimeoutInterceptor(timeout, clientLogger),  // 4️⃣ 超时控制
-		UnaryClientLoggerInterceptor(clientLogger, enableLog), // 5️⃣ 日志记录（可配置）
+		UnaryClientTraceInterceptor(),                         // 1️⃣ Propagate TraceID
+		UnaryClientRateLimitInterceptor(m, serviceName),       // Speed limit check
+		UnaryClientBreakerInterceptor(m, serviceName),         // 3️⃣ Circuit breaker
+		UnaryClientTimeoutInterceptor(timeout, clientLogger),  // 4️⃣ Timeout control
+		UnaryClientLoggerInterceptor(clientLogger, enableLog), // 5️⃣ Logging (configurable)
 	}
 	opts = append(opts, grpc.WithChainUnaryInterceptor(interceptors...))
 
-	// 3. 服务发现模式添加负载均衡配置
+	// 3. Service discovery pattern adds load balancing configuration
 	if cfg.LoadBalance != "" {
 		opts = append(opts, grpc.WithDefaultServiceConfig(
 			fmt.Sprintf(`{"loadBalancingPolicy":"%s"}`, cfg.LoadBalance)))
@@ -226,22 +226,22 @@ func (m *ClientManager) dialWithOptions(ctx context.Context, serviceName, target
 	return grpc.DialContext(ctx, targetAddr, opts...)
 }
 
-// preConnectWithDiscovery 服务发现模式预连接
-// ✅ 重构后：Watch 监听独立启动，预连接尽力而为
+// preConnectWithDiscovery service discovery mode pre-connection
+// ✅ After refactoring: Watch starts independently and pre-connects as best effort
 func (m *ClientManager) preConnectWithDiscovery(serviceName string, cfg ClientConfig, timeout time.Duration) {
-	// ✅ 第一步：无条件启动 Watch 监听（独立生命周期）
+	// Step 1: Unconditionally start Watch listening (independent lifecycle)
 	m.startWatchForever(serviceName, cfg)
 
-	// ✅ 第二步：尝试预连接（尽力而为，失败不影响 Watch）
+	// ✅ Step 2: Attempt a pre-connection (best effort, failure does not impact Watch)
 	m.tryPreConnect(serviceName, cfg, timeout)
 }
 
-// tryPreConnect 尝试预连接（单一职责：连接建立）
+// tryPreConnect attempts to establish a pre-connection (single responsibility: connection establishment)
 func (m *ClientManager) tryPreConnect(serviceName string, cfg ClientConfig, timeout time.Duration) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	// 1. 发现健康实例
+	// 1. Discover healthy instances
 	targetAddr, err := m.discoverHealthyInstance(ctx, cfg.ServiceName)
 	if err != nil {
 		m.logger.WarnCtx(ctx, "⚠️  Pre-connection failed (service discovery), will auto-retry at runtime",
@@ -251,7 +251,7 @@ func (m *ClientManager) tryPreConnect(serviceName string, cfg ClientConfig, time
 		return
 	}
 
-	// 2. 建立连接
+	// Establish connection
 	conn, err := m.dialWithOptions(ctx, serviceName, targetAddr, cfg)
 	if err != nil {
 		m.logger.WarnCtx(ctx, "⚠️  Pre-connection failed (connection establishment), will auto-retry at runtime",
@@ -261,7 +261,7 @@ func (m *ClientManager) tryPreConnect(serviceName string, cfg ClientConfig, time
 		return
 	}
 
-	// 3. 缓存连接
+	// 3. Cache connection
 	m.mu.Lock()
 	m.conns[serviceName] = conn
 	m.mu.Unlock()
@@ -273,7 +273,7 @@ func (m *ClientManager) tryPreConnect(serviceName string, cfg ClientConfig, time
 		zap.String("load_balance", cfg.LoadBalance))
 }
 
-// startWatchForever 启动 Watch 监听（永不放弃，自动重试）
+// startWatchForever starts watch listening (never gives up, auto retries)
 func (m *ClientManager) startWatchForever(serviceName string, cfg ClientConfig) {
 	if m.discovery == nil || cfg.ServiceName == "" {
 		return
@@ -291,7 +291,7 @@ func (m *ClientManager) startWatchForever(serviceName string, cfg ClientConfig) 
 			case <-m.watchCtx.Done():
 				return
 			default:
-				// 尝试启动 Watch 循环
+				// Try to start the Watch loop
 				err := m.runWatchLoop(serviceName, cfg)
 				if err != nil {
 					m.logger.WarnCtx(context.Background(),
@@ -301,7 +301,7 @@ func (m *ClientManager) startWatchForever(serviceName string, cfg ClientConfig) 
 						zap.Error(err),
 						zap.Duration("retry_after", backoff))
 
-					// 指数退避重试
+					// Exponential backoff retry
 					select {
 					case <-m.watchCtx.Done():
 						return
@@ -309,7 +309,7 @@ func (m *ClientManager) startWatchForever(serviceName string, cfg ClientConfig) 
 						backoff = min(backoff*2, maxBackoff)
 					}
 				} else {
-					// 正常退出，重置退避
+					// Normal exit, reset backoff
 					backoff = time.Second
 				}
 			}
@@ -317,13 +317,13 @@ func (m *ClientManager) startWatchForever(serviceName string, cfg ClientConfig) 
 	}()
 }
 
-// runWatchLoop 执行一次 Watch 循环（单一职责）
+// runWatchLoop runs one Watch loop (single responsibility)
 func (m *ClientManager) runWatchLoop(serviceName string, cfg ClientConfig) error {
 	ctx := context.Background()
 
 	watchCh, err := m.discovery.Watch(ctx, cfg.ServiceName)
 	if err != nil {
-		return fmt.Errorf("启动Watch失败: %w", err)
+		return fmt.Errorf("Failed to start Watch: %wWatchFailed to start Watch: %w: %w", err)
 	}
 
 	m.logger.DebugCtx(ctx, "🔍 Service instance watch started",
@@ -333,26 +333,26 @@ func (m *ClientManager) runWatchLoop(serviceName string, cfg ClientConfig) error
 	for {
 		select {
 		case <-m.watchCtx.Done():
-			return nil // 正常退出
+			return nil // normal exit
 
 		case instances, ok := <-watchCh:
 			if !ok {
-				return fmt.Errorf("Watch通道关闭")
+				return fmt.Errorf("WatchWatch channel closed")
 			}
 
-			// 处理实例更新
+			// Handle instance update
 			m.handleInstancesUpdate(serviceName, cfg, instances)
 		}
 	}
 }
 
-// preConnectDirect 直连模式预连接
+// preConnectDirect Direct connection mode pre-connection
 func (m *ClientManager) preConnectDirect(serviceName string, cfg ClientConfig, timeout time.Duration) {
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	// 使用 dialWithOptions 统一创建连接
+	// Use dialWithOptions to uniformly create connections
 	conn, err := m.dialWithOptions(ctx, serviceName, cfg.Target, cfg)
 	if err != nil {
 		m.logger.ErrorCtx(ctx, "❌ Pre-connection failed (service may be unavailable, will retry at runtime)",
@@ -363,7 +363,7 @@ func (m *ClientManager) preConnectDirect(serviceName string, cfg ClientConfig, t
 		return
 	}
 
-	// 缓存连接
+	// cache connection
 	m.mu.Lock()
 	m.conns[serviceName] = conn
 	m.mu.Unlock()
@@ -373,12 +373,12 @@ func (m *ClientManager) preConnectDirect(serviceName string, cfg ClientConfig, t
 		zap.String("target", cfg.Target))
 }
 
-// GetConn 获取客户端连接（运行时调用）
+// GetConn obtain client connection (runtime call)
 func (m *ClientManager) GetConn(serviceName string) (*grpc.ClientConn, error) {
-	// 检查配置是否存在
+	// Check if configuration exists
 	cfg, ok := m.configs[serviceName]
 	if !ok {
-		return nil, fmt.Errorf("未配置服务: %s", serviceName)
+		return nil, fmt.Errorf("Service not configured: %s: %s", serviceName)
 	}
 
 	m.mu.RLock()
@@ -389,22 +389,22 @@ func (m *ClientManager) GetConn(serviceName string) (*grpc.ClientConn, error) {
 		return conn, nil
 	}
 
-	// 🎯 运行时动态连接（如果预连接失败）
+	// 🎯 Runtime dynamic linking (if pre-linking fails)
 	return m.connectOnDemand(serviceName, cfg)
 }
 
-// connectOnDemand 按需连接（运行时重试）
-// ✅ 重构后：复用公共逻辑
+// connectOnDemand Connect on demand (runtime retry)
+// ✅ Refactored: Reuse common logic
 func (m *ClientManager) connectOnDemand(serviceName string, cfg ClientConfig) (*grpc.ClientConn, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	// 双重检查
+	// double check
 	if conn, exists := m.conns[serviceName]; exists {
 		return conn, nil
 	}
 
-	// 使用配置的超时时间
+	// Use the configured timeout period
 	timeout := time.Duration(cfg.GetTimeout()) * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -412,24 +412,24 @@ func (m *ClientManager) connectOnDemand(serviceName string, cfg ClientConfig) (*
 	var targetAddr string
 	var err error
 
-	// 🎯 服务发现模式：复用 discoverHealthyInstance
+	// 🎯 Service discovery pattern: Reuse discoverHealthyInstance
 	if cfg.DiscoveryMode != "" && cfg.ServiceName != "" && m.discovery != nil {
 		targetAddr, err = m.discoverHealthyInstance(ctx, cfg.ServiceName)
 		if err != nil {
-			return nil, fmt.Errorf("服务发现失败: %w", err)
+			return nil, fmt.Errorf("Service discovery failed: %w: %w", err)
 		}
 	} else {
-		// 直连模式
+		// Direct connection mode
 		targetAddr = cfg.Target
 	}
 
-	// ✅ 复用 dialWithOptions 建立连接
+	// ✅ Reuse dialWithOptions to establish connection
 	conn, err := m.dialWithOptions(ctx, serviceName, targetAddr, cfg)
 	if err != nil {
-		return nil, fmt.Errorf("连接失败: %w", err)
+		return nil, fmt.Errorf("Connection failed: %w: %w", err)
 	}
 
-	// 缓存连接
+	// Cache connection
 	m.conns[serviceName] = conn
 
 	m.logger.DebugCtx(ctx, "✅ On-demand connection succeeded",
@@ -440,9 +440,9 @@ func (m *ClientManager) connectOnDemand(serviceName string, cfg ClientConfig) (*
 	return conn, nil
 }
 
-// handleInstancesUpdate 处理实例列表更新
-// ✅ 简化策略：不主动重连，依赖 GetConn 时的 connectOnDemand 重试
-// 原因：避免 Watch 触发频繁重连，造成连接抖动
+// handleInstancesUpdate Handle instance list update
+// ✅ Simplified strategy: do not proactively reconnect; rely on connectOnDemand retries when getting a connection
+// Reason: To avoid frequent reconnection triggered by Watch, causing connection jitter
 func (m *ClientManager) handleInstancesUpdate(serviceName string, cfg ClientConfig, instances []*governance.ServiceInstance) {
 	ctx := context.Background()
 
@@ -450,8 +450,8 @@ func (m *ClientManager) handleInstancesUpdate(serviceName string, cfg ClientConf
 		zap.String("service", serviceName),
 		zap.Int("instances", len(instances)))
 
-	// 🎯 策略：记录健康实例数量，不主动重连
-	// 当前连接如果失败，下次 GetConn 会自动触发 connectOnDemand 重连到新实例
+	// 🎯 Strategy: Record the number of healthy instances, do not proactively reconnect
+	// If the current connection fails, the next GetConn will automatically trigger a connectOnDemand to reconnect to a new instance.
 
 	healthyCount := 0
 	for _, inst := range instances {
@@ -469,25 +469,25 @@ func (m *ClientManager) handleInstancesUpdate(serviceName string, cfg ClientConf
 			zap.Int("healthy_count", healthyCount))
 	}
 
-	// 可选优化：检测当前连接的实例是否已下线，提前断开连接
-	// 这样下次 GetConn 会触发 connectOnDemand 重连到新实例
-	// TODO: 实现连接健康检查（如果需要）
+	// Optional optimization: detect if currently connected instances are offline and disconnect in advance
+	// This way, the next GetConn will trigger a connectOnDemand reconnection to the new instance
+	// TODO: Implement connection health check (if necessary)
 }
 
-// reconnect 重新连接到新实例
+// reconnect to new instance
 
-// Close 关闭所有客户端连接
+// Close all client connections
 func (m *ClientManager) Close() {
 	ctx := context.Background()
 
-	// 停止所有Watch监听
+	// Stop all Watch listeners
 	m.watchCancel()
 	m.watchWg.Wait()
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	// 关闭所有gRPC连接
+	// Close all gRPC connections
 	for name, conn := range m.conns {
 		if err := conn.Close(); err != nil {
 			m.logger.ErrorCtx(ctx, "Failed to close gRPC connection",

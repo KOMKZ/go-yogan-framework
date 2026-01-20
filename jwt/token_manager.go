@@ -28,7 +28,7 @@ type TokenManager interface {
 	// RevokeToken Revoke Token (Add to blacklist)
 	RevokeToken(ctx context.Context, token string) error
 
-	// RevokeUserTokens批量revoke user tokens (logout user from all devices)
+	// RevokeUserTokens batch revoke user tokens (log out user from all devices)
 	RevokeUserTokens(ctx context.Context, subject string) error
 }
 

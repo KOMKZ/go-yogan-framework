@@ -28,7 +28,7 @@ type Limiter interface {
 	// Wait for N licenses to be available
 	WaitN(ctx context.Context, resource string, n int64) error
 
-	// GetMetrics获取指标快照
+	// GetMetrics Retrieve metric snapshot
 	GetMetrics(resource string) *MetricsSnapshot
 
 	// GetEventBus Obtain the event bus (for subscribing to events)

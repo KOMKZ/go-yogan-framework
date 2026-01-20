@@ -53,7 +53,7 @@ func (m *Manager) SetupInfo() {
 	}
 
 	// Get instance through swag.ReadDoc cannot be modified; application layer needs to import the docs package and set it up
-	// Here only log提示
+	// Here only log prompt
 	m.logger.Debug("Swagger info setup complete",
 		zap.String("title", m.info.Title),
 		zap.String("version", m.info.Version),

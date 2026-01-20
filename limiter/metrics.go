@@ -67,7 +67,7 @@ func (m *metricsCollector) RecordRejected(reason string) {
 	atomic.AddInt64(&m.rejected, 1)
 }
 
-// GetSnapshot 获取 metric snapshot
+// GetSnapshot retrieves metric snapshot
 func (m *metricsCollector) GetSnapshot() *MetricsSnapshot {
 	total := atomic.LoadInt64(&m.totalRequests)
 	allowed := atomic.LoadInt64(&m.allowed)

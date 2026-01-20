@@ -87,7 +87,7 @@ func (m *Manager) GetLogger(moduleName string) *CtxZapLogger {
 	// Create the module's configuration
 	cfg := m.buildModuleConfig(moduleName)
 
-	// Create a底层 zap.Logger instance
+	// Create a zap.Logger instance
 	zapLogger := m.createLogger(cfg)
 
 	// Automatically add module field
@@ -244,7 +244,7 @@ func (m *Manager) CloseAll() {
 func (m *Manager) ReloadConfig(newCfg ManagerConfig) error {
 	// Validate new configuration first
 	if err := newCfg.Validate(); err != nil {
-		return fmt.Errorf("新配置验证失败: %w", err)
+		return fmt.Errorf("Configuration validation failed: %w: %w", err)
 	}
 
 	m.mu.Lock()
@@ -277,13 +277,13 @@ func (m *Manager) ReloadConfig(newCfg ManagerConfig) error {
 
 	// Release the lock before outputting the change information (to avoid deadlocks)
 	if oldLevel != newCfg.Level {
-		m.Debug("logger", "日志级别已更新",
+		m.Debug("logger", "English: Log level has been updated",
 			zap.String("old_level", oldLevel),
 			zap.String("new_level", newCfg.Level))
 	}
 
 	if oldEncoding != newCfg.Encoding {
-		m.Debug("logger", "日志编码已更新",
+		m.Debug("logger", "Log encoding has been updated",
 			zap.String("old_encoding", oldEncoding),
 			zap.String("new_encoding", newCfg.Encoding))
 	}
@@ -475,7 +475,7 @@ func CloseAll() {
 // ReloadConfig Hot reload configuration (recreate all Logger instances)
 func ReloadConfig(newCfg ManagerConfig) error {
 	if globalManager == nil {
-		return fmt.Errorf("Logger 管理器未初始化")
+		return fmt.Errorf("Logger Logger manager not initialized")
 	}
 	return globalManager.ReloadConfig(newCfg)
 }

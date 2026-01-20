@@ -163,7 +163,7 @@ func (r *Router) matchWildcard(pattern, eventName string) bool {
 	return true
 }
 
-// HasRoutes是否有路由配置
+// HasRouteConfiguration has route configuration
 func (r *Router) HasRoutes() bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

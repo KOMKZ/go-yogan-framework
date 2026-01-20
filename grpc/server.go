@@ -70,7 +70,7 @@ func (s *Server) Start(ctx context.Context) error {
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", s.config.Port))
 	if err != nil {
-		return fmt.Errorf("监听端口失败: %w", err)
+		return fmt.Errorf("Failed to listen on port: %w: %w", err)
 	}
 
 	// Get the actual listening port (support automatic allocation for port 0)

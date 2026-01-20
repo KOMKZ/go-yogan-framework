@@ -49,7 +49,7 @@ func UnaryRecoveryInterceptor(log *logger.CtxZapLogger) grpc.UnaryServerIntercep
 					zap.String("method", info.FullMethod),
 					zap.Any("panic", r),
 				)
-				err = fmt.Errorf("服务内部错误")
+				err = fmt.Errorf("Internal service error")
 			}
 		}()
 		return handler(ctx, req)

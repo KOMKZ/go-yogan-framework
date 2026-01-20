@@ -58,7 +58,7 @@ type CircuitBreaker interface {
 	// RecordFailure log failure
 	RecordFailure(serviceName string)
 
-	// GetState 获取状态英文为 Get State 或者直接 GetStatus
+	// Get State or directly Get Status
 	GetState(serviceName string) CircuitState
 
 	// Reset circuit breaker

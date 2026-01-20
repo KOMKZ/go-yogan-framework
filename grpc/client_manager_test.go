@@ -51,7 +51,7 @@ func TestClientManager_GetConn_NotConfigured(t *testing.T) {
 	conn, err := manager.GetConn("not-exist-service")
 	assert.Error(t, err)
 	assert.Nil(t, conn)
-	assert.Contains(t, err.Error(), "未配置服务")
+	assert.Contains(t, err.Error(), "Service not configured")
 }
 
 // TestClientManager_GetConn_Success Successfully obtained connection
@@ -137,7 +137,7 @@ func TestClientManager_GetConn_ConnectionFailed(t *testing.T) {
 	conn, err := manager.GetConn("invalid-service")
 	assert.Error(t, err)
 	assert.Nil(t, conn)
-	assert.Contains(t, err.Error(), "连接服务失败")
+	assert.Contains(t, err.Error(), "Connection to service failed")
 }
 
 // TestClientManager_Close_TestCloseAllConnections

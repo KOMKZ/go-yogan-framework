@@ -71,7 +71,7 @@ func (m *ClientManager) SelectInstance(ctx context.Context, serviceName string) 
 	}
 
 	if len(healthyInstances) == 0 {
-		m.logger.Warn("所有实例均不健康，降级使用全部实例",
+		m.logger.Warn("All instances are unhealthy, downgrading to use all instances，All instances are unhealthy, downgrading to use all instances",
 			zap.String("service", serviceName))
 		healthyInstances = instances
 	}
@@ -117,7 +117,7 @@ func (m *ClientManager) RecordFailure(serviceName string) {
 	}
 }
 
-// GetCircuitState 获取断路器状态
+// GetCircuitState get circuit breaker state
 func (m *ClientManager) GetCircuitState(serviceName string) CircuitState {
 	if m.circuitBreaker == nil {
 		return StateClosed
@@ -140,5 +140,5 @@ func (m *ClientManager) Stop() {
 	if m.discovery != nil {
 		m.discovery.Stop()
 	}
-	m.logger.Debug("✅ 客户端治理管理器已停止")
+	m.logger.Debug("✅ ✅ Client governance manager has stopped")
 }

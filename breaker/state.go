@@ -152,7 +152,7 @@ func (sm *stateManager) transitionTo(newState State, reason string) {
 	sm.lastStateChange = time.Now()
 }
 
-// GetFailureCount得失败计数
+// GetFailureCount gets the failure count
 func (sm *stateManager) GetFailureCount() int {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
@@ -166,7 +166,7 @@ func (sm *stateManager) GetSuccessCount() int {
 	return sm.successCount
 }
 
-// GetLastStateChange 获取最后状态变更时间
+// Get last state change time
 func (sm *stateManager) GetLastStateChange() time.Time {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()

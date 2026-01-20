@@ -39,7 +39,7 @@ func TestClientManager_Timeout_ShortTimeout(t *testing.T) {
 	elapsed := time.Since(start)
 
 	// Verify: Should fail and take approximately 1 second
-	assert.Error(t, err, "应该超时失败")
+	assert.Error(t, err, "English: Should time out and fail")
 	assert.Nil(t, conn, "连接应该为空")
 	assert.Less(t, elapsed, 2*time.Second, "应该在2秒内超时")
 	assert.Greater(t, elapsed, 500*time.Millisecond, "应该至少等待500ms")
@@ -72,7 +72,7 @@ func TestClientManager_Timeout_LongTimeout(t *testing.T) {
 	elapsed := time.Since(start)
 
 	// Validate: Should fail and take approximately 10 seconds
-	assert.Error(t, err, "应该超时失败")
+	assert.Error(t, err, "English: Should time out and fail")
 	assert.Nil(t, conn, "连接应该为空")
 	assert.Less(t, elapsed, 12*time.Second, "应该在12秒内超时")
 
@@ -104,7 +104,7 @@ func TestClientManager_Timeout_DefaultTimeout(t *testing.T) {
 	elapsed := time.Since(start)
 
 	// Verify: Should fail and take approximately 5 seconds
-	assert.Error(t, err, "应该超时失败")
+	assert.Error(t, err, "English: Should time out and fail")
 	assert.Nil(t, conn, "连接应该为空")
 	assert.Less(t, elapsed, 7*time.Second, "应该在7秒内超时")
 	assert.Greater(t, elapsed, 3*time.Second, "应该至少等待3秒")

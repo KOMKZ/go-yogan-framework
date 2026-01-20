@@ -12,7 +12,7 @@ const (
 	// TraceIDKey in Context (consistent with middleware)
 	TraceIDKey = "trace_id"
 
-	// TraceIDMetadataKey gRPC Metadata中的Trace ID键
+	// TraceIDMetadataKey gRPC Metadata trace ID key
 	TraceIDMetadataKey = "x-trace-id"
 )
 
@@ -122,7 +122,7 @@ func UnaryClientTraceLoggerInterceptor(logger *zap.Logger) grpc.UnaryClientInter
 		if err != nil {
 			start.Error("gRPC call failed", append(fields, zap.Error(err))...)
 		} else {
-			start.Debug("gRPC 调用成功", fields...)
+			start.Debug("gRPC gRPC call succeeded", fields...)
 		}
 
 		return err
@@ -165,9 +165,9 @@ func UnaryServerTraceLoggerInterceptor(logger *zap.Logger) grpc.UnaryServerInter
 		resp, err := handler(ctx, req)
 
 		if err != nil {
-			start.Error("gRPC 请求失败", append(fields, zap.Error(err))...)
+			start.Error("gRPC gRPC request failed", append(fields, zap.Error(err))...)
 		} else {
-			start.Debug("gRPC 请求成功", fields...)
+			start.Debug("gRPC gRPC request successful", fields...)
 		}
 
 		return resp, err

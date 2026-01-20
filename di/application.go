@@ -27,7 +27,7 @@ const (
 	StateStopped
 )
 
-// String represents status in text形式
+// String represents textual status
 func (s AppState) String() string {
 	switch s {
 	case StateInit:
@@ -198,7 +198,7 @@ func (app *DoApplication) Setup() error {
 
 	loader, err := do.Invoke[*config.Loader](app.injector)
 	if err != nil {
-		return fmt.Errorf("初始化配置失败: %w", err)
+		return fmt.Errorf("Initialization configuration failed: %w: %w", err)
 	}
 	app.configLoader = loader
 
@@ -208,11 +208,11 @@ func (app *DoApplication) Setup() error {
 
 	appLogger, err := do.Invoke[*logger.CtxZapLogger](app.injector)
 	if err != nil {
-		return fmt.Errorf("初始化日志失败: %w", err)
+		return fmt.Errorf("Log initialization failed: %w: %w", err)
 	}
 	app.logger = appLogger
 
-	app.logger.Info("🔧 应用初始化中...",
+	app.logger.Info("🔧 🔧 Application initialization in progress......",
 		zap.String("name", app.name),
 		zap.String("version", app.version),
 		zap.String("config_path", app.configPath),
@@ -221,7 +221,7 @@ func (app *DoApplication) Setup() error {
 	// Call Setup callback
 	if app.onSetup != nil {
 		if err := app.onSetup(app); err != nil {
-			return fmt.Errorf("setup 回调失败: %w", err)
+			return fmt.Errorf("setup setup callback failed: %w: %w", err)
 		}
 	}
 
@@ -232,7 +232,7 @@ func (app *DoApplication) Setup() error {
 func (app *DoApplication) Start() error {
 	app.setState(StateRunning)
 
-	app.logger.Info("✅ 应用启动完成",
+	app.logger.Info("✅ English: Application startup completed successfully",
 		zap.String("name", app.name),
 		zap.String("version", app.version),
 		zap.String("state", app.State().String()),
@@ -241,7 +241,7 @@ func (app *DoApplication) Start() error {
 	// Call Ready callback
 	if app.onReady != nil {
 		if err := app.onReady(app); err != nil {
-			return fmt.Errorf("ready 回调失败: %w", err)
+			return fmt.Errorf("ready Ready callback failed: %w: %w", err)
 		}
 	}
 
@@ -272,14 +272,14 @@ func (app *DoApplication) waitForSignal() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	sig := <-quit
-	app.logger.Info("📥 收到退出信号", zap.String("signal", sig.String()))
+	app.logger.Info("📥 English: Received exit signal", zap.String("signal", sig.String()))
 
 	// graceful shutdown
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	if err := app.Shutdown(ctx); err != nil {
-		app.logger.Error("关闭失败", zap.Error(err))
+		app.logger.Error("English: Close failed", zap.Error(err))
 	}
 }
 
@@ -287,12 +287,12 @@ func (app *DoApplication) waitForSignal() {
 // samber/do will automatically shut down in reverse order based on dependencies
 func (app *DoApplication) Shutdown(ctx context.Context) error {
 	app.setState(StateStopping)
-	app.logger.Info("🔄 开始优雅关闭...")
+	app.logger.Info("🔄 🔄 Starting graceful shutdown...... 🔁: 🔁 Starting graceful shutdown......")
 
 	// Call the user-defined close callback
 	if app.onShutdown != nil {
 		if err := app.onShutdown(ctx); err != nil {
-			app.logger.Warn("shutdown 回调失败", zap.Error(err))
+			app.logger.Warn("shutdown shutdown callback failed", zap.Error(err))
 		}
 	}
 
@@ -301,11 +301,11 @@ func (app *DoApplication) Shutdown(ctx context.Context) error {
 
 	// 3. Close the samber/do container (automatically shut down in dependency order)
 	if err := app.injector.Shutdown(); err != nil {
-		app.logger.Warn("injector shutdown 失败", zap.Error(err))
+		app.logger.Warn("injector shutdown English: injector shutdown failed", zap.Error(err))
 	}
 
 	app.setState(StateStopped)
-	app.logger.Info("✅ 应用已关闭")
+	app.logger.Info("✅ English: The application has been closed")
 
 	return nil
 }

@@ -26,7 +26,7 @@ type CORSConfig struct {
 	// Note: When set to true, AllowOrigins cannot use "*"
 	AllowCredentials bool
 
-	// MaxAge preflight request cache time (seconds) (default 43200,即12 hours)
+	// MaxAge preflight request cache time (seconds) (default 43200, i.e., 12 hours)
 	MaxAge int
 }
 

@@ -31,7 +31,7 @@ func TestPrettyConsoleEncoder_ErrorField(t *testing.T) {
 	}
 
 	// Test the zap.Error field
-	testErr := errors.New("连接超时")
+	testErr := errors.New("Connection timeout")
 	fields := []zapcore.Field{
 		zap.String("module", "database"),
 		zap.Error(testErr),
@@ -48,7 +48,7 @@ func TestPrettyConsoleEncoder_ErrorField(t *testing.T) {
 	assert.Contains(t, output, "[🔴ERRO]")
 	assert.Contains(t, output, "[database]")
 	assert.Contains(t, output, "数据库错误")
-	assert.Contains(t, output, `"error":"连接超时"`) // ✅ Key validation
+	assert.Contains(t, output, `"error":"连接超时"`) // Validating key correctness
 	assert.Contains(t, output, `"host":"localhost"`)
 	assert.NotContains(t, output, `"error":null`) // Should not be null
 }

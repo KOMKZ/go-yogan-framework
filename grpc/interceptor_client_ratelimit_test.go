@@ -50,7 +50,11 @@ func TestUnaryClientRateLimitInterceptor(t *testing.T) {
 	err = interceptor(context.Background(), "/test.Service/Method", nil, nil, nil, invoker)
 	if err != nil {
 		assert.Equal(t, codes.ResourceExhausted, status.Code(err), "应该返回 ResourceExhausted 错误码")
-		assert.Contains(t, err.Error(), "rate limit exceeded", "错误信息应包含限流提示")
+		assert.Contains(t, err.Error(), "rate limit exceeded", "The error message should include rate limiting提示
+
+Note: It seems there might be a leftover character "提示" at the end, which means "prompt/tip". If you only need the direct translation of the sentence without this word, here it is:
+
+English: The error message should include rate limiting information.")
 	} else {
 		t.Log("WARNING: 第2次请求未被限流，可能是令牌生成太快")
 	}
@@ -103,8 +107,8 @@ func TestUnaryClientRateLimitInterceptor_MethodLevel(t *testing.T) {
 	assert.NoError(t, err, "慢方法第1次应该通过")
 
 	err = interceptor(context.Background(), "/test.Service/SlowMethod", nil, nil, nil, invoker)
-	assert.Error(t, err, "慢方法第2次应该被限流（方法级 rate=1）")
-	assert.Contains(t, err.Error(), "rate limit exceeded", "应该提示限流")
+	assert.Error(t, err, "The second time the slow method should be rate-limited (method level rate=1)2The second time the slow method should be rate-limited (method level rate=1)（The second time the slow method should be rate-limited (method level rate=1) rate=1）")
+	assert.Contains(t, err.Error(), "rate limit exceeded", "English: Rate limiting should be applied")
 }
 
 // TestUnaryClientRateLimitInterceptor_Disabled test when rate limiter is disabled
@@ -169,6 +173,6 @@ func TestUnaryClientRateLimitInterceptor_NoDefault(t *testing.T) {
 	assert.NoError(t, err, "已配置方法第1次应该通过")
 
 	err = interceptor(context.Background(), "/test.Service/LimitedMethod", nil, nil, nil, invoker)
-	assert.Error(t, err, "已配置方法第2次应该被限流")
+	assert.Error(t, err, "The second configured method should be rate-limited2The second configured method should be rate-limited")
 }
 

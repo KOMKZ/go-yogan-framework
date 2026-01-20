@@ -90,7 +90,7 @@ func TestConfig_Validate(t *testing.T) {
 		}
 		err := cfg.Validate()
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "至少需要启用一种认证方式")
+		assert.Contains(t, err.Error(), "At least one authentication method must be enabled.")
 	})
 
 	t.Run("invalid password min length", func(t *testing.T) {
@@ -108,7 +108,7 @@ func TestConfig_Validate(t *testing.T) {
 		}
 		err := cfg.Validate()
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "密码最小长度配置无效")
+		assert.Contains(t, err.Error(), "English: Invalid configuration for minimum password length")
 	})
 
 	t.Run("min length greater than max length", func(t *testing.T) {
@@ -126,7 +126,7 @@ func TestConfig_Validate(t *testing.T) {
 		}
 		err := cfg.Validate()
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "密码最小长度配置无效")
+		assert.Contains(t, err.Error(), "English: Invalid configuration for minimum password length")
 	})
 
 	t.Run("invalid bcrypt cost too low", func(t *testing.T) {
@@ -144,7 +144,7 @@ func TestConfig_Validate(t *testing.T) {
 		}
 		err := cfg.Validate()
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "bcrypt cost 必须在 4-31 之间")
+		assert.Contains(t, err.Error(), "bcrypt cost The bcrypt cost must be between 4 and 31 4-31 The bcrypt cost must be between 4 and 31")
 	})
 
 	t.Run("invalid bcrypt cost too high", func(t *testing.T) {
@@ -162,7 +162,7 @@ func TestConfig_Validate(t *testing.T) {
 		}
 		err := cfg.Validate()
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "bcrypt cost 必须在 4-31 之间")
+		assert.Contains(t, err.Error(), "bcrypt cost The bcrypt cost must be between 4 and 31 4-31 The bcrypt cost must be between 4 and 31")
 	})
 
 	t.Run("invalid login attempt max attempts", func(t *testing.T) {
@@ -177,7 +177,7 @@ func TestConfig_Validate(t *testing.T) {
 		}
 		err := cfg.Validate()
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "最大登录尝试次数必须 >= 1")
+		assert.Contains(t, err.Error(), "The maximum number of login attempts must be >= 1 >= 1")
 	})
 
 	t.Run("invalid login attempt storage", func(t *testing.T) {
@@ -192,7 +192,7 @@ func TestConfig_Validate(t *testing.T) {
 		}
 		err := cfg.Validate()
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "登录尝试存储方式只支持 redis 或 memory")
+		assert.Contains(t, err.Error(), "The login attempt storage method only supports redis or memory redis The login attempt storage method only supports redis or memory memory")
 	})
 
 	t.Run("valid config", func(t *testing.T) {

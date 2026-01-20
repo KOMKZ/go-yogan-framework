@@ -97,7 +97,7 @@ func (g *GRPCApplication) Run() {
 	g.BaseApplication.setState(StateRunning)
 	if g.BaseApplication.onReady != nil {
 		if err := g.BaseApplication.onReady(g.BaseApplication); err != nil {
-			logger.ErrorCtx(g.ctx, "OnReady 失败", zap.Error(err))
+			logger.ErrorCtx(g.ctx, "OnReady OnReady failed", zap.Error(err))
 			panic(err)
 		}
 	}

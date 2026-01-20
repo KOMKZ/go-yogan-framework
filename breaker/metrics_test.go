@@ -153,7 +153,7 @@ func TestMetrics_SubscribeUnsubscribe(t *testing.T) {
 	assert.False(t, called)
 }
 
-// TestMetrics_Reset reset metrics测试重置指标
+// TestMetrics_Reset resets metrics testing reset of metrics
 func TestMetrics_Reset(t *testing.T) {
 	config := DefaultResourceConfig()
 	sm := newStateManager()

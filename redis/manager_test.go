@@ -356,7 +356,7 @@ func TestManager_WithMiniredis(t *testing.T) {
 	// Create a mini Redis server
 	mr, err := miniredis.Run()
 	if err != nil {
-		t.Fatalf("无法启动 miniredis: %v", err)
+		t.Fatalf("Unable to start miniredis: %v miniredis: %v", err)
 	}
 	defer mr.Close()
 
@@ -397,7 +397,7 @@ func TestManager_WithDB_Miniredis(t *testing.T) {
 	// Create a mini Redis server
 	mr, err := miniredis.Run()
 	if err != nil {
-		t.Fatalf("无法启动 miniredis: %v", err)
+		t.Fatalf("Unable to start miniredis: %v miniredis: %v", err)
 	}
 	defer mr.Close()
 
@@ -440,13 +440,13 @@ func TestManager_MultipleInstances_Miniredis(t *testing.T) {
 	// Create two miniredis servers
 	mr1, err := miniredis.Run()
 	if err != nil {
-		t.Fatalf("无法启动 miniredis 1: %v", err)
+		t.Fatalf("Unable to start miniredis 1: %v miniredis 1: %v", err)
 	}
 	defer mr1.Close()
 
 	mr2, err := miniredis.Run()
 	if err != nil {
-		t.Fatalf("无法启动 miniredis 2: %v", err)
+		t.Fatalf("Unable to start miniredis 2: %v miniredis 2: %v", err)
 	}
 	defer mr2.Close()
 
@@ -504,7 +504,7 @@ func TestManager_MultipleInstances_Miniredis(t *testing.T) {
 func TestManager_Close_Miniredis(t *testing.T) {
 	mr, err := miniredis.Run()
 	if err != nil {
-		t.Fatalf("无法启动 miniredis: %v", err)
+		t.Fatalf("Unable to start miniredis: %v miniredis: %v", err)
 	}
 	defer mr.Close()
 

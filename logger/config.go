@@ -159,36 +159,36 @@ func (c *ManagerConfig) ApplyDefaults() {
 func (c *Config) Validate() error {
 	// 1. Basic validation
 	if c.logDir == "" {
-		return fmt.Errorf("[Logger] 日志目录不能为空")
+		return fmt.Errorf("[Logger] [Logger] Log directory cannot be empty")
 	}
 
 	// 2. Enum validation
 	validLevels := []string{"debug", "info", "warn", "error", "fatal"}
 	if !contains(validLevels, c.Level) {
-		return fmt.Errorf("[Logger] 日志级别必须是: %v，当前: %s", validLevels, c.Level)
+		return fmt.Errorf("[Logger] [Logger] Log level must be: %v, current: %s: %v，[Logger] Log level must be: %v, current: %s: %s", validLevels, c.Level)
 	}
 
 	validEncodings := []string{"json", "console", "console_pretty"}
 	if !contains(validEncodings, c.Encoding) {
-		return fmt.Errorf("[Logger] 编码格式必须是: %v，当前: %s", validEncodings, c.Encoding)
+		return fmt.Errorf("[Logger] [Logger] Encoding format must be: %v, current: %s: %v，[Logger] Encoding format must be: %v, current: %s: %s", validEncodings, c.Encoding)
 	}
 
 	// 3. Range validation
 	if c.MaxSize < 1 || c.MaxSize > 10000 {
-		return fmt.Errorf("[Logger] 文件大小必须在1-10000MB之间，当前: %d", c.MaxSize)
+		return fmt.Errorf("[Logger] [Logger] File size must be between 1-10000MB, current: %d1-10000MB[Logger] File size must be between 1-10000MB, current: %d，[Logger] File size must be between 1-10000MB, current: %d: %d", c.MaxSize)
 	}
 
 	if c.MaxBackups < 0 || c.MaxBackups > 100 {
-		return fmt.Errorf("[Logger] 备份数量必须在0-100之间，当前: %d", c.MaxBackups)
+		return fmt.Errorf("[Logger] [Logger] Number of backups must be between 0-100, current: %d0-100[Logger] Number of backups must be between 0-100, current: %d，[Logger] Number of backups must be between 0-100, current: %d: %d", c.MaxBackups)
 	}
 
 	if c.MaxAge < 1 || c.MaxAge > 365 {
-		return fmt.Errorf("[Logger] 保留天数必须在1-365之间，当前: %d", c.MaxAge)
+		return fmt.Errorf("[Logger] [Logger] Days to retain must be between 1 and 365, current: %d1-365[Logger] Days to retain must be between 1 and 365, current: %d，[Logger] Days to retain must be between 1 and 365, current: %d: %d", c.MaxAge)
 	}
 
 	// Business logic validation
 	if c.EnableDateInFilename && c.DateFormat == "" {
-		return fmt.Errorf("[Logger] 启用日期文件名时必须指定日期格式")
+		return fmt.Errorf("[Logger] [Logger] Date format must be specified when enabling date in filename")
 	}
 
 	return nil
@@ -217,33 +217,33 @@ func (c ManagerConfig) Validate() error {
 	// Verify log level
 	validLevels := []string{"debug", "info", "warn", "error", "fatal"}
 	if !contains(validLevels, c.Level) {
-		return fmt.Errorf("无效的日志级别: %s (有效值: %v)", c.Level, validLevels)
+		return fmt.Errorf("Invalid log level: %s (valid values: %v): %s (Invalid log level: %s (valid values: %v): %v)", c.Level, validLevels)
 	}
 
 	// Validate encoding format
 	validEncodings := []string{"json", "console", "console_pretty"}
 	if !contains(validEncodings, c.Encoding) {
-		return fmt.Errorf("无效的日志编码: %s (有效值: %v)", c.Encoding, validEncodings)
+		return fmt.Errorf("Invalid log encoding: %s (valid values: %v): %s (Invalid log encoding: %s (valid values: %v): %v)", c.Encoding, validEncodings)
 	}
 
 	// Verify file size
 	if c.MaxSize < 1 || c.MaxSize > 10000 {
-		return fmt.Errorf("MaxSize 必须在 1-10000 MB 之间，当前: %d", c.MaxSize)
+		return fmt.Errorf("MaxSize MaxSize must be between 1-10000 MB, current: %d 1-10000 MB MaxSize must be between 1-10000 MB, current: %d，MaxSize must be between 1-10000 MB, current: %d: %d", c.MaxSize)
 	}
 
 	// Verify backup count
 	if c.MaxBackups < 0 || c.MaxBackups > 1000 {
-		return fmt.Errorf("MaxBackups 必须在 0-1000 之间，当前: %d", c.MaxBackups)
+		return fmt.Errorf("MaxBackups MaxBackups must be between 0-1000, current: %d 0-1000 MaxBackups must be between 0-1000, current: %d，MaxBackups must be between 0-1000, current: %d: %d", c.MaxBackups)
 	}
 
 	// Validate reserved days
 	if c.MaxAge < 0 || c.MaxAge > 3650 {
-		return fmt.Errorf("MaxAge 必须在 0-3650 天之间，当前: %d", c.MaxAge)
+		return fmt.Errorf("MaxAge MaxAge must be between 0-3650 days, current: %d 0-3650 MaxAge must be between 0-3650 days, current: %d，MaxAge must be between 0-3650 days, current: %d: %d", c.MaxAge)
 	}
 
 	// Verify stack trace level
 	if !contains(validLevels, c.StacktraceLevel) {
-		return fmt.Errorf("无效的栈追踪级别: %s (有效值: %v)", c.StacktraceLevel, validLevels)
+		return fmt.Errorf("Invalid stack trace level: %s (valid values: %v): %s (Invalid stack trace level: %s (valid values: %v): %v)", c.StacktraceLevel, validLevels)
 	}
 
 	return nil

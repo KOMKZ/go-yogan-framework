@@ -103,7 +103,7 @@ func (r *ConsumerRunner) Run(ctx context.Context) error {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
-	r.logger.Info("📡 消费者运行中，等待消息... (按 Ctrl+C 退出)",
+	r.logger.Info("📡 English: .Consumer running, waiting for messages... (Press Ctrl+C to exit), English: .Consumer running, waiting for messages... (Press Ctrl+C to exit)... (English: .Consumer running, waiting for messages... (Press Ctrl+C to exit) Ctrl+C English: .Consumer running, waiting for messages... (Press Ctrl+C to exit))：.Consumer running, waiting for messages... (Press Ctrl+C to exit)，English: .Consumer running, waiting for messages... (Press Ctrl+C to exit), English: .Consumer running, waiting for messages... (Press Ctrl+C to exit)... (English: .Consumer running, waiting for messages... (Press Ctrl+C to exit) Ctrl+C English: .Consumer running, waiting for messages... (Press Ctrl+C to exit))：.Consumer running, waiting for messages... (Press Ctrl+C to exit)... (English: .Consumer running, waiting for messages... (Press Ctrl+C to exit), English: .Consumer running, waiting for messages... (Press Ctrl+C to exit)... (English: .Consumer running, waiting for messages... (Press Ctrl+C to exit) Ctrl+C English: .Consumer running, waiting for messages... (Press Ctrl+C to exit))：.Consumer running, waiting for messages... (Press Ctrl+C to exit) Ctrl+C English: .Consumer running, waiting for messages... (Press Ctrl+C to exit), English: .Consumer running, waiting for messages... (Press Ctrl+C to exit)... (English: .Consumer running, waiting for messages... (Press Ctrl+C to exit) Ctrl+C English: .Consumer running, waiting for messages... (Press Ctrl+C to exit))：.Consumer running, waiting for messages... (Press Ctrl+C to exit))",
 		zap.String("group_id", r.config.GroupID),
 		zap.Strings("topics", r.handler.Topics()),
 		zap.Int("workers", r.config.Workers))
@@ -111,9 +111,9 @@ func (r *ConsumerRunner) Run(ctx context.Context) error {
 	// wait for signal or context cancellation
 	select {
 	case sig := <-sigCh:
-		r.logger.Info("🛑 收到退出信号", zap.String("signal", sig.String()))
+		r.logger.Info("🛑 English: STOP Received exit signal", zap.String("signal", sig.String()))
 	case <-ctx.Done():
-		r.logger.Info("🛑 上下文已取消")
+		r.logger.Info("🛑 English: ⛔ Context has been cancelled")
 	}
 
 	// Stop consumer
@@ -164,12 +164,12 @@ func (r *ConsumerRunner) Start(ctx context.Context) error {
 
 		go r.runWorker(runCtx, workerID, consumer)
 
-		r.logger.Info("✅ Worker 启动成功",
+		r.logger.Info("✅ Worker English: Worker started successfully",
 			zap.Int("worker_id", workerID),
 			zap.String("consumer", consumerName))
 	}
 
-	r.logger.Info("🚀 消费者运行器已启动",
+	r.logger.Info("🚀 English: Rocket Consumer runner has started",
 		zap.String("name", r.handler.Name()),
 		zap.String("group_id", r.config.GroupID),
 		zap.Int("workers", r.config.Workers),
@@ -189,7 +189,7 @@ func (r *ConsumerRunner) runWorker(ctx context.Context, workerID int, consumer *
 
 	err := consumer.Start(ctx, wrappedHandler)
 	if err != nil && err != context.Canceled {
-		r.logger.Error("worker 异常退出",
+		r.logger.Error("worker English: worker abnormally exited",
 			zap.Int("worker_id", workerID),
 			zap.Error(err))
 	}
@@ -205,7 +205,7 @@ func (r *ConsumerRunner) Stop() error {
 	r.running = false
 	r.mu.Unlock()
 
-	r.logger.Info("🛑 正在停止消费者...")
+	r.logger.Info("🛑 Stopping consumer......")
 
 	// Cancel context
 	if r.cancel != nil {
@@ -218,7 +218,7 @@ func (r *ConsumerRunner) Stop() error {
 	// wait for all workers to complete
 	r.wg.Wait()
 
-	r.logger.Info("✅ 消费者运行器已停止", zap.String("name", r.handler.Name()))
+	r.logger.Info("✅ English: The consumer runner has stopped", zap.String("name", r.handler.Name()))
 	return nil
 }
 

@@ -115,7 +115,7 @@ func (a *slidingWindowAlgorithm) Wait(ctx context.Context, store Store, resource
 	}
 }
 
-// GetMetrics获取当前指标
+// GetMetrics retrieves current metrics
 func (a *slidingWindowAlgorithm) GetMetrics(ctx context.Context, store Store, resource string) (*AlgorithmMetrics, error) {
 	now := time.Now()
 	key := a.windowKey(resource)

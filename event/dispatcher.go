@@ -67,7 +67,7 @@ func NewDispatcher(opts ...DispatcherOption) *dispatcher {
 	var err error
 	d.pool, err = ants.NewPool(d.poolSize)
 	if err != nil {
-		d.logger.Error("创建协程池失败，使用默认配置", zap.Error(err))
+		d.logger.Error("Failed to create coroutine pool, using default configuration，Failed to create coroutine pool, using default configuration", zap.Error(err))
 		d.pool, _ = ants.NewPool(100)
 	}
 
@@ -143,7 +143,7 @@ func (d *dispatcher) Dispatch(ctx context.Context, event Event, opts ...Dispatch
 	// If the code does not explicitly specify the driver, try to obtain it from the route configuration
 	if !options.driverExplicit && d.router != nil {
 		if route := d.router.Match(event.Name()); route != nil {
-			d.logger.DebugCtx(ctx, "🎯 事件路由匹配成功",
+			d.logger.DebugCtx(ctx, "🎯 English: 🎲 Event routing match successful",
 				zap.String("event", event.Name()),
 				zap.String("driver", route.Driver),
 				zap.String("topic", route.Topic))
@@ -213,14 +213,14 @@ func (d *dispatcher) dispatchAsyncMemory(ctx context.Context, event Event) {
 
 	err := d.pool.Submit(func() {
 		if err := d.dispatchMemory(asyncCtx, event); err != nil {
-			d.logger.ErrorCtx(asyncCtx, "异步事件处理失败",
+			d.logger.ErrorCtx(asyncCtx, "English: Async event processing failed",
 				zap.String("event", eventName),
 				zap.Error(err))
 		}
 	})
 
 	if err != nil {
-		d.logger.ErrorCtx(ctx, "提交异步任务失败",
+		d.logger.ErrorCtx(ctx, "English: Failed to submit asynchronous task",
 			zap.String("event", eventName),
 			zap.Error(err))
 	}
@@ -260,7 +260,7 @@ func (d *dispatcher) dispatchToKafka(ctx context.Context, event Event, opts *dis
 	if opts.async {
 		go func() {
 			if err := d.kafkaPublisher.PublishJSON(ctx, opts.topic, key, payload); err != nil {
-				d.logger.ErrorCtx(ctx, "Kafka 异步发送失败",
+				d.logger.ErrorCtx(ctx, "Kafka English: Kafka asynchronous send failed",
 					zap.String("event", event.Name()),
 					zap.String("topic", opts.topic),
 					zap.Error(err))
@@ -307,7 +307,7 @@ func (d *dispatcher) executeListeners(ctx context.Context, event Event, entries 
 			eventName := event.Name()
 			_ = d.pool.Submit(func() {
 				if err := listener.Handle(ctx, event); err != nil && !errors.Is(err, ErrStopPropagation) {
-					d.logger.ErrorCtx(ctx, "异步监听器执行失败",
+					d.logger.ErrorCtx(ctx, "Asynchronous listener execution failed",
 						zap.String("event", eventName),
 						zap.Error(err))
 				}

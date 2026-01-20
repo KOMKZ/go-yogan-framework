@@ -98,10 +98,10 @@ type realServerConfig struct {
 
 func (c realServerConfig) Validate() error {
 	if c.Port < 1 || c.Port > 65535 {
-		return errors.New("端口必须在 1-65535 之间")
+		return errors.New("The port must be between 1 and 65535 1-65535 The port must be between 1 and 65535")
 	}
 	if c.Host == "" {
-		return errors.New("主机地址不能为空")
+		return errors.New("The host address cannot be empty")
 	}
 	return nil
 }

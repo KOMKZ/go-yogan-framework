@@ -143,7 +143,7 @@ func NewHTTPServer(cfg ApiServerConfig, middlewareCfg *MiddlewareConfig, httpxCf
 	}
 }
 
-// GetEngine获取Gin引擎（用于业务层注册路由）
+// GetEngine retrieves the Gin engine (for business layer route registration)
 func (s *HTTPServer) GetEngine() *gin.Engine {
 	return s.engine
 }
@@ -154,7 +154,7 @@ func (s *HTTPServer) Start() error {
 
 	// 1. Pre-check port availability
 	if err := s.checkPortAvailable(); err != nil {
-		return fmt.Errorf("端口 %d 不可用: %w", s.port, err)
+		return fmt.Errorf("Port %d is not available: %w %d Port %d is not available: %w: %w", s.port, err)
 	}
 
 	s.httpServer = &http.Server{
@@ -179,7 +179,7 @@ func (s *HTTPServer) Start() error {
 	select {
 	case err := <-errChan:
 		logger.Error("yogan", "❌ HTTP server start failed", zap.Error(err))
-		return fmt.Errorf("HTTP 服务启动失败: %w", err)
+		return fmt.Errorf("HTTP HTTP service startup failed: %w: %w", err)
 	case <-time.After(50 * time.Millisecond):
 		// startup successful
 		logger.Debug("yogan", "✅ HTTP server started successfully",
@@ -208,7 +208,7 @@ func (s *HTTPServer) Shutdown(ctx context.Context) error {
 	logger.Debug("yogan", "Shutting down HTTP server...")
 
 	if err := s.httpServer.Shutdown(ctx); err != nil {
-		return fmt.Errorf("HTTP Server 关闭失败: %w", err)
+		return fmt.Errorf("HTTP Server HTTP Server shutdown failed: %w: %w", err)
 	}
 
 	logger.Debug("yogan", "✅ HTTP server closed")

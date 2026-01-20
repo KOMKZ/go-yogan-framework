@@ -255,7 +255,7 @@ func TestBaseApplication_LoadAppConfig_NotInitialized(t *testing.T) {
 	cfg, err := app.LoadAppConfig()
 	assert.Error(t, err)
 	assert.Nil(t, cfg)
-	assert.Contains(t, err.Error(), "AppConfig 未初始化")
+	assert.Contains(t, err.Error(), "AppConfig English: AppConfig not initialized")
 }
 
 // TestBaseApplication_Setup_Error setup callback returns error

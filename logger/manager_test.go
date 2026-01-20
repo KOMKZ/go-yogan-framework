@@ -264,7 +264,7 @@ func TestManager_Stacktrace(t *testing.T) {
 	log.InfoCtx(ctx, "Info level log")
 
 	// The error level should have a stack (using ErrorCtx will automatically add it)
-	log.ErrorCtx(ctx, "Error level log", zap.String("error", "测试错误"))
+	log.ErrorCtx(ctx, "Error level log", zap.String("error", "English: Test error"))
 
 	CloseAll()
 

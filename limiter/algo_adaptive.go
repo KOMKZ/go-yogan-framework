@@ -78,7 +78,7 @@ func (a *adaptiveAlgorithm) Wait(ctx context.Context, store Store, resource stri
 	return tokenBucket.Wait(ctx, store, resource, n, tempCfg, timeout)
 }
 
-// GetMetrics获取当前指标
+// GetMetrics retrieves current metrics
 func (a *adaptiveAlgorithm) GetMetrics(ctx context.Context, store Store, resource string) (*AlgorithmMetrics, error) {
 	a.mu.RLock()
 	limit := a.currentLimit

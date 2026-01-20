@@ -41,7 +41,7 @@ func NewCron(configPath, configPrefix string) (*CronApplication, error) {
 	// Create gocron scheduler
 	scheduler, err := gocron.NewScheduler()
 	if err != nil {
-		return nil, fmt.Errorf("创建调度器失败: %w", err)
+		return nil, fmt.Errorf("Failed to create scheduler: %w: %w", err)
 	}
 
 	return &CronApplication{
@@ -186,7 +186,7 @@ func (a *CronApplication) shutdownSchedulerWithTimeout() error {
 				zap.Duration("timeout", timeout))
 			logger.WarnCtx(a.ctx, "💡 Suggestion: Increase cron.shutdown_timeout or optimize task execution time")
 		}
-		return fmt.Errorf("调度器关闭超时（%v）", timeout)
+		return fmt.Errorf("Scheduling shutdown timeout (%v)（%v）", timeout)
 	}
 }
 

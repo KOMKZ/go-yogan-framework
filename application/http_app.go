@@ -153,7 +153,7 @@ func (a *Application) startHTTPServer() error {
 
 	// Start HTTP Server (non-blocking)
 	if err := a.httpServer.Start(); err != nil {
-		return fmt.Errorf("启动 HTTP Server 失败: %w", err)
+		return fmt.Errorf("Failed to start HTTP Server: %w HTTP Server Failed to start HTTP Server: %w: %w", err)
 	}
 
 	return nil
@@ -217,7 +217,7 @@ func (a *Application) OnShutdown(fn func(*Application) error) *Application {
 	return a
 }
 
-// RegisterRoutes Register routes (HTTP专用)
+// RegisterRoutes Register HTTP routes
 func (a *Application) RegisterRoutes(registrar RouterRegistrar) *Application {
 	a.routerRegistrar = registrar
 	return a

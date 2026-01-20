@@ -13,7 +13,7 @@ type Algorithm interface {
 	// Wait for permission (blocking until acquired or timed out)
 	Wait(ctx context.Context, store Store, resource string, n int64, cfg ResourceConfig, timeout time.Duration) error
 
-	// GetMetrics获取当前指标
+	// GetMetrics retrieves current metrics
 	GetMetrics(ctx context.Context, store Store, resource string) (*AlgorithmMetrics, error)
 
 	// Reset reset status

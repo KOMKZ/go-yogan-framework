@@ -308,7 +308,7 @@ func NewManagerWithLogger(config Config, ctxLogger *logger.CtxZapLogger) (*Manag
 
 	// If not enabled, return empty manager
 	if !config.Enabled {
-		ctxLogger.DebugCtx(ctx, "⏭️  熔断器未启用，所有调用将直接执行")
+		ctxLogger.DebugCtx(ctx, "⏭️  English: 🚫 Circuit breaker is not enabled, all calls will be executed directly，English: 🚫 Circuit breaker is not enabled, all calls will be executed directly")
 		return &Manager{
 			config:   config,
 			breakers: make(map[string]*circuitBreaker),
@@ -319,7 +319,7 @@ func NewManagerWithLogger(config Config, ctxLogger *logger.CtxZapLogger) (*Manag
 	// Create event bus
 	eventBus := NewEventBus(config.EventBusBuffer)
 
-	ctxLogger.DebugCtx(ctx, "🎯 熔断器管理器初始化",
+	ctxLogger.DebugCtx(ctx, "🎯 Circuit breaker manager initialization",
 		zap.Int("event_bus_buffer", config.EventBusBuffer))
 
 	return &Manager{
@@ -378,7 +378,7 @@ func (m *Manager) GetState(resource string) State {
 	return breaker.GetState()
 }
 
-// GetMetrics获取circuit breaker metrics
+// GetMetrics retrieves circuit breaker metrics
 func (m *Manager) GetMetrics(resource string) *MetricsSnapshot {
 	breaker := m.getOrCreateBreaker(resource)
 	return breaker.GetMetrics()

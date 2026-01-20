@@ -138,7 +138,7 @@ func TestMergeConfigWithHandler(t *testing.T) {
 	loader2.set("kafka.consumers.demo.workers", 2)
 
 	topics2, cfg2 := MergeConfigWithHandler(handler, loader2)
-	assert.Equal(t, []string{"handler-topic"}, topics2) // Handler fallback保障措施
+	assert.Equal(t, []string{"handler-topic"}, topics2) // Handler fallback safeguard measures
 	assert.Equal(t, 2, cfg2.Workers)
 }
 

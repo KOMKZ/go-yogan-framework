@@ -5,24 +5,24 @@ import "errors"
 // Authentication related errors
 var (
 	// Password error
-	ErrPasswordTooShort         = errors.New("密码长度过短")
-	ErrPasswordTooLong          = errors.New("密码长度过长")
-	ErrPasswordRequireUppercase = errors.New("密码必须包含大写字母")
-	ErrPasswordRequireLowercase = errors.New("密码必须包含小写字母")
-	ErrPasswordRequireDigit     = errors.New("密码必须包含数字")
-	ErrPasswordRequireSpecial   = errors.New("密码必须包含特殊字符")
-	ErrPasswordTooWeak          = errors.New("密码过于简单，请使用更强密码")
-	ErrPasswordInBlacklist      = errors.New("密码在黑名单中")
+	ErrPasswordTooShort         = errors.New("Password length is too short")
+	ErrPasswordTooLong          = errors.New("Password length is too long")
+	ErrPasswordRequireUppercase = errors.New("Password must contain uppercase letters")
+	ErrPasswordRequireLowercase = errors.New("The password must contain lowercase letters")
+	ErrPasswordRequireDigit     = errors.New("The password must contain numbers")
+	ErrPasswordRequireSpecial   = errors.New("The password must contain special characters")
+	ErrPasswordTooWeak          = errors.New("Password is too simple, please use a stronger password，Password is too simple, please use a stronger password")
+	ErrPasswordInBlacklist      = errors.New("Password is in the blacklist")
 	
 	// Login error
-	ErrInvalidCredentials       = errors.New("用户名或密码错误")
-	ErrUserNotFound             = errors.New("用户不存在")
-	ErrAccountDisabled          = errors.New("账户已禁用")
-	ErrAccountLocked            = errors.New("账户已锁定")
-	ErrTooManyAttempts          = errors.New("登录尝试次数过多，请稍后再试")
+	ErrInvalidCredentials       = errors.New("Username or password incorrect")
+	ErrUserNotFound             = errors.New("User does not exist")
+	ErrAccountDisabled          = errors.New("Account disabled")
+	ErrAccountLocked            = errors.New("Account is locked")
+	ErrTooManyAttempts          = errors.New("Too many login attempts, please try again later，Too many login attempts, please try again later")
 	
 	// Authentication provider error
-	ErrProviderNotEnabled       = errors.New("认证方式未启用")
-	ErrProviderNotSupported     = errors.New("不支持的认证方式")
+	ErrProviderNotEnabled       = errors.New("Authentication method not enabled")
+	ErrProviderNotSupported     = errors.New("Unsupported authentication method")
 )
 

@@ -60,7 +60,7 @@ func (e *LayeredError) Module() string {
 	return e.module
 }
 
-// MsgKey获取消息键（用于国际化）
+// MsgKey retrieves the message key (for internationalization)
 func (e *LayeredError) MsgKey() string {
 	return e.msgKey
 }

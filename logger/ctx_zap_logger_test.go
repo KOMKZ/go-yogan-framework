@@ -40,28 +40,28 @@ func TestCtxZapLogger_AllMethods(t *testing.T) {
 	ctx := context.WithValue(context.Background(), "trace_id", "test-trace-123")
 
 	// Test InfoCtx
-	logger.InfoCtx(ctx, "Info 消息", zap.String("key", "value"))
+	logger.InfoCtx(ctx, "Info English: Info Message", zap.String("key", "value"))
 
 	// Test Info (without ctx)
-	logger.Info("Info 不带 ctx")
+	logger.Info("Info English: Info without ctx ctx")
 
 	// Test DebugCtx
-	logger.DebugCtx(ctx, "Debug 消息", zap.Int("count", 10))
+	logger.DebugCtx(ctx, "Debug English: Debug message", zap.Int("count", 10))
 
 	// Test Debug (without ctx)
-	logger.Debug("Debug 不带 ctx")
+	logger.Debug("Debug English: Debug without ctx ctx")
 
 	// Test WarnCtx
-	logger.WarnCtx(ctx, "Warn 消息", zap.Bool("flag", true))
+	logger.WarnCtx(ctx, "Warn English: Warning Message", zap.Bool("flag", true))
 
 	// Test Warn (without ctx)
-	logger.Warn("Warn 不带 ctx")
+	logger.Warn("Warn English: Warn No ctx provided ctx")
 
 	// Test ErrorCtx (stack is automatically added)
-	logger.ErrorCtx(ctx, "Error 消息", zap.Error(nil))
+	logger.ErrorCtx(ctx, "Error English: Error message", zap.Error(nil))
 
 	// Test Error (without ctx)
-	logger.Error("Error 不带 ctx")
+	logger.Error("Error English: Error without ctx ctx")
 
 	CloseAll()
 
@@ -111,8 +111,8 @@ func TestCtxZapLogger_With(t *testing.T) {
 		zap.Int64("order_id", 12345),
 	)
 
-	orderLogger.InfoCtx(context.Background(), "订单创建")
-	orderLogger.InfoCtx(context.Background(), "订单支付")
+	orderLogger.InfoCtx(context.Background(), "Order creation")
+	orderLogger.InfoCtx(context.Background(), "Order payment")
 
 	CloseAll()
 
@@ -152,7 +152,7 @@ func TestCtxZapLogger_GetZapLogger(t *testing.T) {
 	assert.NotNil(t, zapLogger)
 
 	// Use underlying Logger for logging
-	zapLogger.Info("直接使用 zap.Logger")
+	zapLogger.Info("English: Use zap.Logger directly zap.Logger")
 
 	CloseAll()
 
@@ -186,15 +186,15 @@ func TestCtxZapLogger_TraceIDFromDifferentKeys(t *testing.T) {
 
 	// Test custom key
 	ctx1 := context.WithValue(context.Background(), "custom_trace", "custom-trace-456")
-	logger.InfoCtx(ctx1, "自定义 key 测试")
+	logger.InfoCtx(ctx1, "English: Custom key test key English: Custom key test")
 
 	// Test for standard trace_id key (fallback)
 	ctx2 := context.WithValue(context.Background(), "trace_id", "standard-trace-789")
-	logger.InfoCtx(ctx2, "标准 key 测试")
+	logger.InfoCtx(ctx2, "English: Standard key test key English: Standard key test")
 
 	// Test traceId key (compatibility fallback)
 	ctx3 := context.WithValue(context.Background(), "traceId", "camel-trace-000")
-	logger.InfoCtx(ctx3, "驼峰 key 测试")
+	logger.InfoCtx(ctx3, "English: Camel case key test key English: Camel case key test")
 
 	CloseAll()
 
@@ -226,7 +226,7 @@ func TestCtxZapLogger_NoStacktraceWhenDisabled(t *testing.T) {
 	})
 
 	logger := GetLogger("test")
-	logger.ErrorCtx(context.Background(), "Error 无堆栈")
+	logger.ErrorCtx(context.Background(), "Error English: Error no stack trace")
 
 	CloseAll()
 
@@ -258,7 +258,7 @@ func TestNewCtxZapLogger(t *testing.T) {
 	logger := NewCtxZapLogger("new_module")
 	assert.NotNil(t, logger)
 
-	logger.InfoCtx(context.Background(), "使用 NewCtxZapLogger 创建")
+	logger.InfoCtx(context.Background(), "English: Created using NewCtxZapLogger NewCtxZapLogger English: Created using NewCtxZapLogger")
 
 	CloseAll()
 

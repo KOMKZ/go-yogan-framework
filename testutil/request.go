@@ -107,7 +107,7 @@ func (rh *ResponseHelper) Status() int {
 	return rh.Recorder.Code
 }
 
-// Body 获取响应体
+// Body Retrieve response body
 func (rh *ResponseHelper) Body() string {
 	return rh.Recorder.Body.String()
 }

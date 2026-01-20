@@ -43,13 +43,13 @@ func TestGormLogger_Basic(t *testing.T) {
 	ctx := context.Background()
 
 	// Test Info
-	gormLog.Info(ctx, "GORM Info 消息: %s", "测试")
+	gormLog.Info(ctx, "GORM Info English: GORM Info Message: %s: %s", "English: GORM Info Message: %s")
 
 	// Test Warn
-	gormLog.Warn(ctx, "GORM Warn 消息: %s", "警告")
+	gormLog.Warn(ctx, "GORM Warn English: GORM Warning Message: %s: %s", "English: GORM Warning Message: %s")
 
 	// Test Error
-	gormLog.Error(ctx, "GORM Error 消息: %s", "错误")
+	gormLog.Error(ctx, "GORM Error GORM Error Message: %s: %s", "GORM Error Message: %s")
 
 	// Test Trace - Normal Query (Audit Enabled)
 	gormLog.Trace(ctx, time.Now().Add(-100*time.Millisecond), func() (string, int64) {

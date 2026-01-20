@@ -1,43 +1,45 @@
 # Yogan Framework
 
-**不写重复代码，不操心基础设施。** 组件注册即用，配置自动加载，追踪开箱即有。你写业务，框架兜底。
+**[中文](README_zh.md)** | English
 
-📖 **文档**：[go-yogan-doc-portal.pages.dev](https://go-yogan-doc-portal.pages.dev/)
+**No duplicate code, no infrastructure headaches.** Register components and they just work. Config auto-loads. Tracing out of the box. You write business logic, the framework handles the rest.
 
-> ⚠️ **注意**：项目处于快速迭代阶段，API 可能发生变化。
+📖 **Documentation**: [go-yogan-doc-portal.pages.dev](https://go-yogan-doc-portal.pages.dev/)
 
-## 安装
+> ⚠️ **Note**: This project is under active development. APIs may change.
+
+## Installation
 
 ```bash
 go get github.com/KOMKZ/go-yogan-framework
 ```
 
-## 脚手架工具 go-ygctl
+## Scaffolding Tool: go-ygctl
 
-一条命令，项目就绪：
+One command, project ready:
 
 ```bash
-# 安装
+# Install
 go install github.com/KOMKZ/go-ygctl@latest
 
-# 创建 HTTP 项目
+# Create HTTP project
 go-ygctl new http my-api
 
-# 创建 gRPC / CLI / Cron 项目
+# Create gRPC / CLI / Cron project
 go-ygctl new grpc my-service
 go-ygctl new cli my-tool
 go-ygctl new cron my-scheduler
 ```
 
-生成的项目结构完整可运行：配置文件、路由、健康检查、Docker Compose 一应俱全。
+Generated projects are complete and runnable: config files, routes, health checks, Docker Compose included.
 
-**查看可用组件**：
+**List available components**:
 
 ```bash
 go-ygctl component list
 ```
 
-**获取组件集成指南**：
+**Get component integration guide**:
 
 ```bash
 go-ygctl component add database
@@ -45,30 +47,30 @@ go-ygctl component add redis
 go-ygctl component add kafka
 ```
 
-不用翻文档，命令行直接告诉你怎么接入。
+No need to dig through docs—the CLI tells you how to integrate.
 
-## 核心组件
+## Core Components
 
-| 组件 | 说明 |
-|------|------|
-| application | 应用生命周期管理（HTTP/gRPC/CLI/Cron） |
-| component | 组件接口定义 |
-| config | 配置加载（YAML + 环境变量） |
-| logger | 结构化日志（Zap） |
-| database | GORM 数据库连接池 |
-| redis | Redis 客户端管理 |
-| grpc | gRPC 服务端/客户端 |
-| kafka | Kafka 生产者/消费者 |
-| auth | 认证服务（密码/OAuth） |
-| jwt | JWT Token 管理 |
-| middleware | HTTP 中间件（CORS/TraceID/日志） |
-| telemetry | OpenTelemetry 分布式追踪 |
-| health | 健康检查 |
-| limiter | 限流（令牌桶/滑动窗口） |
-| breaker | 熔断器 |
-| retry | 重试策略 |
+| Component | Description |
+|-----------|-------------|
+| application | Application lifecycle management (HTTP/gRPC/CLI/Cron) |
+| component | Component interface definitions |
+| config | Configuration loading (YAML + environment variables) |
+| logger | Structured logging (Zap) |
+| database | GORM database connection pool |
+| redis | Redis client management |
+| grpc | gRPC server/client |
+| kafka | Kafka producer/consumer |
+| auth | Authentication service (password/OAuth) |
+| jwt | JWT token management |
+| middleware | HTTP middleware (CORS/TraceID/logging) |
+| telemetry | OpenTelemetry distributed tracing |
+| health | Health checks |
+| limiter | Rate limiting (token bucket/sliding window) |
+| breaker | Circuit breaker |
+| retry | Retry strategies |
 
-## 快速开始
+## Quick Start
 
 ```go
 package main
@@ -91,6 +93,6 @@ func main() {
 }
 ```
 
-## 协议
+## License
 
 [MIT License](LICENSE)

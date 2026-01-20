@@ -50,7 +50,7 @@ func (d *EtcdDiscovery) Discover(ctx context.Context, serviceName string) ([]*Se
 	// Query all current instances
 	resp, err := d.client.GetClient().Get(ctx, prefix, clientv3.WithPrefix())
 	if err != nil {
-		return nil, fmt.Errorf("查询服务失败: %w", err)
+		return nil, fmt.Errorf("Query service failed: %w: %w", err)
 	}
 
 	d.mu.Lock()
@@ -59,7 +59,7 @@ func (d *EtcdDiscovery) Discover(ctx context.Context, serviceName string) ([]*Se
 	for _, kv := range resp.Kvs {
 		instance, err := d.parseServiceInstance(string(kv.Key), string(kv.Value))
 		if err != nil {
-			d.logger.WarnCtx(ctx, "解析服务实例失败",
+			d.logger.WarnCtx(ctx, "English: Failed to parse service instance",
 				zap.String("key", string(kv.Key)),
 				zap.Error(err))
 			continue
@@ -70,7 +70,7 @@ func (d *EtcdDiscovery) Discover(ctx context.Context, serviceName string) ([]*Se
 	instances := d.getInstanceList()
 	d.mu.Unlock()
 
-	d.logger.DebugCtx(ctx, "✅ 服务发现成功",
+	d.logger.DebugCtx(ctx, "✅ English: Service discovery successful",
 		zap.String("service", serviceName),
 		zap.Int("instances", len(instances)))
 
@@ -100,24 +100,24 @@ func (d *EtcdDiscovery) watchChanges(serviceName string) {
 		clientv3.WithPrefix(),
 	)
 
-	d.logger.DebugCtx(d.ctx, "🔍 开始监听服务变更", zap.String("service", serviceName))
+	d.logger.DebugCtx(d.ctx, "🔍 🔍 Starting to monitor service changes", zap.String("service", serviceName))
 
 	for {
 		select {
 		case <-d.ctx.Done():
-			d.logger.DebugCtx(d.ctx, "停止服务监听", zap.String("service", serviceName))
+			d.logger.DebugCtx(d.ctx, "English: Stop service listener", zap.String("service", serviceName))
 			close(d.watchCh)
 			return
 
 		case watchResp, ok := <-watchChan:
 			if !ok {
-				d.logger.ErrorCtx(d.ctx, "Watch 通道关闭", zap.String("service", serviceName))
+				d.logger.ErrorCtx(d.ctx, "Watch English: Watch Channel closed", zap.String("service", serviceName))
 				close(d.watchCh)
 				return
 			}
 
 			if watchResp.Err() != nil {
-				d.logger.ErrorCtx(d.ctx, "Watch 错误",
+				d.logger.ErrorCtx(d.ctx, "Watch Watch error",
 					zap.String("service", serviceName),
 					zap.Error(watchResp.Err()))
 				continue
@@ -156,14 +156,14 @@ func (d *EtcdDiscovery) handleWatchEvents(events []*clientv3.Event) bool {
 			// service launch or update
 			instance, err := d.parseServiceInstance(key, value)
 			if err != nil {
-				d.logger.WarnCtx(d.ctx, "解析服务实例失败",
+				d.logger.WarnCtx(d.ctx, "English: Failed to parse service instance",
 					zap.String("key", key),
 					zap.Error(err))
 				continue
 			}
 
 			if _, exists := d.instances[instance.ID]; !exists {
-				d.logger.DebugCtx(d.ctx, "🟢 服务实例上线",
+				d.logger.DebugCtx(d.ctx, "🟢 GREEN Service instance online",
 					zap.String("service", d.serviceName),
 					zap.String("instance", instance.ID),
 					zap.String("address", instance.GetAddress()))
@@ -176,7 +176,7 @@ func (d *EtcdDiscovery) handleWatchEvents(events []*clientv3.Event) bool {
 			// service offline
 			instanceID := extractInstanceIDFromKey(key)
 			if _, exists := d.instances[instanceID]; exists {
-				d.logger.WarnCtx(d.ctx, "🔴 服务实例下线",
+				d.logger.WarnCtx(d.ctx, "🔴 English: ⚫ Service instance offline",
 					zap.String("service", d.serviceName),
 					zap.String("instance", instanceID))
 				delete(d.instances, instanceID)
@@ -224,7 +224,7 @@ func (d *EtcdDiscovery) parseServiceInstance(key, value string) (*ServiceInstanc
 // Stop Service discovery
 func (d *EtcdDiscovery) Stop() {
 	d.cancel()
-	d.logger.DebugCtx(context.Background(), "✅ 服务发现已停止", zap.String("service", d.serviceName))
+	d.logger.DebugCtx(context.Background(), "✅ English: Service discovery has stopped", zap.String("service", d.serviceName))
 }
 
 // get instance list (lock required)

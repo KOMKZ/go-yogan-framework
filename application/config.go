@@ -139,7 +139,7 @@ func (a *Application) LoadAppConfig() (*AppConfig, error) {
 	// Retrieve ConfigLoader from the registry center
 	loader := a.GetConfigLoader()
 	if loader == nil {
-		return nil, fmt.Errorf("配置加载器未初始化")
+		return nil, fmt.Errorf("Configuration loader uninitialized")
 	}
 
 	var cfg AppConfig

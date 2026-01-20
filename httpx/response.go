@@ -137,7 +137,7 @@ func HandleError(c *gin.Context, err error) {
 	// 2. Compatibility for old error types: database record does not exist -> 404
 	if errors.Is(err, database.ErrRecordNotFound) {
 		if cfg.Enable {
-			logger.WarnCtx(ctx, "httpx", "资源不存在", zap.Error(err))
+			logger.WarnCtx(ctx, "httpx", "English: Resource does not exist", zap.Error(err))
 		}
 		NotFoundJson(c, err.Error())
 		return
@@ -145,7 +145,7 @@ func HandleError(c *gin.Context, err error) {
 
 	// 3. Unknown error (default) -> 500 (to avoid leaking internal information)
 	if cfg.Enable {
-		logger.ErrorCtx(ctx, "httpx", "未知错误",
+		logger.ErrorCtx(ctx, "httpx", "English: Unknown error",
 			zap.Error(err),
 			zap.String("error_chain", err.Error()),
 		)

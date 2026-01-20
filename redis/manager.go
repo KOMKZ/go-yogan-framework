@@ -60,7 +60,7 @@ func NewManager(configs map[string]Config, logger *zap.Logger) (*Manager, error)
 
 		m.configs[name] = cfg
 
-		m.logger.Debug("Redis 连接成功",
+		m.logger.Debug("Redis Redis connection successful",
 			zap.String("name", name),
 			zap.String("mode", cfg.Mode),
 			zap.Strings("addrs", cfg.Addrs))
@@ -160,7 +160,7 @@ func (m *Manager) WithDB(name string, db int) *redis.Client {
 	// Test connection
 	ctx := context.Background()
 	if err := newClient.Ping(ctx).Err(); err != nil {
-		m.logger.Error("WithDB 连接失败",
+		m.logger.Error("WithDB Database connection failed",
 			zap.String("name", name),
 			zap.Int("db", db),
 			zap.Error(err))
@@ -225,11 +225,11 @@ func (m *Manager) Close() error {
 	// Shut down single-instance
 	for name, client := range m.instances {
 		if err := client.Close(); err != nil {
-			m.logger.Error("关闭 Redis 连接失败",
+			m.logger.Error("English: Failed to close Redis connection Redis English: Failed to close Redis connection",
 				zap.String("name", name),
 				zap.Error(err))
 		} else {
-			m.logger.Debug("Redis 连接已关闭",
+			m.logger.Debug("Redis English: Redis connection closed",
 				zap.String("name", name))
 		}
 	}
@@ -237,11 +237,11 @@ func (m *Manager) Close() error {
 	// Shut down cluster instance
 	for name, cluster := range m.clusters {
 		if err := cluster.Close(); err != nil {
-			m.logger.Error("关闭 Redis 集群连接失败",
+			m.logger.Error("Failed to close Redis cluster connection Redis Failed to close Redis cluster connection",
 				zap.String("name", name),
 				zap.Error(err))
 		} else {
-			m.logger.Debug("Redis 集群连接已关闭",
+			m.logger.Debug("Redis English: Redis cluster connection closed",
 				zap.String("name", name))
 		}
 	}

@@ -98,10 +98,10 @@ func TestManager_InstanceMethods(t *testing.T) {
 	})
 
 	// Test all levels
-	manager.Debug("test", "Debug消息")
-	manager.DebugCtx(context.Background(), "test", "Info消息")
-	manager.Warn("test", "Warn消息")
-	manager.Error("test", "Error消息")
+	manager.Debug("test", "DebugEnglish: Debug message")
+	manager.DebugCtx(context.Background(), "test", "InfoEnglish: Info message")
+	manager.Warn("test", "WarnEnglish: Warn message")
+	manager.Error("test", "ErrorEnglish: Error message")
 
 	manager.CloseAll()
 
@@ -173,7 +173,7 @@ func TestManager_InstanceTraceID(t *testing.T) {
 	ctx := context.WithValue(context.Background(), "trace_id", "test-trace-123")
 
 	manager.InfoCtx(ctx, "order", "Order creation", zap.String("order_id", "001"))
-	manager.ErrorCtx(ctx, "order", "订单失败", zap.String("reason", "库存不足"))
+	manager.ErrorCtx(ctx, "order", "Order failed", zap.String("reason", "Order failed"))
 
 	manager.CloseAll()
 
@@ -208,7 +208,7 @@ func TestManager_InstanceReloadConfig(t *testing.T) {
 	})
 
 	// Record initial log
-	manager.InfoCtx(context.Background(), "test", "初始配置")
+	manager.InfoCtx(context.Background(), "test", "English: Initial configuration")
 
 	// Override configuration (change to debug level)
 	newCfg := ManagerConfig{
@@ -227,8 +227,8 @@ func TestManager_InstanceReloadConfig(t *testing.T) {
 	assert.NoError(t, err)
 
 	// The debug log should be able to be recorded after overriding.
-	manager.Debug("test", "重载后的Debug")
-	manager.DebugCtx(context.Background(), "test", "重载后的Info")
+	manager.Debug("test", "English: Reloaded DebugDebug")
+	manager.DebugCtx(context.Background(), "test", "Reloaded InfoInfo")
 
 	manager.CloseAll()
 
@@ -276,7 +276,7 @@ func TestManager_GlobalAndInstanceCoexist(t *testing.T) {
 	Info("order", "全局订单创建")
 
 	// Custom usage
-	customManager.InfoCtx(context.Background(), "order", "自定义订单创建")
+	customManager.InfoCtx(context.Background(), "order", "English: Custom order creation")
 
 	CloseAll()
 	customManager.CloseAll()
@@ -294,14 +294,14 @@ func TestManager_GlobalAndInstanceCoexist(t *testing.T) {
 
 // TestManager_IsolatedTesting isolated unit test scenarios
 func TestManager_IsolatedTesting(t *testing.T) {
-	// Each sub-test uses an independent Manager,不影响其他测试
+	// Each sub-test uses an independent Manager, does not affect other tests
 	t.Run("Test1", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		logDir := filepath.Join(tmpDir, "test1")
 
 		m := NewManager(DefaultManagerConfig())
 		m.baseConfig.BaseLogDir = logDir
-		m.InfoCtx(context.Background(), "module1", "测试1")
+		m.InfoCtx(context.Background(), "module1", "English: Test 11")
 		m.CloseAll()
 
 		assert.FileExists(t, filepath.Join(logDir, "module1", "module1-info-"+time.Now().Format("2006-01-02")+".log"))
@@ -313,7 +313,7 @@ func TestManager_IsolatedTesting(t *testing.T) {
 
 		m := NewManager(DefaultManagerConfig())
 		m.baseConfig.BaseLogDir = logDir
-		m.InfoCtx(context.Background(), "module2", "测试2")
+		m.InfoCtx(context.Background(), "module2", "English: Test 22")
 		m.CloseAll()
 
 		assert.FileExists(t, filepath.Join(logDir, "module2", "module2-info-"+time.Now().Format("2006-01-02")+".log"))

@@ -103,13 +103,13 @@ func TestServiceInfo_Validate(t *testing.T) {
 			// Verify default value settings
 			if !tt.wantErr {
 				if tt.info.TTL == 0 {
-					t.Error("TTL 应该有默认值")
+					t.Error("TTL TTL should have a default value")
 				}
 				if tt.info.Protocol == "" {
-					t.Error("Protocol 应该有默认值")
+					t.Error("Protocol The protocol should have a default value")
 				}
 				if tt.info.InstanceID == "" {
-					t.Error("InstanceID 应该自动生成")
+					t.Error("InstanceID InstanceID should be auto-generated")
 				}
 			}
 		})
@@ -136,17 +136,17 @@ func TestManager_RegisterService(t *testing.T) {
 	}
 
 	if mockRegistry.registerCallCount != 1 {
-		t.Errorf("Register 应该被调用 1 次，实际调用了 %d 次", mockRegistry.registerCallCount)
+		t.Errorf("Register Register should be called 1 time, actually called %d times 1 Register should be called 1 time, actually called %d times，Register should be called 1 time, actually called %d times %d Register should be called 1 time, actually called %d times", mockRegistry.registerCallCount)
 	}
 
 	if !manager.IsRegistered() {
-		t.Error("服务应该处于已注册状态")
+		t.Error("The service should be in a registered state.")
 	}
 
 	// Duplicate registration should return an error
 	err = manager.RegisterService(ctx, serviceInfo)
 	if err != ErrAlreadyRegistered {
-		t.Errorf("重复注册应该返回 ErrAlreadyRegistered，实际返回 %v", err)
+		t.Errorf("Duplicate registration should return ErrAlreadyRegistered, actually returned %v ErrAlreadyRegistered，Duplicate registration should return ErrAlreadyRegistered, actually returned %v %v", err)
 	}
 }
 
@@ -173,11 +173,11 @@ func TestManager_DeregisterService(t *testing.T) {
 	}
 
 	if mockRegistry.deregisterCallCount != 1 {
-		t.Errorf("Deregister 应该被调用 1 次，实际调用了 %d 次", mockRegistry.deregisterCallCount)
+		t.Errorf("Deregister Deregister should be called 1 time, actually called %d times 1 Deregister should be called 1 time, actually called %d times，Deregister should be called 1 time, actually called %d times %d Deregister should be called 1 time, actually called %d times", mockRegistry.deregisterCallCount)
 	}
 
 	if manager.IsRegistered() {
-		t.Error("服务应该处于未注册状态")
+		t.Error("The service should be in an unregistered state.")
 	}
 }
 
@@ -210,16 +210,16 @@ func TestManager_UpdateMetadata(t *testing.T) {
 	}
 
 	if mockRegistry.updateMetaCallCount != 1 {
-		t.Errorf("UpdateMetadata 应该被调用 1 次，实际调用了 %d 次", mockRegistry.updateMetaCallCount)
+		t.Errorf("UpdateMetadata UpdateMetadata should have been called 1 time, but was actually called %d times 1 UpdateMetadata should have been called 1 time, but was actually called %d times，UpdateMetadata should have been called 1 time, but was actually called %d times %d UpdateMetadata should have been called 1 time, but was actually called %d times", mockRegistry.updateMetaCallCount)
 	}
 
 	// Verify metadata has been updated
 	info := manager.GetServiceInfo()
 	if info.Metadata["version"] != "v1.1" {
-		t.Errorf("version 应该是 v1.1，实际是 %s", info.Metadata["version"])
+		t.Errorf("version The version should be v1.1, but it is actually %s v1.1，The version should be v1.1, but it is actually %s %s", info.Metadata["version"])
 	}
 	if info.Metadata["weight"] != "100" {
-		t.Errorf("weight 应该是 100，实际是 %s", info.Metadata["weight"])
+		t.Errorf("weight weight should be 100, actually it is %s 100，weight should be 100, actually it is %s %s", info.Metadata["weight"])
 	}
 }
 
@@ -249,6 +249,6 @@ func TestManager_Shutdown(t *testing.T) {
 	}
 
 	if manager.IsRegistered() {
-		t.Error("关闭后服务应该处于未注册状态")
+		t.Error("The service should be in an unregistered state after shutdown.")
 	}
 }

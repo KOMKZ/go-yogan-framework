@@ -1,10 +1,10 @@
-// Package breaker 提供熔断器功能
+// Package breaker provides circuit breaker functionality
 // 
-// 设计理念：
-//   - 独立包，不依赖其他 yogan 组件（除 logger）
-//   - 事件驱动，应用层可订阅所有事件
-//   - 指标开放，应用层可访问和订阅实时数据
-//   - 可选启用，未配置时不生效
+// Design concept:
+// - Standalone package, depends only on the logger component of yogan
+// - Event-driven, the application layer can subscribe to all events
+// - Metrics exposed, application layer can access and subscribe to real-time data
+// - Optional enablement, does not take effect if not configured
 package breaker
 
 import (
@@ -12,78 +12,78 @@ import (
 	"time"
 )
 
-// Breaker 熔断器核心接口
+// Circuit breaker core interface
 type Breaker interface {
-	// Execute 执行受保护的调用
+	// Execute protected call
 	Execute(ctx context.Context, req *Request) (*Response, error)
 	
-	// GetState 获取资源的当前状态
+	// GetState Retrieve the current state of the resource
 	GetState(resource string) State
 	
-	// GetMetrics 获取指标快照（应用层可访问）
+	// GetMetrics Obtain metric snapshot (accessible at the application layer)
 	GetMetrics(resource string) *MetricsSnapshot
 	
-	// GetEventBus 获取事件总线（用于订阅事件）
+	// GetEventBus Obtain the event bus (for subscribing to events)
 	GetEventBus() EventBus
 	
-	// GetMetricsCollector 获取指标采集器（用于订阅实时数据）
+	// GetMetricsCollector obtain metric collector (for subscribing to real-time data)
 	GetMetricsCollector(resource string) MetricsCollector
 	
-	// Reset 手动重置熔断器状态
+	// Reset Manually reset the circuit breaker state
 	Reset(resource string)
 	
-	// Close 关闭熔断器（清理资源）
+	// Close circuit breaker (clean up resources)
 	Close() error
 	
-	// IsEnabled 检查熔断器是否启用（未配置时返回 false）
+	// Check if the circuit breaker is enabled (returns false if not configured)
 	IsEnabled() bool
 }
 
-// Request 请求上下文
+// Request context
 type Request struct {
-	// Resource 资源标识（服务名、方法名等）
+	// Resource identifier (service name, method name, etc.)
 	Resource string
 	
-	// Execute 实际调用函数
+	// Execute actual function call
 	Execute func(ctx context.Context) (interface{}, error)
 	
-	// Fallback 降级逻辑（可选）
+	// Fallback degradation logic (optional)
 	Fallback func(ctx context.Context, err error) (interface{}, error)
 	
-	// Timeout 超时时间（可选，0 表示使用配置的超时）
+	// Timeout (optional, 0 indicates using the configured timeout)
 	Timeout time.Duration
 }
 
-// Response 响应结果
+// Response result
 type Response struct {
-	// Value 返回值
+	// Value return value
 	Value interface{}
 	
-	// FromFallback 是否来自降级
+	// IsFromFallback whether from fallback
 	FromFallback bool
 	
-	// Duration 调用耗时
+	// Duration call time spent
 	Duration time.Duration
 	
-	// Error 错误（如果有）
+	// Error (if any)
 	Error error
 }
 
-// State 熔断器状态
+// State circuit breaker status
 type State int
 
 const (
-	// StateClosed 关闭（正常）
+	// StateClosed Closed (normal)
 	StateClosed State = iota
 	
-	// StateOpen 打开（熔断）
+	// StateOpen Open (circuit breaker)
 	StateOpen
 	
-	// StateHalfOpen 半开（试探恢复）
+	// StateHalfOpen Half open (recovery probe)
 	StateHalfOpen
 )
 
-// String 返回状态名称
+// Return status name
 func (s State) String() string {
 	switch s {
 	case StateClosed:
@@ -97,17 +97,17 @@ func (s State) String() string {
 	}
 }
 
-// IsOpen 是否处于熔断状态
+// IsOpen whether it is in circuit breaker state
 func (s State) IsOpen() bool {
 	return s == StateOpen
 }
 
-// IsClosed 是否处于正常状态
+// IsClosed whether in normal state
 func (s State) IsClosed() bool {
 	return s == StateClosed
 }
 
-// IsHalfOpen 是否处于半开状态
+// IsHalfOpen whether it is in half-open state
 func (s State) IsHalfOpen() bool {
 	return s == StateHalfOpen
 }

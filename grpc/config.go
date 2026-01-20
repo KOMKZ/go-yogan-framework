@@ -89,11 +89,11 @@ func (c *ClientConfig) Validate() error {
 	
 	if mode == "direct" {
 		if c.Target == "" {
-			return fmt.Errorf("direct 模式下 target 不能为空")
+			return fmt.Errorf("direct In direct mode, target cannot be empty target In direct mode, target cannot be empty")
 		}
 	} else if mode == "etcd" {
 		if c.ServiceName == "" {
-			return fmt.Errorf("etcd 模式下 service_name 不能为空")
+			return fmt.Errorf("etcd etcd mode service_name cannot be empty service_name etcd mode service_name cannot be empty")
 		}
 	}
 	

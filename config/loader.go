@@ -42,7 +42,7 @@ func (l *Loader) Load() error {
 	for _, source := range l.sources {
 		data, err := source.Load()
 		if err != nil {
-			return fmt.Errorf("加载数据源 %s 失败: %w", source.Name(), err)
+			return fmt.Errorf("Failed to load data source %s: %w %s Failed to load data source %s: %w: %w", source.Name(), err)
 		}
 
 		// Log file data source
@@ -194,7 +194,7 @@ func (l *Loader) GetLoadedFiles() []string {
 	return l.loadedFiles
 }
 
-// GetViper获取底层Viper实例
+// GetViper retrieves the underlying Viper instance
 func (l *Loader) GetViper() *viper.Viper {
 	return l.v
 }

@@ -151,7 +151,7 @@ func (a *tokenBucketAlgorithm) Wait(ctx context.Context, store Store, resource s
 	}
 }
 
-// GetMetrics获取当前指标
+// GetMetrics retrieves current metrics
 func (a *tokenBucketAlgorithm) GetMetrics(ctx context.Context, store Store, resource string) (*AlgorithmMetrics, error) {
 	tokensKey := a.tokensKey(resource)
 	lastRefillKey := a.lastRefillKey(resource)

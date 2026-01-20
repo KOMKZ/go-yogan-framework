@@ -88,7 +88,7 @@ func (eb *eventBus) Publish(event Event) {
 		// Bus is closed, silently ignore
 		return
 	default:
-		// Buffer full, discard event (or可以选择阻塞)
+		// Buffer full, discard event (or can choose to block)
 	}
 }
 

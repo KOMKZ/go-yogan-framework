@@ -27,7 +27,7 @@ type Credentials struct {
 	// API key authentication
 	APIKey string
 	
-	// Basic Authentication认证
+	// Basic Authentication authorization
 	BasicAuthUser string
 	BasicAuthPass string
 }

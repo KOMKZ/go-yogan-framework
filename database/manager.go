@@ -70,7 +70,7 @@ func NewManager(configs map[string]Config, loggerFactory GormLoggerFactory, logg
 		m.instances[name] = db
 		m.configs[name] = cfg
 
-		m.logger.Debug("数据库连接成功",
+		m.logger.Debug("Database connection successful",
 			zap.String("name", name),
 			zap.String("driver", cfg.Driver))
 	}
@@ -142,18 +142,18 @@ func (m *Manager) Close() error {
 	for name, db := range m.instances {
 		sqlDB, err := db.DB()
 		if err != nil {
-			m.logger.Error("获取 sql.DB 失败",
+			m.logger.Error("Failed to get sql.DB sql.DB Failed to get sql.DB",
 				zap.String("name", name),
 				zap.Error(err))
 			continue
 		}
 
 		if err := sqlDB.Close(); err != nil {
-			m.logger.Error("关闭数据库连接失败",
+			m.logger.Error("English: Failed to close database connection",
 				zap.String("name", name),
 				zap.Error(err))
 		} else {
-			m.logger.Debug("数据库连接已关闭",
+			m.logger.Debug("Database connection closed",
 				zap.String("name", name))
 		}
 	}

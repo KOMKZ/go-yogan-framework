@@ -223,7 +223,7 @@ func (m *Manager) testConnection() error {
 	return nil
 }
 
-// GetProducer 获取生产者功能
+// GetProducer obtain producer functionality
 func (m *Manager) GetProducer() Producer {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -248,7 +248,7 @@ func (m *Manager) GetAsyncProducer() (*AsyncProducer, error) {
 	return m.asyncProducer, nil
 }
 
-// CreateConsumer 创建消费者对象
+// Create consumer object
 func (m *Manager) CreateConsumer(name string, cfg ConsumerConfig) (*ConsumerGroup, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -281,7 +281,7 @@ func (m *Manager) CreateConsumer(name string, cfg ConsumerConfig) (*ConsumerGrou
 	return consumer, nil
 }
 
-// GetConsumer 获取消费者信息
+// GetConsumer get consumer information
 func (m *Manager) GetConsumer(name string) *ConsumerGroup {
 	m.mu.RLock()
 	defer m.mu.RUnlock()

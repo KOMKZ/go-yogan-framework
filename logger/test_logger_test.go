@@ -18,19 +18,19 @@ func TestTestCtxLogger(t *testing.T) {
 	ctxWithTrace := context.WithValue(ctx, "trace_id", "test-trace-123")
 
 	// Test InfoCtx
-	logger.InfoCtx(ctx, "Info 消息", zap.String("key", "value"))
+	logger.InfoCtx(ctx, "Info English: Info Message", zap.String("key", "value"))
 
 	// Test DebugCtx
-	logger.DebugCtx(ctx, "Debug 消息", zap.Int("count", 10))
+	logger.DebugCtx(ctx, "Debug English: Debug message", zap.Int("count", 10))
 
 	// Test WarnCtx
-	logger.WarnCtx(ctx, "Warn 消息", zap.Bool("flag", true))
+	logger.WarnCtx(ctx, "Warn English: Warning Message", zap.Bool("flag", true))
 
 	// Test ErrorCtx
-	logger.ErrorCtx(ctx, "Error 消息", zap.Error(nil))
+	logger.ErrorCtx(ctx, "Error English: Error message", zap.Error(nil))
 
 	// Test logs with TraceID
-	logger.InfoCtx(ctxWithTrace, "带 TraceID 的消息")
+	logger.InfoCtx(ctxWithTrace, "English: Message with TraceID TraceID English: Message with TraceID")
 
 	// Test HasLog (using uppercase level, consistent with TestCtxLogger storage format)
 	assert.True(t, logger.HasLog("INFO", "Info 消息"))
@@ -78,7 +78,7 @@ func TestTestCtxLogger_With(t *testing.T) {
 	assert.NotNil(t, orderLogger)
 
 	// The new Logger can record logs
-	orderLogger.InfoCtx(context.Background(), "订单创建")
+	orderLogger.InfoCtx(context.Background(), "Order creation")
 
 	// The new Logger can see its own records
 	assert.True(t, orderLogger.HasLog("INFO", "订单创建"))

@@ -111,28 +111,28 @@ func (c *Config) Validate() error {
 
 	// At least one authentication method must be enabled
 	if len(c.Providers) == 0 {
-		return errors.New("至少需要启用一种认证方式")
+		return errors.New("At least one authentication method must be enabled")
 	}
 
 	// Password policy validation
 	if c.Password.Enabled {
 		policy := c.Password.Policy
 		if policy.MinLength < 1 || policy.MinLength > policy.MaxLength {
-			return errors.New("密码最小长度配置无效")
+			return errors.New("Invalid minimum password length configuration")
 		}
 
 		if c.Password.BcryptCost < 4 || c.Password.BcryptCost > 31 {
-			return errors.New("bcrypt cost 必须在 4-31 之间")
+			return errors.New("bcrypt cost bcrypt cost must be between 4 and 31 4-31 bcrypt cost must be between 4 and 31")
 		}
 	}
 
 	// Login attempt limit validation
 	if c.LoginAttempt.Enabled {
 		if c.LoginAttempt.MaxAttempts < 1 {
-			return errors.New("最大登录尝试次数必须 >= 1")
+			return errors.New("The maximum login attempt count must be >= 1 >= 1")
 		}
 		if c.LoginAttempt.Storage != "redis" && c.LoginAttempt.Storage != "memory" {
-			return errors.New("登录尝试存储方式只支持 redis 或 memory")
+			return errors.New("Login attempt storage method only supports redis or memory redis Login attempt storage method only supports redis or memory memory")
 		}
 	}
 

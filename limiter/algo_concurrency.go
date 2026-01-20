@@ -81,7 +81,7 @@ func (a *concurrencyAlgorithm) Wait(ctx context.Context, store Store, resource s
 			return ErrWaitTimeout
 		}
 
-		// 短暂 wait 后重试
+		// Retry after a brief wait
 		waitTime := min64Duration(100*time.Millisecond, time.Until(deadline))
 		if waitTime <= 0 {
 			return ErrWaitTimeout
@@ -96,7 +96,7 @@ func (a *concurrencyAlgorithm) Wait(ctx context.Context, store Store, resource s
 	}
 }
 
-// GetMetrics获取当前指标
+// GetMetrics retrieves current metrics
 func (a *concurrencyAlgorithm) GetMetrics(ctx context.Context, store Store, resource string) (*AlgorithmMetrics, error) {
 	key := a.concurrencyKey(resource)
 

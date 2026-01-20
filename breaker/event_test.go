@@ -92,7 +92,7 @@ func TestEventBus_FilteredSubscribe(t *testing.T) {
 	assert.Equal(t, int32(1), atomic.LoadInt32(&callSuccessCount))
 }
 
-// TestMultipleSubscribers 测试多个订阅者
+// TestMultipleSubscribers test multiple subscribers
 func TestEventBus_MultipleSubscribers(t *testing.T) {
 	bus := NewEventBus(100)
 	defer bus.Close()

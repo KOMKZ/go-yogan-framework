@@ -26,7 +26,7 @@ func (r *BaseRepository[T]) DB() *gorm.DB {
 // Create record
 func (r *BaseRepository[T]) Create(ctx context.Context, entity *T) error {
 	if err := r.db.WithContext(ctx).Create(entity).Error; err != nil {
-		return fmt.Errorf("创建记录失败: %w", err)
+		return fmt.Errorf("Record creation failed: %w: %w", err)
 	}
 	return nil
 }
@@ -39,7 +39,7 @@ func (r *BaseRepository[T]) FindByID(ctx context.Context, id interface{}) (*T, e
 		return nil, ErrRecordNotFound
 	}
 	if result.Error != nil {
-		return nil, fmt.Errorf("查询记录失败 (id=%v): %w", id, result.Error)
+		return nil, fmt.Errorf("Query record failed (id=%v): %w (id=%v): %w", id, result.Error)
 	}
 	return &entity, nil
 }
@@ -48,7 +48,7 @@ func (r *BaseRepository[T]) FindByID(ctx context.Context, id interface{}) (*T, e
 func (r *BaseRepository[T]) FindAll(ctx context.Context) ([]T, error) {
 	var entities []T
 	if err := r.db.WithContext(ctx).Find(&entities).Error; err != nil {
-		return nil, fmt.Errorf("查询所有记录失败: %w", err)
+		return nil, fmt.Errorf("Failed to query all records: %w: %w", err)
 	}
 	return entities, nil
 }
@@ -56,7 +56,7 @@ func (r *BaseRepository[T]) FindAll(ctx context.Context) ([]T, error) {
 // Update record
 func (r *BaseRepository[T]) Update(ctx context.Context, entity *T) error {
 	if err := r.db.WithContext(ctx).Save(entity).Error; err != nil {
-		return fmt.Errorf("更新记录失败: %w", err)
+		return fmt.Errorf("Update record failed: %w: %w", err)
 	}
 	return nil
 }
@@ -65,7 +65,7 @@ func (r *BaseRepository[T]) Update(ctx context.Context, entity *T) error {
 func (r *BaseRepository[T]) Delete(ctx context.Context, id interface{}) error {
 	var entity T
 	if err := r.db.WithContext(ctx).Delete(&entity, id).Error; err != nil {
-		return fmt.Errorf("删除记录失败 (id=%v): %w", id, err)
+		return fmt.Errorf("Delete record failed (id=%v): %w (id=%v): %w", id, err)
 	}
 	return nil
 }
@@ -75,7 +75,7 @@ func (r *BaseRepository[T]) Exists(ctx context.Context, id interface{}) (bool, e
 	var count int64
 	var entity T
 	if err := r.db.WithContext(ctx).Model(&entity).Where("id = ?", id).Count(&count).Error; err != nil {
-		return false, fmt.Errorf("检查记录是否存在失败 (id=%v): %w", id, err)
+		return false, fmt.Errorf("Failed to check if record exists (id=%v): %w (id=%v): %w", id, err)
 	}
 	return count > 0, nil
 }
@@ -85,7 +85,7 @@ func (r *BaseRepository[T]) Count(ctx context.Context) (int64, error) {
 	var count int64
 	var entity T
 	if err := r.db.WithContext(ctx).Model(&entity).Count(&count).Error; err != nil {
-		return 0, fmt.Errorf("统计记录数失败: %w", err)
+		return 0, fmt.Errorf("Failed to count statistics: %w: %w", err)
 	}
 	return count, nil
 }
@@ -98,13 +98,13 @@ func (r *BaseRepository[T]) Paginate(ctx context.Context, page, pageSize int) ([
 	// count total number
 	var entity T
 	if err := r.db.WithContext(ctx).Model(&entity).Count(&total).Error; err != nil {
-		return nil, 0, fmt.Errorf("分页查询-统计总数失败: %w", err)
+		return nil, 0, fmt.Errorf("Paging query-failed to statistics total count: %w-Paging query-failed to statistics total count: %w: %w", err)
 	}
 
 	// paged query
 	offset := (page - 1) * pageSize
 	if err := r.db.WithContext(ctx).Offset(offset).Limit(pageSize).Find(&entities).Error; err != nil {
-		return nil, 0, fmt.Errorf("分页查询-查询数据失败 (page=%d, pageSize=%d): %w", page, pageSize, err)
+		return nil, 0, fmt.Errorf("Paging query-failed to retrieve data (page=%d, pageSize=%d): %w-Paging query-failed to retrieve data (page=%d, pageSize=%d): %w (page=%d, pageSize=%d): %w", page, pageSize, err)
 	}
 
 	return entities, total, nil

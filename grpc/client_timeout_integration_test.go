@@ -52,7 +52,7 @@ func TestClientManager_RealTimeout_With10SecondDelay(t *testing.T) {
 
 	// Validate timeout
 	t.Logf("调用耗时: %v", elapsed)
-	assert.Error(t, err, "应该超时")
+	assert.Error(t, err, "English: Should time out")
 
 	// Verify timeout error
 	st, ok := status.FromError(err)
@@ -101,7 +101,7 @@ func TestClientManager_DifferentTimeouts_RealDelay(t *testing.T) {
 		_, err = healthClient.Check(ctx, &grpc_health_v1.HealthCheckRequest{})
 		elapsed := time.Since(start)
 
-		assert.Error(t, err, "应该超时")
+		assert.Error(t, err, "English: Should time out")
 		assert.Less(t, elapsed, 2*time.Second, "应该在2秒内超时")
 		t.Logf("   1秒超时客户端耗时: %v", elapsed)
 	})

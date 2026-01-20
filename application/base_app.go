@@ -107,7 +107,7 @@ func NewBase(configPath, configPrefix, appType string, flags interface{}) *BaseA
 		panic(fmt.Sprintf("加载 AppConfig 失败: %v", err))
 	}
 
-	coreLogger.DebugCtx(ctx, "✅ 基础应用初始化完成（纯 DI 模式）",
+	coreLogger.DebugCtx(ctx, "✅ English: ✓ Basic application initialization complete (pure DI mode)（English: ✓ Basic application initialization complete (pure DI mode) DI English: ✓ Basic application initialization complete (pure DI mode)）",
 		zap.String("configPath", configPath),
 		zap.String("appType", appType))
 
@@ -191,7 +191,7 @@ func (b *BaseApplication) Shutdown(timeout time.Duration) error {
 		log.ErrorCtx(ctx, "DI container shutdown failed", zap.Error(err))
 	}
 
-	log.DebugCtx(ctx, "✅ 所有组件已关闭")
+	log.DebugCtx(ctx, "✅ All components have been shut down")
 	b.setState(StateStopped)
 	return nil
 }
@@ -270,7 +270,7 @@ func (b *BaseApplication) GetConfigLoader() *config.Loader {
 	return b.configLoader
 }
 
-// GetInjector获取samber/do注入器
+// GetInjector obtains the sanber/do injector
 func (b *BaseApplication) GetInjector() *do.RootScope {
 	return b.injector
 }
@@ -278,7 +278,7 @@ func (b *BaseApplication) GetInjector() *do.RootScope {
 // LoadAppConfig retrieves common configurations (already loaded and cached in NewBase)
 func (b *BaseApplication) LoadAppConfig() (*AppConfig, error) {
 	if b.appConfig == nil {
-		return nil, fmt.Errorf("AppConfig 未初始化")
+		return nil, fmt.Errorf("AppConfig AppConfig not initialized")
 	}
 	return b.appConfig, nil
 }
