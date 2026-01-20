@@ -115,3 +115,54 @@ api_server:
 	assert.NoError(t, err)
 }
 
+// TestAppConfig_MiddlewareApplyDefaults 测试中间件默认值应用
+func TestAppConfig_MiddlewareApplyDefaults(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := filepath.Join(tmpDir, "config.yaml")
+	
+	// 配置包含中间件但不包含某些默认值
+	configContent := `
+api_server:
+  port: 8080
+  mode: debug
+
+middleware:
+  cors:
+    enabled: true
+  trace_id:
+    enabled: true
+  request_log:
+    enabled: true
+`
+	err := os.WriteFile(configFile, []byte(configContent), 0644)
+	require.NoError(t, err)
+
+	app := New(tmpDir, "TEST", nil)
+
+	app.OnSetup(func(a *Application) error {
+		appCfg, err := a.LoadAppConfig()
+		require.NoError(t, err)
+		
+		// 验证默认值已应用
+		assert.NotNil(t, appCfg.Middleware)
+		if appCfg.Middleware != nil && appCfg.Middleware.CORS != nil {
+			assert.NotEmpty(t, appCfg.Middleware.CORS.AllowOrigins)
+		}
+		if appCfg.Middleware != nil && appCfg.Middleware.TraceID != nil {
+			assert.NotEmpty(t, appCfg.Middleware.TraceID.TraceIDHeader)
+		}
+		if appCfg.Middleware != nil && appCfg.Middleware.RequestLog != nil {
+			assert.Greater(t, appCfg.Middleware.RequestLog.MaxBodySize, 0)
+		}
+		
+		return nil
+	})
+
+	app.OnReady(func(a *Application) error {
+		a.Shutdown()
+		return nil
+	})
+
+	err = app.Run()
+	assert.NoError(t, err)
+}
