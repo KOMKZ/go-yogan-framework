@@ -108,11 +108,11 @@ func RequestLogWithConfig(cfg RequestLogConfig) gin.HandlerFunc {
 		// 400+: 客户端错误，Warn 级别
 		// 200+: 正常请求，Info 级别
 		if statusCode >= 500 {
-			logger.ErrorCtx(ctx, "gin-http", "HTTP 请求", fields...)
+			logger.ErrorCtx(ctx, "yogan", "HTTP 请求", fields...)
 		} else if statusCode >= 400 {
-			logger.WarnCtx(ctx, "gin-http", "HTTP 请求", fields...)
+			logger.WarnCtx(ctx, "yogan", "HTTP 请求", fields...)
 		} else {
-			logger.InfoCtx(ctx, "gin-http", "HTTP 请求", fields...)
+			logger.InfoCtx(ctx, "yogan", "HTTP 请求", fields...)
 		}
 	}
 }
