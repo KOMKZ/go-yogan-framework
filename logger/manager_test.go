@@ -261,7 +261,7 @@ func TestManager_Stacktrace(t *testing.T) {
 	log := GetLogger("stacktest")
 
 	// Info 级别不应该有栈
-	log.DebugCtx(ctx, "Info level log")
+	log.InfoCtx(ctx, "Info level log")
 
 	// Error 级别应该有栈（使用 ErrorCtx 会自动添加）
 	log.ErrorCtx(ctx, "Error level log", zap.String("error", "测试错误"))
@@ -340,7 +340,7 @@ func TestManager_WithFields(t *testing.T) {
 		zap.String("version", "v1.0"),
 	)
 
-	orderLogger.DebugCtx(context.Background(), "Order creation", zap.String("order_id", "12345"))
+	orderLogger.InfoCtx(context.Background(), "Order creation", zap.String("order_id", "12345"))
 	CloseAll()
 
 	content, _ := os.ReadFile("logs/order/order-info.log")
@@ -425,7 +425,7 @@ func TestManager_TraceIDBasic(t *testing.T) {
 	ctx := context.WithValue(context.Background(), "trace_id", "abc-123-xyz")
 
 	// 使用 Context API
-	DebugCtx(ctx, "order", "Order creation", zap.String("order_id", "001"))
+	InfoCtx(ctx, "order", "Order creation", zap.String("order_id", "001"))
 	ErrorCtx(ctx, "order", "订单失败", zap.String("reason", "库存不足"))
 
 	CloseAll()
@@ -469,7 +469,7 @@ func TestManager_TraceIDDisabled(t *testing.T) {
 
 	// 即使 context 有 traceID，也不应该记录
 	ctx := context.WithValue(context.Background(), "trace_id", "should-not-appear")
-	DebugCtx(ctx, "order", "测试禁用")
+	InfoCtx(ctx, "order", "测试禁用")
 
 	CloseAll()
 
@@ -504,7 +504,7 @@ func TestManager_TraceIDCustomKey(t *testing.T) {
 
 	// 使用自定义 key
 	ctx := context.WithValue(context.Background(), "request_id", "req-999")
-	DebugCtx(ctx, "order", "自定义Key测试")
+	InfoCtx(ctx, "order", "自定义Key测试")
 
 	CloseAll()
 
@@ -536,7 +536,7 @@ func TestManager_TraceIDEmptyContext(t *testing.T) {
 
 	// 使用空 context（没有 traceID）
 	ctx := context.Background()
-	DebugCtx(ctx, "order", "空Context测试", zap.String("key", "value"))
+	InfoCtx(ctx, "order", "空Context测试", zap.String("key", "value"))
 
 	CloseAll()
 
@@ -572,7 +572,7 @@ func TestManager_TraceIDAllLevels(t *testing.T) {
 
 	// 测试所有级别
 	DebugCtx(ctx, "test", "Debug级别")
-	DebugCtx(ctx, "test", "Info级别")
+	InfoCtx(ctx, "test", "Info级别")
 	WarnCtx(ctx, "test", "Warn级别")
 	ErrorCtx(ctx, "test", "Error级别")
 
@@ -610,7 +610,7 @@ func TestManager_TraceIDConcurrent(t *testing.T) {
 		go func(id int) {
 			traceID := "trace-" + string(rune('0'+id))
 			ctx := context.WithValue(context.Background(), "trace_id", traceID)
-			DebugCtx(ctx, "concurrent", "并发测试", zap.Int("goroutine", id))
+			InfoCtx(ctx, "concurrent", "并发测试", zap.Int("goroutine", id))
 			done <- true
 		}(i)
 	}

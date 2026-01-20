@@ -59,8 +59,8 @@ func TestManager_IndependentInstances(t *testing.T) {
 	})
 
 	// 独立使用
-	appManager.DebugCtx(context.Background(), "order", "Order creation", zap.String("id", "001"))
-	auditManager.DebugCtx(context.Background(), "security", "User login", zap.String("user", "admin"))
+	appManager.InfoCtx(context.Background(), "order", "Order creation", zap.String("id", "001"))
+	auditManager.InfoCtx(context.Background(), "security", "User login", zap.String("user", "admin"))
 
 	// 关闭
 	appManager.CloseAll()
@@ -138,7 +138,7 @@ func TestManager_InstanceWithFields(t *testing.T) {
 		zap.String("version", "v1.0"),
 	)
 
-	orderLogger.DebugCtx(context.Background(), "Order creation", zap.String("order_id", "12345"))
+	orderLogger.InfoCtx(context.Background(), "Order creation", zap.String("order_id", "12345"))
 	manager.CloseAll()
 
 	content, _ := os.ReadFile(filepath.Join(logDir, "order", "order-info.log"))
@@ -172,7 +172,7 @@ func TestManager_InstanceTraceID(t *testing.T) {
 
 	ctx := context.WithValue(context.Background(), "trace_id", "test-trace-123")
 
-	manager.DebugCtx(ctx, "order", "Order creation", zap.String("order_id", "001"))
+	manager.InfoCtx(ctx, "order", "Order creation", zap.String("order_id", "001"))
 	manager.ErrorCtx(ctx, "order", "订单失败", zap.String("reason", "库存不足"))
 
 	manager.CloseAll()
@@ -208,7 +208,7 @@ func TestManager_InstanceReloadConfig(t *testing.T) {
 	})
 
 	// 记录初始日志
-	manager.DebugCtx(context.Background(), "test", "初始配置")
+	manager.InfoCtx(context.Background(), "test", "初始配置")
 
 	// 重载配置（改为 debug 级别）
 	newCfg := ManagerConfig{
@@ -276,7 +276,7 @@ func TestManager_GlobalAndInstanceCoexist(t *testing.T) {
 	Info("order", "全局订单创建")
 
 	// 自定义使用
-	customManager.DebugCtx(context.Background(), "order", "自定义订单创建")
+	customManager.InfoCtx(context.Background(), "order", "自定义订单创建")
 
 	CloseAll()
 	customManager.CloseAll()
@@ -301,7 +301,7 @@ func TestManager_IsolatedTesting(t *testing.T) {
 
 		m := NewManager(DefaultManagerConfig())
 		m.baseConfig.BaseLogDir = logDir
-		m.DebugCtx(context.Background(), "module1", "测试1")
+		m.InfoCtx(context.Background(), "module1", "测试1")
 		m.CloseAll()
 
 		assert.FileExists(t, filepath.Join(logDir, "module1", "module1-info-"+time.Now().Format("2006-01-02")+".log"))
@@ -313,7 +313,7 @@ func TestManager_IsolatedTesting(t *testing.T) {
 
 		m := NewManager(DefaultManagerConfig())
 		m.baseConfig.BaseLogDir = logDir
-		m.DebugCtx(context.Background(), "module2", "测试2")
+		m.InfoCtx(context.Background(), "module2", "测试2")
 		m.CloseAll()
 
 		assert.FileExists(t, filepath.Join(logDir, "module2", "module2-info-"+time.Now().Format("2006-01-02")+".log"))
