@@ -48,6 +48,7 @@ type dispatcher struct {
 	closed         int32
 	kafkaPublisher KafkaPublisher // Kafka 发布者（可选）
 	router         *Router        // 事件路由器（可选）
+	setAllSync     bool
 }
 
 // NewDispatcher 创建事件分发器
@@ -86,6 +87,9 @@ func (d *dispatcher) Subscribe(eventName string, listener Listener, opts ...Subs
 
 	for _, opt := range opts {
 		opt(&entry)
+		if d.setAllSync {
+			entry.async = false
+		}
 	}
 
 	d.mu.Lock()
@@ -158,7 +162,8 @@ func (d *dispatcher) Dispatch(ctx context.Context, event Event, opts ...Dispatch
 	case DriverKafka:
 		return d.dispatchToKafka(ctx, event, options)
 	default:
-		if options.async {
+		// setAllSync 强制同步分发（忽略 options.async）
+		if options.async && !d.setAllSync {
 			d.dispatchAsyncMemory(ctx, event)
 			return nil
 		}

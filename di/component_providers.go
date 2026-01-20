@@ -275,6 +275,7 @@ func ProvideEventDispatcherIndependent(i do.Injector) (event.Dispatcher, error) 
 	// 创建 Dispatcher（使用 Option 模式）
 	return event.NewDispatcher(
 		event.WithPoolSize(cfg.PoolSize),
+		event.WithSetAllSync(cfg.SetAllSync),
 	), nil
 }
 
