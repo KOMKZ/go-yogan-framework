@@ -98,7 +98,7 @@ func (a *CronApplication) run(blocking bool) error {
 	}
 
 	logger := a.MustGetLogger()
-	logger.DebugCtx(a.ctx, "✅ Cron application started", zap.String("state", a.GetState().String()))
+	logger.DebugCtx(a.ctx, "✅ Cron application started", zap.String("state", a.GetState().String()), zap.Duration("startup_time", a.GetStartDuration()))
 
 	// 6. 如果是阻塞模式，等待关闭信号
 	if blocking {

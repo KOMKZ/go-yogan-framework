@@ -43,7 +43,8 @@ type BaseApplication struct {
 	mu     sync.RWMutex
 
 	// 应用元信息
-	version string
+	version   string
+	startTime time.Time // 启动开始时间
 
 	// 回调函数
 	onSetup        func(*BaseApplication) error
@@ -84,6 +85,7 @@ func (s AppState) String() string {
 // NewBase 创建基础应用实例
 // 🎯 全面使用 samber/do 管理所有组件，不再使用 Registry
 func NewBase(configPath, configPrefix, appType string, flags interface{}) *BaseApplication {
+	startTime := time.Now() // 记录启动开始时间
 	ctx, cancel := context.WithCancel(context.Background())
 	injector := do.New()
 
@@ -119,6 +121,7 @@ func NewBase(configPath, configPrefix, appType string, flags interface{}) *BaseA
 		ctx:          ctx,
 		cancel:       cancel,
 		state:        StateInit,
+		startTime:    startTime,
 	}
 }
 
@@ -142,6 +145,11 @@ func (b *BaseApplication) WithVersion(version string) *BaseApplication {
 // GetVersion 获取应用版本号
 func (b *BaseApplication) GetVersion() string {
 	return b.version
+}
+
+// GetStartDuration 获取应用启动耗时
+func (b *BaseApplication) GetStartDuration() time.Duration {
+	return time.Since(b.startTime)
 }
 
 // Setup 初始化应用（核心逻辑）

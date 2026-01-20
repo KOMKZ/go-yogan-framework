@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
 )
 
 // CLIApplication CLI 应用（组合 BaseApplication + CLI 专有功能）
@@ -88,7 +89,7 @@ func (c *CLIApplication) Execute() error {
 	}
 
 	logger := c.MustGetLogger()
-	logger.DebugCtx(c.ctx, "✅ CLI application initialized")
+	logger.DebugCtx(c.ctx, "✅ CLI application initialized", zap.Duration("startup_time", c.GetStartDuration()))
 
 	// 3. 执行 Cobra 命令（同步）
 	err := c.rootCmd.Execute()

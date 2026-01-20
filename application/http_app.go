@@ -101,11 +101,14 @@ func (a *Application) RunNonBlocking() error {
 	}
 
 	logger := a.MustGetLogger()
-	if version := a.GetVersion(); version != "" {
-		logger.InfoCtx(a.ctx, "✅ HTTP application started", zap.String("version", version), zap.String("state", a.GetState().String()))
-	} else {
-		logger.InfoCtx(a.ctx, "✅ HTTP application started", zap.String("state", a.GetState().String()))
+	fields := []zap.Field{
+		zap.String("state", a.GetState().String()),
+		zap.Duration("startup_time", a.GetStartDuration()),
 	}
+	if version := a.GetVersion(); version != "" {
+		fields = append(fields, zap.String("version", version))
+	}
+	logger.InfoCtx(a.ctx, "✅ HTTP application started", fields...)
 
 	return nil
 }
