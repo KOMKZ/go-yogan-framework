@@ -105,6 +105,8 @@ func (l *GormLogger) Trace(ctx context.Context, begin time.Time, fc func() (sql 
 			// 忽略 RecordNotFound 错误（这是正常业务逻辑）
 			fields = append(fields, zap.Error(err))
 			ErrorCtx(ctx, "yogan_sql", "SQL 执行错误", fields...)
+		} else if l.enableAudit {
+			DebugCtx(ctx, "yogan_sql", "SQL 执行", fields...)
 		}
 
 	case elapsed > l.slowThreshold && l.slowThreshold != 0 && l.logLevel >= gormlogger.Warn:
@@ -124,9 +126,6 @@ func (l *GormLogger) Trace(ctx context.Context, begin time.Time, fc func() (sql 
 		// 正常 SQL 执行
 		if l.enableAudit {
 			// 审计日志：记录所有 SQL 执行
-			DebugCtx(ctx, "yogan_sql", "SQL 执行", fields...)
-		} else {
-			// 非审计模式：只在 Debug 级别记录
 			DebugCtx(ctx, "yogan_sql", "SQL 执行", fields...)
 		}
 	}
