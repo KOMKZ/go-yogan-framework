@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/KOMKZ/go-yogan-framework/logger"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 )
 
 func TestMessage_Fields(t *testing.T) {
@@ -149,11 +149,11 @@ func TestMockSyncProducer_SendAfterClose(t *testing.T) {
 
 // Test the validation logic of SyncProducer
 func TestSyncProducer_Send_Validation(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 
 	// Create a simulated SyncProducer structure to test validation logic
 	p := &SyncProducer{
-		logger: logger,
+		logger: log,
 		closed: false,
 	}
 
@@ -179,10 +179,10 @@ func TestSyncProducer_Send_Validation(t *testing.T) {
 
 // Test the validation logic of AsyncProducer
 func TestAsyncProducer_Validation(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 
 	p := &AsyncProducer{
-		logger:    logger,
+		logger:    log,
 		closed:    false,
 		successCh: make(chan *ProducerResult, 10),
 		errorCh:   make(chan error, 10),
@@ -212,10 +212,10 @@ func TestAsyncProducer_Validation(t *testing.T) {
 }
 
 func TestAsyncProducer_SendAsync_Closed(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 
 	p := &AsyncProducer{
-		logger:    logger,
+		logger:    log,
 		closed:    true,
 		successCh: make(chan *ProducerResult, 10),
 		errorCh:   make(chan error, 10),
@@ -237,10 +237,10 @@ func TestAsyncProducer_SendAsync_Closed(t *testing.T) {
 }
 
 func TestAsyncProducer_SendAsync_NilMessage(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 
 	p := &AsyncProducer{
-		logger:    logger,
+		logger:    log,
 		closed:    false,
 		successCh: make(chan *ProducerResult, 10),
 		errorCh:   make(chan error, 10),
@@ -262,13 +262,13 @@ func TestAsyncProducer_SendAsync_NilMessage(t *testing.T) {
 }
 
 func TestAsyncProducer_Channels(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 
 	successCh := make(chan *ProducerResult, 10)
 	errorCh := make(chan error, 10)
 
 	p := &AsyncProducer{
-		logger:    logger,
+		logger:    log,
 		closed:    false,
 		successCh: successCh,
 		errorCh:   errorCh,
@@ -280,10 +280,10 @@ func TestAsyncProducer_Channels(t *testing.T) {
 }
 
 func TestAsyncProducer_Close_Idempotent(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 
 	p := &AsyncProducer{
-		logger:    logger,
+		logger:    log,
 		closed:    true, // closed
 		successCh: make(chan *ProducerResult, 10),
 		errorCh:   make(chan error, 10),
@@ -295,10 +295,10 @@ func TestAsyncProducer_Close_Idempotent(t *testing.T) {
 }
 
 func TestSyncProducer_Close_Idempotent(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 
 	p := &SyncProducer{
-		logger: logger,
+		logger: log,
 		closed: true, // closed
 	}
 
@@ -309,7 +309,7 @@ func TestSyncProducer_Close_Idempotent(t *testing.T) {
 
 // Test the real Producer (requires Kafka to be running)
 func TestProducer_Send_WithKafka(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 		Version: "3.8.0",
@@ -319,7 +319,7 @@ func TestProducer_Send_WithKafka(t *testing.T) {
 		},
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	assert.NoError(t, err)
 	defer manager.Close()
 
@@ -354,7 +354,7 @@ func TestProducer_Send_WithKafka(t *testing.T) {
 }
 
 func TestProducer_SendJSON_WithKafka(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 		Version: "3.8.0",
@@ -364,7 +364,7 @@ func TestProducer_SendJSON_WithKafka(t *testing.T) {
 		},
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	assert.NoError(t, err)
 	defer manager.Close()
 
@@ -394,7 +394,7 @@ func TestProducer_SendJSON_WithKafka(t *testing.T) {
 }
 
 func TestProducer_SendAsync_WithKafka(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 		Version: "3.8.0",
@@ -404,7 +404,7 @@ func TestProducer_SendAsync_WithKafka(t *testing.T) {
 		},
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	assert.NoError(t, err)
 	defer manager.Close()
 
@@ -443,10 +443,10 @@ func TestProducer_SendAsync_WithKafka(t *testing.T) {
 }
 
 func TestSyncProducer_Send_NilMessage(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 
 	p := &SyncProducer{
-		logger: logger,
+		logger: log,
 		closed: false,
 	}
 
@@ -456,10 +456,10 @@ func TestSyncProducer_Send_NilMessage(t *testing.T) {
 }
 
 func TestSyncProducer_Send_EmptyTopic(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 
 	p := &SyncProducer{
-		logger: logger,
+		logger: log,
 		closed: false,
 	}
 
@@ -470,7 +470,7 @@ func TestSyncProducer_Send_EmptyTopic(t *testing.T) {
 
 // Real Kafka test
 func TestProducer_RealKafka_FullFlow(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 		Version: "3.8.0",
@@ -481,7 +481,7 @@ func TestProducer_RealKafka_FullFlow(t *testing.T) {
 		},
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	if err != nil {
 		t.Skip("Cannot create manager:", err)
 	}
@@ -551,13 +551,13 @@ func TestProducer_RealKafka_FullFlow(t *testing.T) {
 }
 
 func TestManager_RealKafka_ListTopics(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 		Version: "3.8.0",
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	if err != nil {
 		t.Skip("Cannot create manager:", err)
 	}
@@ -573,13 +573,13 @@ func TestManager_RealKafka_ListTopics(t *testing.T) {
 }
 
 func TestManager_RealKafka_Ping(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 		Version: "3.8.0",
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	if err != nil {
 		t.Skip("Cannot create manager:", err)
 	}
@@ -590,7 +590,7 @@ func TestManager_RealKafka_Ping(t *testing.T) {
 }
 
 func TestManager_RealKafka_CreateConsumer(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 		Version: "3.8.0",
@@ -601,7 +601,7 @@ func TestManager_RealKafka_CreateConsumer(t *testing.T) {
 		},
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	if err != nil {
 		t.Skip("Cannot create manager:", err)
 	}
@@ -624,7 +624,7 @@ func TestManager_RealKafka_CreateConsumer(t *testing.T) {
 }
 
 func TestAsyncProducer_RealKafka(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 		Version: "3.8.0",
@@ -634,7 +634,7 @@ func TestAsyncProducer_RealKafka(t *testing.T) {
 		},
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	if err != nil {
 		t.Skip("Cannot create manager:", err)
 	}
@@ -667,10 +667,10 @@ func TestAsyncProducer_RealKafka(t *testing.T) {
 }
 
 func TestSyncProducer_SendJSON_Error(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 
 	p := &SyncProducer{
-		logger: logger,
+		logger: log,
 		closed: false,
 	}
 
@@ -680,7 +680,7 @@ func TestSyncProducer_SendJSON_Error(t *testing.T) {
 }
 
 func TestAsyncProducer_RealKafka_FullFlow(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 		Version: "3.8.0",
@@ -690,7 +690,7 @@ func TestAsyncProducer_RealKafka_FullFlow(t *testing.T) {
 		},
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	if err != nil {
 		t.Skip("Cannot create manager:", err)
 	}
@@ -743,7 +743,7 @@ func TestAsyncProducer_RealKafka_FullFlow(t *testing.T) {
 }
 
 func TestAsyncProducer_SendAsync_AfterManagerClosed(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 		Version: "3.8.0",
@@ -753,7 +753,7 @@ func TestAsyncProducer_SendAsync_AfterManagerClosed(t *testing.T) {
 		},
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	if err != nil {
 		t.Skip("Cannot create manager:", err)
 	}

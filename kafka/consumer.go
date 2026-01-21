@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/IBM/sarama"
+	"github.com/KOMKZ/go-yogan-framework/logger"
 	"go.uber.org/zap"
 )
 
@@ -53,7 +54,7 @@ type ConsumerGroup struct {
 	group    sarama.ConsumerGroup
 	config   ConsumerConfig
 	brokers  []string
-	logger   *zap.Logger
+	logger   *logger.CtxZapLogger
 	handler  MessageHandler
 	mu       sync.RWMutex
 	running  bool
@@ -62,8 +63,8 @@ type ConsumerGroup struct {
 }
 
 // Create consumer group NewConsumerGroup
-func NewConsumerGroup(brokers []string, cfg ConsumerConfig, saramaCfg *sarama.Config, logger *zap.Logger) (*ConsumerGroup, error) {
-	if logger == nil {
+func NewConsumerGroup(brokers []string, cfg ConsumerConfig, saramaCfg *sarama.Config, log *logger.CtxZapLogger) (*ConsumerGroup, error) {
+	if log == nil {
 		return nil, fmt.Errorf("logger cannot be nil")
 	}
 
@@ -80,7 +81,7 @@ func NewConsumerGroup(brokers []string, cfg ConsumerConfig, saramaCfg *sarama.Co
 		group:   group,
 		config:  cfg,
 		brokers: brokers,
-		logger:  logger,
+		logger:  log,
 		stopCh:  make(chan struct{}),
 		doneCh:  make(chan struct{}),
 	}, nil
@@ -99,7 +100,7 @@ func (c *ConsumerGroup) Start(ctx context.Context, handler MessageHandler) error
 
 	go c.consumeLoop(ctx)
 
-	c.logger.Info("consumer group started",
+	c.logger.InfoCtx(ctx, "consumer group started",
 		zap.String("group_id", c.config.GroupID),
 		zap.Strings("topics", c.config.Topics))
 
@@ -118,16 +119,16 @@ func (c *ConsumerGroup) consumeLoop(ctx context.Context) {
 	for {
 		select {
 		case <-c.stopCh:
-			c.logger.Debug("consumer loop stopped by signal")
+			c.logger.DebugCtx(ctx, "consumer loop stopped by signal")
 			return
 		case <-ctx.Done():
-			c.logger.Debug("consumer loop stopped by context")
+			c.logger.DebugCtx(ctx, "consumer loop stopped by context")
 			return
 		default:
 			// Consume message
 			err := c.group.Consume(ctx, c.config.Topics, consumerHandler)
 			if err != nil {
-				c.logger.Error("consume error", zap.Error(err))
+				c.logger.ErrorCtx(ctx, "consume error", zap.Error(err))
 			}
 
 			// Check if context is cancelled
@@ -157,7 +158,7 @@ func (c *ConsumerGroup) Stop() error {
 		return fmt.Errorf("close consumer group failed: %w", err)
 	}
 
-	c.logger.Info("consumer group stopped",
+	c.logger.InfoCtx(context.Background(), "consumer group stopped",
 		zap.String("group_id", c.config.GroupID))
 
 	return nil
@@ -173,12 +174,12 @@ func (c *ConsumerGroup) IsRunning() bool {
 // consumerGroupHandler implements the sarama.ConsumerGroupHandler interface
 type consumerGroupHandler struct {
 	handler MessageHandler
-	logger  *zap.Logger
+	logger  *logger.CtxZapLogger
 }
 
 // Setup called at the start of a new session
 func (h *consumerGroupHandler) Setup(session sarama.ConsumerGroupSession) error {
-	h.logger.Debug("consumer session setup",
+	h.logger.DebugCtx(session.Context(), "consumer session setup",
 		zap.Int32("generation_id", session.GenerationID()),
 		zap.String("member_id", session.MemberID()))
 	return nil
@@ -186,7 +187,7 @@ func (h *consumerGroupHandler) Setup(session sarama.ConsumerGroupSession) error 
 
 // Cleanup is called at the end of the session
 func (h *consumerGroupHandler) Cleanup(session sarama.ConsumerGroupSession) error {
-	h.logger.Debug("consumer session cleanup",
+	h.logger.DebugCtx(session.Context(), "consumer session cleanup",
 		zap.Int32("generation_id", session.GenerationID()))
 	return nil
 }
@@ -221,7 +222,7 @@ func (h *consumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 			// Call processing function
 			if h.handler != nil {
 				if err := h.handler(session.Context(), consumedMsg); err != nil {
-					h.logger.Error("handle message failed",
+					h.logger.ErrorCtx(session.Context(), "handle message failed",
 						zap.String("topic", msg.Topic),
 						zap.Int32("partition", msg.Partition),
 						zap.Int64("offset", msg.Offset),
@@ -240,15 +241,15 @@ func (h *consumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 type SimpleConsumer struct {
 	consumer sarama.Consumer
 	config   ConsumerConfig
-	logger   *zap.Logger
+	logger   *logger.CtxZapLogger
 	mu       sync.RWMutex
 	running  bool
 	stopCh   chan struct{}
 }
 
 // Create simple consumer
-func NewSimpleConsumer(brokers []string, saramaCfg *sarama.Config, logger *zap.Logger) (*SimpleConsumer, error) {
-	if logger == nil {
+func NewSimpleConsumer(brokers []string, saramaCfg *sarama.Config, log *logger.CtxZapLogger) (*SimpleConsumer, error) {
+	if log == nil {
 		return nil, fmt.Errorf("logger cannot be nil")
 	}
 
@@ -259,7 +260,7 @@ func NewSimpleConsumer(brokers []string, saramaCfg *sarama.Config, logger *zap.L
 
 	return &SimpleConsumer{
 		consumer: consumer,
-		logger:   logger,
+		logger:   log,
 		stopCh:   make(chan struct{}),
 	}, nil
 }
@@ -309,12 +310,12 @@ func (c *SimpleConsumer) ConsumePartition(ctx context.Context, topic string, par
 
 				if handler != nil {
 					if err := handler(ctx, consumedMsg); err != nil {
-						c.logger.Error("handle message failed", zap.Error(err))
+						c.logger.ErrorCtx(ctx, "handle message failed", zap.Error(err))
 					}
 				}
 			case err := <-partitionConsumer.Errors():
 				if err != nil {
-					c.logger.Error("partition consumer error", zap.Error(err))
+					c.logger.ErrorCtx(ctx, "partition consumer error", zap.Error(err))
 				}
 			}
 		}

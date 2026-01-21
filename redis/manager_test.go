@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/KOMKZ/go-yogan-framework/logger"
 	"github.com/alicebob/miniredis/v2"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 )
 
 func TestNewManager_NilLogger(t *testing.T) {
@@ -25,7 +25,7 @@ func TestNewManager_NilLogger(t *testing.T) {
 }
 
 func TestNewManager_InvalidConfig(t *testing.T) {
-	logger, _ := zap.NewDevelopment()
+	log := logger.GetLogger("test")
 
 	tests := []struct {
 		name    string
@@ -56,7 +56,7 @@ func TestNewManager_InvalidConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m, err := NewManager(tt.configs, logger)
+			m, err := NewManager(tt.configs, log)
 			assert.Error(t, err)
 			assert.Nil(t, m)
 			assert.Contains(t, err.Error(), tt.errMsg)
@@ -71,7 +71,7 @@ func TestManager_Client_Standalone(t *testing.T) {
 		t.Skip("跳过需要 Redis 服务器的测试")
 	}
 
-	logger, _ := zap.NewDevelopment()
+	log := logger.GetLogger("test")
 
 	configs := map[string]Config{
 		"main": {
@@ -81,7 +81,7 @@ func TestManager_Client_Standalone(t *testing.T) {
 		},
 	}
 
-	m, err := NewManager(configs, logger)
+	m, err := NewManager(configs, log)
 	if err != nil {
 		t.Skipf("无法连接到 Redis: %v", err)
 	}
@@ -114,7 +114,7 @@ func TestManager_WithDB(t *testing.T) {
 		t.Skip("跳过需要 Redis 服务器的测试")
 	}
 
-	logger, _ := zap.NewDevelopment()
+	log := logger.GetLogger("test")
 
 	configs := map[string]Config{
 		"main": {
@@ -124,7 +124,7 @@ func TestManager_WithDB(t *testing.T) {
 		},
 	}
 
-	m, err := NewManager(configs, logger)
+	m, err := NewManager(configs, log)
 	if err != nil {
 		t.Skipf("无法连接到 Redis: %v", err)
 	}
@@ -157,12 +157,12 @@ func TestManager_WithDB(t *testing.T) {
 }
 
 func TestManager_Client_NotExists(t *testing.T) {
-	logger, _ := zap.NewDevelopment()
+	log := logger.GetLogger("test")
 
 	m := &Manager{
 		instances: make(map[string]*redis.Client),
 		clusters:  make(map[string]*redis.ClusterClient),
-		logger:    logger,
+		logger:    log,
 	}
 
 	client := m.Client("not_exists")
@@ -170,12 +170,12 @@ func TestManager_Client_NotExists(t *testing.T) {
 }
 
 func TestManager_Cluster_NotExists(t *testing.T) {
-	logger, _ := zap.NewDevelopment()
+	log := logger.GetLogger("test")
 
 	m := &Manager{
 		instances: make(map[string]*redis.Client),
 		clusters:  make(map[string]*redis.ClusterClient),
-		logger:    logger,
+		logger:    log,
 	}
 
 	cluster := m.Cluster("not_exists")
@@ -183,12 +183,12 @@ func TestManager_Cluster_NotExists(t *testing.T) {
 }
 
 func TestManager_WithDB_ClientNotExists(t *testing.T) {
-	logger, _ := zap.NewDevelopment()
+	log := logger.GetLogger("test")
 
 	m := &Manager{
 		instances: make(map[string]*redis.Client),
 		clusters:  make(map[string]*redis.ClusterClient),
-		logger:    logger,
+		logger:    log,
 	}
 
 	client := m.WithDB("not_exists", 1)
@@ -196,12 +196,12 @@ func TestManager_WithDB_ClientNotExists(t *testing.T) {
 }
 
 func TestManager_Close(t *testing.T) {
-	logger, _ := zap.NewDevelopment()
+	log := logger.GetLogger("test")
 
 	m := &Manager{
 		instances: make(map[string]*redis.Client),
 		clusters:  make(map[string]*redis.ClusterClient),
-		logger:    logger,
+		logger:    log,
 	}
 
 	// Closing an empty Manager should not result in an error
@@ -279,7 +279,7 @@ func TestNewManager_MultipleInstances(t *testing.T) {
 		t.Skip("跳过需要 Redis 服务器的测试")
 	}
 
-	logger, _ := zap.NewDevelopment()
+	log := logger.GetLogger("test")
 
 	configs := map[string]Config{
 		"main": {
@@ -294,7 +294,7 @@ func TestNewManager_MultipleInstances(t *testing.T) {
 		},
 	}
 
-	m, err := NewManager(configs, logger)
+	m, err := NewManager(configs, log)
 	if err != nil {
 		t.Skipf("无法连接到 Redis: %v", err)
 	}
@@ -316,7 +316,7 @@ func TestManager_Ping(t *testing.T) {
 		t.Skip("跳过需要 Redis 服务器的测试")
 	}
 
-	logger, _ := zap.NewDevelopment()
+	log := logger.GetLogger("test")
 
 	configs := map[string]Config{
 		"main": {
@@ -326,7 +326,7 @@ func TestManager_Ping(t *testing.T) {
 		},
 	}
 
-	m, err := NewManager(configs, logger)
+	m, err := NewManager(configs, log)
 	if err != nil {
 		t.Skipf("无法连接到 Redis: %v", err)
 	}
@@ -338,12 +338,12 @@ func TestManager_Ping(t *testing.T) {
 }
 
 func TestManager_Ping_EmptyManager(t *testing.T) {
-	logger, _ := zap.NewDevelopment()
+	log := logger.GetLogger("test")
 
 	m := &Manager{
 		instances: make(map[string]*redis.Client),
 		clusters:  make(map[string]*redis.ClusterClient),
-		logger:    logger,
+		logger:    log,
 	}
 
 	ctx := context.Background()
@@ -360,7 +360,7 @@ func TestManager_WithMiniredis(t *testing.T) {
 	}
 	defer mr.Close()
 
-	logger, _ := zap.NewDevelopment()
+	log := logger.GetLogger("test")
 
 	configs := map[string]Config{
 		"main": {
@@ -370,7 +370,7 @@ func TestManager_WithMiniredis(t *testing.T) {
 		},
 	}
 
-	m, err := NewManager(configs, logger)
+	m, err := NewManager(configs, log)
 	assert.NoError(t, err)
 	assert.NotNil(t, m)
 	defer m.Close()
@@ -401,7 +401,7 @@ func TestManager_WithDB_Miniredis(t *testing.T) {
 	}
 	defer mr.Close()
 
-	logger, _ := zap.NewDevelopment()
+	log := logger.GetLogger("test")
 
 	configs := map[string]Config{
 		"main": {
@@ -411,7 +411,7 @@ func TestManager_WithDB_Miniredis(t *testing.T) {
 		},
 	}
 
-	m, err := NewManager(configs, logger)
+	m, err := NewManager(configs, log)
 	assert.NoError(t, err)
 	defer m.Close()
 
@@ -450,7 +450,7 @@ func TestManager_MultipleInstances_Miniredis(t *testing.T) {
 	}
 	defer mr2.Close()
 
-	logger, _ := zap.NewDevelopment()
+	log := logger.GetLogger("test")
 
 	configs := map[string]Config{
 		"main": {
@@ -465,7 +465,7 @@ func TestManager_MultipleInstances_Miniredis(t *testing.T) {
 		},
 	}
 
-	m, err := NewManager(configs, logger)
+	m, err := NewManager(configs, log)
 	assert.NoError(t, err)
 	defer m.Close()
 
@@ -508,7 +508,7 @@ func TestManager_Close_Miniredis(t *testing.T) {
 	}
 	defer mr.Close()
 
-	logger, _ := zap.NewDevelopment()
+	log := logger.GetLogger("test")
 
 	configs := map[string]Config{
 		"main": {
@@ -518,7 +518,7 @@ func TestManager_Close_Miniredis(t *testing.T) {
 		},
 	}
 
-	m, err := NewManager(configs, logger)
+	m, err := NewManager(configs, log)
 	assert.NoError(t, err)
 
 	// Close Manager
