@@ -25,7 +25,7 @@ func ErrorLoggingMiddleware(cfg ErrorLoggingConfig) gin.HandlerFunc {
 	}
 
 	internalCfg := errorLoggingConfigInternal{
-		Enable:          cfg.Enable,
+		Enable:          true,
 		IgnoreStatusMap: ignoreStatusMap,
 		FullErrorChain:  cfg.FullErrorChain,
 		LogLevel:        cfg.LogLevel,
@@ -54,4 +54,3 @@ func getErrorLoggingConfig(c *gin.Context) errorLoggingConfigInternal {
 		LogLevel:        "error",
 	}
 }
-

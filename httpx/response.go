@@ -145,12 +145,12 @@ func HandleError(c *gin.Context, err error) {
 
 	// 3. Unknown error (default) -> 500 (to avoid leaking internal information)
 	if cfg.Enable {
-		logger.ErrorCtx(ctx, "httpx", "English: Unknown error",
+		logger.ErrorCtx(ctx, "httpx", "general error",
 			zap.Error(err),
 			zap.String("error_chain", err.Error()),
 		)
 	}
-	InternalErrorJson(c, "内部服务器错误")
+	InternalErrorJson(c, err.Error())
 }
 
 // determine whether logging should occur based on configuration
