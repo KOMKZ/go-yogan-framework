@@ -89,7 +89,7 @@ func (c *CLIApplication) Execute() error {
 	}
 
 	logger := c.MustGetLogger()
-	logger.DebugCtx(c.ctx, "✅ CLI application initialized", zap.Duration("startup_time", c.GetStartDuration()))
+	logger.DebugCtx(c.ctx, "✅ CLI application initialized", zap.Int64("startup_time", c.GetStartupTimeMs()))
 
 	// Execute Cobra command (sync)
 	err := c.rootCmd.Execute()

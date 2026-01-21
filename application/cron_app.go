@@ -98,7 +98,7 @@ func (a *CronApplication) run(blocking bool) error {
 	}
 
 	logger := a.MustGetLogger()
-	logger.DebugCtx(a.ctx, "✅ Cron application started", zap.String("state", a.GetState().String()), zap.Duration("startup_time", a.GetStartDuration()))
+	logger.DebugCtx(a.ctx, "✅ Cron application started", zap.String("state", a.GetState().String()), zap.Int64("startup_time", a.GetStartupTimeMs()))
 
 	// If in blocking mode, wait for shutdown signal
 	if blocking {

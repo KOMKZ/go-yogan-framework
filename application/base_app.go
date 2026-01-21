@@ -152,6 +152,11 @@ func (b *BaseApplication) GetStartDuration() time.Duration {
 	return time.Since(b.startTime)
 }
 
+// GetStartupTimeMs Obtain application startup time in milliseconds
+func (b *BaseApplication) GetStartupTimeMs() int64 {
+	return time.Since(b.startTime).Milliseconds()
+}
+
 // Setup initialize application (core logic)
 // 🎯 Component lifecycle: Provider completes Init+Start (lazy loading) internally, automatically stops on Shutdown
 func (b *BaseApplication) Setup() error {
@@ -187,7 +192,7 @@ func (b *BaseApplication) Shutdown(timeout time.Duration) error {
 	}
 
 	// 2. Close the DI container (automatically shut down all components that implement Shutdownable)
-	if err := b.injector.Shutdown(); err != nil {
+	if err := b.injector.Shutdown(); err != nil && err.Error() != "" {
 		log.ErrorCtx(ctx, "DI container shutdown failed", zap.Error(err))
 	}
 

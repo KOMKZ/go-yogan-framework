@@ -102,7 +102,7 @@ func (g *GRPCApplication) Run() {
 		}
 	}
 
-	logger.InfoCtx(g.ctx, "✅ gRPC application started", zap.Duration("startup_time", g.GetStartDuration()))
+	logger.InfoCtx(g.ctx, "✅ gRPC application started", zap.Int64("startup_time", g.GetStartupTimeMs()))
 
 	// wait for shutdown signal (blocking)
 	g.WaitShutdown()

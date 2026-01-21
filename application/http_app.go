@@ -103,7 +103,7 @@ func (a *Application) RunNonBlocking() error {
 	logger := a.MustGetLogger()
 	fields := []zap.Field{
 		zap.String("state", a.GetState().String()),
-		zap.Duration("startup_time", a.GetStartDuration()),
+		zap.Int64("startup_time", a.GetStartupTimeMs()),
 	}
 	if version := a.GetVersion(); version != "" {
 		fields = append(fields, zap.String("version", version))
