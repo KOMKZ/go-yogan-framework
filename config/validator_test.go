@@ -128,7 +128,7 @@ func TestValidateAll_RealExample(t *testing.T) {
 				realServerConfig{Port: 0, Host: "localhost"},
 			},
 			wantError: true,
-			errorMsg:  "端口必须在 1-65535 之间",
+			errorMsg:  "port must be between 1 and 65535",
 		},
 		{
 			name: "主机地址为空",
@@ -136,7 +136,7 @@ func TestValidateAll_RealExample(t *testing.T) {
 				realServerConfig{Port: 8080, Host: ""},
 			},
 			wantError: true,
-			errorMsg:  "主机地址不能为空",
+			errorMsg:  "host address cannot be empty",
 		},
 		{
 			name: "第一个有效，第二个无效",
@@ -145,7 +145,7 @@ func TestValidateAll_RealExample(t *testing.T) {
 				realServerConfig{Port: 99999, Host: "0.0.0.0"},
 			},
 			wantError: true,
-			errorMsg:  "端口必须在 1-65535 之间",
+			errorMsg:  "port must be between 1 and 65535",
 		},
 	}
 

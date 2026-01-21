@@ -9,33 +9,57 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	"gorm.io/driver/sqlite"
+	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
-// TestOtelPlugin_Initialize test plugin initialization
-func TestOtelPlugin_Initialize(t *testing.T) {
-	// Create in-memory database
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	require.NoError(t, err)
-
-	// Create plugin
-	plugin := NewOtelPlugin(nil)
-	assert.NotNil(t, plugin)
-
-	// Initialize plugin
-	err = plugin.Initialize(db)
-	assert.NoError(t, err)
-
-	// Validate plugin name
-	assert.Equal(t, "otel", plugin.Name())
-}
+// Test MySQL DSN (from admin-api config)
+const testMySQLDSN = "root:123123@tcp(localhost:3306)/futurelz_db?charset=utf8mb4&parseTime=True&loc=Local"
 
 // TestModel test model
 type TestModel struct {
 	ID   uint   `gorm:"primaryKey"`
 	Name string `gorm:"size:100"`
 }
+
+// TableName specify table name to avoid conflicts
+func (TestModel) TableName() string {
+	return "yogan_otel_plugin_test"
+}
+
+// setupTestDB creates a test database connection
+func setupTestDB(t *testing.T) *gorm.DB {
+	db, err := gorm.Open(mysql.Open(testMySQLDSN), &gorm.Config{})
+	if err != nil {
+		t.Skipf("Skipping test: MySQL not available: %v", err)
+	}
+
+	// AutoMigrate test table
+	err = db.AutoMigrate(&TestModel{})
+	require.NoError(t, err)
+
+	// Clean test data
+	db.Exec("TRUNCATE TABLE yogan_otel_plugin_test")
+
+	return db
+}
+
+// TestOtelPlugin_Initialize test plugin initialization
+func TestOtelPlugin_Initialize(t *testing.T) {
+	db := setupTestDB(t)
+
+	// Create plugin
+	plugin := NewOtelPlugin(nil)
+	assert.NotNil(t, plugin)
+
+	// Initialize plugin
+	err := plugin.Initialize(db)
+	assert.NoError(t, err)
+
+	// Validate plugin name
+	assert.Equal(t, "otel", plugin.Name())
+}
+
 
 // TestOtelPlugin_CreateSpan test creating Span
 func TestOtelPlugin_CreateSpan(t *testing.T) {
@@ -45,17 +69,11 @@ func TestOtelPlugin_CreateSpan(t *testing.T) {
 	otel.SetTracerProvider(tracerProvider)
 	defer otel.SetTracerProvider(trace.NewTracerProvider())
 
-	// Create in-memory database
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	require.NoError(t, err)
-
-	// Automatic migration
-	err = db.AutoMigrate(&TestModel{})
-	require.NoError(t, err)
+	db := setupTestDB(t)
 
 	// Register plugin
 	plugin := NewOtelPlugin(tracerProvider)
-	err = plugin.Initialize(db)
+	err := plugin.Initialize(db)
 	require.NoError(t, err)
 
 	// Execute query (trigger Span creation)
@@ -64,12 +82,12 @@ func TestOtelPlugin_CreateSpan(t *testing.T) {
 
 	// wait for Span processing
 	spans := spanRecorder.Ended()
-	require.NotEmpty(t, spans, "应该至少有一个 Span")
+	require.NotEmpty(t, spans, "should have at least one Span")
 
 	// Validate Span attributes
 	span := spans[0]
 	assert.Contains(t, span.Name(), "gorm")
-	
+
 	// Validate attributes
 	attrs := span.Attributes()
 	hasDBSystem := false
@@ -79,7 +97,7 @@ func TestOtelPlugin_CreateSpan(t *testing.T) {
 			assert.Equal(t, "gorm", attr.Value.AsString())
 		}
 	}
-	assert.True(t, hasDBSystem, "应该包含 db.system 属性")
+	assert.True(t, hasDBSystem, "should contain db.system attribute")
 }
 
 // TestOtelPlugin_QueryOperation test query operation
@@ -87,14 +105,10 @@ func TestOtelPlugin_QueryOperation(t *testing.T) {
 	spanRecorder := tracetest.NewSpanRecorder()
 	tracerProvider := trace.NewTracerProvider(trace.WithSpanProcessor(spanRecorder))
 
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	require.NoError(t, err)
-
-	err = db.AutoMigrate(&TestModel{})
-	require.NoError(t, err)
+	db := setupTestDB(t)
 
 	plugin := NewOtelPlugin(tracerProvider)
-	err = plugin.Initialize(db)
+	err := plugin.Initialize(db)
 	require.NoError(t, err)
 
 	// Execute query
@@ -106,7 +120,7 @@ func TestOtelPlugin_QueryOperation(t *testing.T) {
 	spans := spanRecorder.Ended()
 	require.NotEmpty(t, spans)
 
-	t.Logf("✅ Query 操作创建了 %d 个 Span", len(spans))
+	t.Logf("✅ Query operation created %d Span(s)", len(spans))
 }
 
 // TestOtelPlugin_CreateOperation test create operation
@@ -114,14 +128,10 @@ func TestOtelPlugin_CreateOperation(t *testing.T) {
 	spanRecorder := tracetest.NewSpanRecorder()
 	tracerProvider := trace.NewTracerProvider(trace.WithSpanProcessor(spanRecorder))
 
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	require.NoError(t, err)
-
-	err = db.AutoMigrate(&TestModel{})
-	require.NoError(t, err)
+	db := setupTestDB(t)
 
 	plugin := NewOtelPlugin(tracerProvider)
-	err = plugin.Initialize(db)
+	err := plugin.Initialize(db)
 	require.NoError(t, err)
 
 	// Execute creation
@@ -133,7 +143,7 @@ func TestOtelPlugin_CreateOperation(t *testing.T) {
 	spans := spanRecorder.Ended()
 	require.NotEmpty(t, spans)
 
-	t.Logf("✅ Create 操作创建了 %d 个 Span", len(spans))
+	t.Logf("✅ Create operation created %d Span(s)", len(spans))
 }
 
 // TestOtelPlugin_UpdateOperation test update operation
@@ -141,14 +151,10 @@ func TestOtelPlugin_UpdateOperation(t *testing.T) {
 	spanRecorder := tracetest.NewSpanRecorder()
 	tracerProvider := trace.NewTracerProvider(trace.WithSpanProcessor(spanRecorder))
 
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	require.NoError(t, err)
-
-	err = db.AutoMigrate(&TestModel{})
-	require.NoError(t, err)
+	db := setupTestDB(t)
 
 	plugin := NewOtelPlugin(tracerProvider)
-	err = plugin.Initialize(db)
+	err := plugin.Initialize(db)
 	require.NoError(t, err)
 
 	// Create first
@@ -166,7 +172,7 @@ func TestOtelPlugin_UpdateOperation(t *testing.T) {
 	spans := spanRecorder.Ended()
 	require.NotEmpty(t, spans)
 
-	t.Logf("✅ Update 操作创建了 %d 个 Span", len(spans))
+	t.Logf("✅ Update operation created %d Span(s)", len(spans))
 }
 
 // TestOtelPlugin_DeleteOperation test delete operation
@@ -174,14 +180,10 @@ func TestOtelPlugin_DeleteOperation(t *testing.T) {
 	spanRecorder := tracetest.NewSpanRecorder()
 	tracerProvider := trace.NewTracerProvider(trace.WithSpanProcessor(spanRecorder))
 
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	require.NoError(t, err)
-
-	err = db.AutoMigrate(&TestModel{})
-	require.NoError(t, err)
+	db := setupTestDB(t)
 
 	plugin := NewOtelPlugin(tracerProvider)
-	err = plugin.Initialize(db)
+	err := plugin.Initialize(db)
 	require.NoError(t, err)
 
 	// Create first
@@ -199,7 +201,7 @@ func TestOtelPlugin_DeleteOperation(t *testing.T) {
 	spans := spanRecorder.Ended()
 	require.NotEmpty(t, spans)
 
-	t.Logf("✅ Delete 操作创建了 %d 个 Span", len(spans))
+	t.Logf("✅ Delete operation created %d Span(s)", len(spans))
 }
 
 // TestOtelPlugin_WithParentSpan test with parent Span
@@ -207,14 +209,10 @@ func TestOtelPlugin_WithParentSpan(t *testing.T) {
 	spanRecorder := tracetest.NewSpanRecorder()
 	tracerProvider := trace.NewTracerProvider(trace.WithSpanProcessor(spanRecorder))
 
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	require.NoError(t, err)
-
-	err = db.AutoMigrate(&TestModel{})
-	require.NoError(t, err)
+	db := setupTestDB(t)
 
 	plugin := NewOtelPlugin(tracerProvider)
-	err = plugin.Initialize(db)
+	err := plugin.Initialize(db)
 	require.NoError(t, err)
 
 	// Create parent Span
@@ -239,14 +237,13 @@ func TestOtelPlugin_WithParentSpan(t *testing.T) {
 		}
 	}
 
-	require.NotNil(t, gormSpan, "应该找到 GORM Span")
-	
+	require.NotNil(t, gormSpan, "should find GORM Span")
+
 	// Validate Parent relationship
 	parentSpanContext := parentSpan.SpanContext()
-	assert.Equal(t, parentSpanContext.TraceID(), gormSpan.SpanContext().TraceID(), "应该共享相同的 TraceID")
+	assert.Equal(t, parentSpanContext.TraceID(), gormSpan.SpanContext().TraceID(), "should share the same TraceID")
 
-	t.Logf("✅ GORM Span 成功继承父 Span")
+	t.Logf("✅ GORM Span successfully inherited parent Span")
 	t.Logf("   Parent TraceID: %s", parentSpanContext.TraceID())
 	t.Logf("   GORM TraceID:   %s", gormSpan.SpanContext().TraceID())
 }
-

@@ -42,7 +42,7 @@ func (l *Loader) Load() error {
 	for _, source := range l.sources {
 		data, err := source.Load()
 		if err != nil {
-			return fmt.Errorf("Failed to load data source %s: %w %s Failed to load data source %s: %w: %w", source.Name(), err)
+			return fmt.Errorf("failed to load data source %s: %w", source.Name(), err)
 		}
 
 		// Log file data source
