@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/KOMKZ/go-yogan-framework/logger"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 )
 
 func TestNewManager_NilLogger(t *testing.T) {
@@ -21,18 +21,18 @@ func TestNewManager_NilLogger(t *testing.T) {
 }
 
 func TestNewManager_InvalidConfig(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{}, // empty brokers
 	}
 
-	_, err := NewManager(cfg, logger)
+	_, err := NewManager(cfg, log)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "config validation failed")
 }
 
 func TestNewManager_Success(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers:  []string{"localhost:9092"},
 		Version:  "3.8.0",
@@ -48,14 +48,14 @@ func TestNewManager_Success(t *testing.T) {
 		},
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	assert.NoError(t, err)
 	assert.NotNil(t, manager)
 	assert.Equal(t, cfg.Brokers, manager.GetConfig().Brokers)
 }
 
 func TestManager_GetProducer_Nil(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 		Producer: ProducerConfig{
@@ -63,7 +63,7 @@ func TestManager_GetProducer_Nil(t *testing.T) {
 		},
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	assert.NoError(t, err)
 
 	// When not connected, producer is nil
@@ -71,12 +71,12 @@ func TestManager_GetProducer_Nil(t *testing.T) {
 }
 
 func TestManager_GetConsumer_NotExists(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	assert.NoError(t, err)
 
 	// nonexistent consumer
@@ -84,12 +84,12 @@ func TestManager_GetConsumer_NotExists(t *testing.T) {
 }
 
 func TestManager_CreateConsumer_Closed(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	assert.NoError(t, err)
 
 	// Close manager
@@ -105,7 +105,7 @@ func TestManager_CreateConsumer_Closed(t *testing.T) {
 }
 
 func TestManager_CreateConsumer_AlreadyExists(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 		Consumer: ConsumerConfig{
@@ -115,7 +115,7 @@ func TestManager_CreateConsumer_AlreadyExists(t *testing.T) {
 		},
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	assert.NoError(t, err)
 
 	// Simulate existing consumer
@@ -131,12 +131,12 @@ func TestManager_CreateConsumer_AlreadyExists(t *testing.T) {
 }
 
 func TestManager_CreateConsumer_InvalidConfig(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	assert.NoError(t, err)
 
 	// invalid consumer configuration
@@ -149,12 +149,12 @@ func TestManager_CreateConsumer_InvalidConfig(t *testing.T) {
 }
 
 func TestManager_Ping_Closed(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	assert.NoError(t, err)
 
 	manager.closed = true
@@ -165,12 +165,12 @@ func TestManager_Ping_Closed(t *testing.T) {
 }
 
 func TestManager_Connect_Closed(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	assert.NoError(t, err)
 
 	manager.closed = true
@@ -181,12 +181,12 @@ func TestManager_Connect_Closed(t *testing.T) {
 }
 
 func TestManager_Close_Idempotent(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	assert.NoError(t, err)
 
 	// First shutdown
@@ -199,14 +199,14 @@ func TestManager_Close_Idempotent(t *testing.T) {
 }
 
 func TestManager_GetConfig(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers:  []string{"localhost:9092", "localhost:9093"},
 		Version:  "3.8.0",
 		ClientID: "test-client",
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	assert.NoError(t, err)
 
 	gotCfg := manager.GetConfig()
@@ -374,7 +374,7 @@ func TestBuildSaramaConfig_InvalidVersion(t *testing.T) {
 }
 
 func TestManager_GetAsyncProducer_Closed(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 		Producer: ProducerConfig{
@@ -383,12 +383,12 @@ func TestManager_GetAsyncProducer_Closed(t *testing.T) {
 		},
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	assert.NoError(t, err)
 
 	// Simulate existing asynchronous producer
 	manager.asyncProducer = &AsyncProducer{
-		logger:    logger,
+		logger:    log,
 		successCh: make(chan *ProducerResult, 10),
 		errorCh:   make(chan error, 10),
 	}
@@ -400,12 +400,12 @@ func TestManager_GetAsyncProducer_Closed(t *testing.T) {
 }
 
 func TestManager_Ping_Timeout(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	assert.NoError(t, err)
 
 	// Use canceled context
@@ -418,12 +418,12 @@ func TestManager_Ping_Timeout(t *testing.T) {
 }
 
 func TestManager_ListTopics(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	assert.NoError(t, err)
 
 	// ListTopics will attempt to connect
@@ -437,12 +437,12 @@ func TestManager_ListTopics(t *testing.T) {
 
 // Test Ping timeout scenario
 func TestManager_Ping_ContextTimeout(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	assert.NoError(t, err)
 
 	// Create a timed-out context
@@ -456,7 +456,7 @@ func TestManager_Ping_ContextTimeout(t *testing.T) {
 
 // Test real connection scenarios (requires Kafka to be running)
 func TestManager_Connect_WithKafka(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 		Version: "3.8.0",
@@ -466,7 +466,7 @@ func TestManager_Connect_WithKafka(t *testing.T) {
 		},
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	assert.NoError(t, err)
 	defer manager.Close()
 
@@ -478,7 +478,7 @@ func TestManager_Connect_WithKafka(t *testing.T) {
 }
 
 func TestManager_CreateConsumer_WithKafka(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 		Version: "3.8.0",
@@ -489,7 +489,7 @@ func TestManager_CreateConsumer_WithKafka(t *testing.T) {
 		},
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	assert.NoError(t, err)
 	defer manager.Close()
 
@@ -506,7 +506,7 @@ func TestManager_CreateConsumer_WithKafka(t *testing.T) {
 }
 
 func TestManager_GetAsyncProducer_Create(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 		Version: "3.8.0",
@@ -516,7 +516,7 @@ func TestManager_GetAsyncProducer_Create(t *testing.T) {
 		},
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	assert.NoError(t, err)
 	defer manager.Close()
 
@@ -534,7 +534,7 @@ func TestManager_GetAsyncProducer_Create(t *testing.T) {
 }
 
 func TestManager_RealKafka_FullFlow(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 		Version: "3.8.0",
@@ -552,7 +552,7 @@ func TestManager_RealKafka_FullFlow(t *testing.T) {
 		},
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	assert.NoError(t, err)
 	defer manager.Close()
 
@@ -597,7 +597,7 @@ func TestManager_RealKafka_FullFlow(t *testing.T) {
 }
 
 func TestManager_Close_WithConsumersAndProducers(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 		Version: "3.8.0",
@@ -607,7 +607,7 @@ func TestManager_Close_WithConsumersAndProducers(t *testing.T) {
 		},
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	assert.NoError(t, err)
 
 	err = manager.Connect(context.Background())
@@ -643,13 +643,13 @@ func TestManager_Close_WithConsumersAndProducers(t *testing.T) {
 }
 
 func TestManager_Ping_Variations(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 		Version: "3.8.0",
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	assert.NoError(t, err)
 	defer manager.Close()
 
@@ -669,7 +669,7 @@ func TestManager_Ping_Variations(t *testing.T) {
 }
 
 func TestManager_Close_MultipleConsumers(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 		Version: "3.8.0",
@@ -679,7 +679,7 @@ func TestManager_Close_MultipleConsumers(t *testing.T) {
 		},
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	assert.NoError(t, err)
 
 	err = manager.Connect(context.Background())

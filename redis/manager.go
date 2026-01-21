@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/KOMKZ/go-yogan-framework/logger"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
@@ -14,23 +15,24 @@ type Manager struct {
 	instances map[string]*redis.Client        // single-machine instance
 	clusters  map[string]*redis.ClusterClient // cluster instance
 	configs   map[string]Config               // Configuration
-	logger    *zap.Logger                     // Injector logger
+	logger    *logger.CtxZapLogger            // Injector logger (supports TraceID)
 	mu        sync.RWMutex                    // read-write lock
 }
 
 // Create Redis manager
 // configs: Redis configuration (supporting multiple instances)
-// logger: business logger (injected zap.Logger instance, must not be nil)
-func NewManager(configs map[string]Config, logger *zap.Logger) (*Manager, error) {
-	if logger == nil {
+// log: business logger (injected CtxZapLogger instance, must not be nil)
+func NewManager(configs map[string]Config, log *logger.CtxZapLogger) (*Manager, error) {
+	if log == nil {
 		return nil, fmt.Errorf("logger cannot be nil")
 	}
 
+	ctx := context.Background()
 	m := &Manager{
 		instances: make(map[string]*redis.Client),
 		clusters:  make(map[string]*redis.ClusterClient),
 		configs:   make(map[string]Config),
-		logger:    logger,
+		logger:    log,
 	}
 
 	// Initialize all instances
@@ -60,7 +62,7 @@ func NewManager(configs map[string]Config, logger *zap.Logger) (*Manager, error)
 
 		m.configs[name] = cfg
 
-		m.logger.Debug("Redis Redis connection successful",
+		m.logger.DebugCtx(ctx, "Redis connection successful",
 			zap.String("name", name),
 			zap.String("mode", cfg.Mode),
 			zap.Strings("addrs", cfg.Addrs))
@@ -160,7 +162,7 @@ func (m *Manager) WithDB(name string, db int) *redis.Client {
 	// Test connection
 	ctx := context.Background()
 	if err := newClient.Ping(ctx).Err(); err != nil {
-		m.logger.Error("WithDB Database connection failed",
+		m.logger.ErrorCtx(ctx, "WithDB database connection failed",
 			zap.String("name", name),
 			zap.Int("db", db),
 			zap.Error(err))
@@ -222,14 +224,16 @@ func (m *Manager) Close() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	ctx := context.Background()
+
 	// Shut down single-instance
 	for name, client := range m.instances {
 		if err := client.Close(); err != nil {
-			m.logger.Error("English: Failed to close Redis connection Redis English: Failed to close Redis connection",
+			m.logger.ErrorCtx(ctx, "failed to close Redis connection",
 				zap.String("name", name),
 				zap.Error(err))
 		} else {
-			m.logger.Debug("Redis English: Redis connection closed",
+			m.logger.DebugCtx(ctx, "Redis connection closed",
 				zap.String("name", name))
 		}
 	}
@@ -237,11 +241,11 @@ func (m *Manager) Close() error {
 	// Shut down cluster instance
 	for name, cluster := range m.clusters {
 		if err := cluster.Close(); err != nil {
-			m.logger.Error("Failed to close Redis cluster connection Redis Failed to close Redis cluster connection",
+			m.logger.ErrorCtx(ctx, "failed to close Redis cluster connection",
 				zap.String("name", name),
 				zap.Error(err))
 		} else {
-			m.logger.Debug("Redis English: Redis cluster connection closed",
+			m.logger.DebugCtx(ctx, "Redis cluster connection closed",
 				zap.String("name", name))
 		}
 	}

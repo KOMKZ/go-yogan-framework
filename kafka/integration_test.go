@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/KOMKZ/go-yogan-framework/logger"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 )
 
 // Integration tests require a real Kafka environment
@@ -35,10 +35,10 @@ func getTestConfig() Config {
 }
 
 func TestIntegration_Manager_Connect(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := getTestConfig()
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	assert.NoError(t, err)
 	defer manager.Close()
 
@@ -50,10 +50,10 @@ func TestIntegration_Manager_Connect(t *testing.T) {
 }
 
 func TestIntegration_Manager_Ping(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := getTestConfig()
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	assert.NoError(t, err)
 	defer manager.Close()
 
@@ -65,10 +65,10 @@ func TestIntegration_Manager_Ping(t *testing.T) {
 }
 
 func TestIntegration_Manager_ListTopics(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := getTestConfig()
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	assert.NoError(t, err)
 	defer manager.Close()
 
@@ -81,10 +81,10 @@ func TestIntegration_Manager_ListTopics(t *testing.T) {
 }
 
 func TestIntegration_Producer_Send(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := getTestConfig()
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	assert.NoError(t, err)
 	defer manager.Close()
 
@@ -107,10 +107,10 @@ func TestIntegration_Producer_Send(t *testing.T) {
 }
 
 func TestIntegration_Producer_SendJSON(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := getTestConfig()
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	assert.NoError(t, err)
 	defer manager.Close()
 
@@ -130,10 +130,10 @@ func TestIntegration_Producer_SendJSON(t *testing.T) {
 }
 
 func TestIntegration_Consumer_Create(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := getTestConfig()
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	assert.NoError(t, err)
 	defer manager.Close()
 

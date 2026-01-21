@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/IBM/sarama"
+	"github.com/KOMKZ/go-yogan-framework/logger"
 	"go.uber.org/zap"
 )
 
@@ -66,14 +67,14 @@ type Producer interface {
 type SyncProducer struct {
 	producer sarama.SyncProducer
 	config   ProducerConfig
-	logger   *zap.Logger
+	logger   *logger.CtxZapLogger
 	mu       sync.RWMutex
 	closed   bool
 }
 
 // NewSyncProducer creates a synchronous producer
-func NewSyncProducer(brokers []string, cfg ProducerConfig, saramaCfg *sarama.Config, logger *zap.Logger) (*SyncProducer, error) {
-	if logger == nil {
+func NewSyncProducer(brokers []string, cfg ProducerConfig, saramaCfg *sarama.Config, log *logger.CtxZapLogger) (*SyncProducer, error) {
+	if log == nil {
 		return nil, fmt.Errorf("logger cannot be nil")
 	}
 
@@ -85,7 +86,7 @@ func NewSyncProducer(brokers []string, cfg ProducerConfig, saramaCfg *sarama.Con
 	return &SyncProducer{
 		producer: producer,
 		config:   cfg,
-		logger:   logger,
+		logger:   log,
 	}, nil
 }
 
@@ -139,13 +140,13 @@ func (p *SyncProducer) Send(ctx context.Context, msg *Message) (*ProducerResult,
 	// Send message
 	partition, offset, err := p.producer.SendMessage(saramaMsg)
 	if err != nil {
-		p.logger.Error("send message failed",
+		p.logger.ErrorCtx(ctx, "send message failed",
 			zap.String("topic", msg.Topic),
 			zap.Error(err))
 		return nil, fmt.Errorf("send message failed: %w", err)
 	}
 
-	p.logger.Debug("message sent",
+	p.logger.DebugCtx(ctx, "message sent",
 		zap.String("topic", msg.Topic),
 		zap.Int32("partition", partition),
 		zap.Int64("offset", offset))
@@ -202,7 +203,7 @@ func (p *SyncProducer) Close() error {
 		return fmt.Errorf("close producer failed: %w", err)
 	}
 
-	p.logger.Debug("producer closed")
+	p.logger.DebugCtx(context.Background(), "producer closed")
 	return nil
 }
 
@@ -210,7 +211,7 @@ func (p *SyncProducer) Close() error {
 type AsyncProducer struct {
 	producer   sarama.AsyncProducer
 	config     ProducerConfig
-	logger     *zap.Logger
+	logger     *logger.CtxZapLogger
 	mu         sync.RWMutex
 	closed     bool
 	wg         sync.WaitGroup
@@ -220,8 +221,8 @@ type AsyncProducer struct {
 }
 
 // Create asynchronous producer
-func NewAsyncProducer(brokers []string, cfg ProducerConfig, saramaCfg *sarama.Config, logger *zap.Logger) (*AsyncProducer, error) {
-	if logger == nil {
+func NewAsyncProducer(brokers []string, cfg ProducerConfig, saramaCfg *sarama.Config, log *logger.CtxZapLogger) (*AsyncProducer, error) {
+	if log == nil {
 		return nil, fmt.Errorf("logger cannot be nil")
 	}
 
@@ -233,7 +234,7 @@ func NewAsyncProducer(brokers []string, cfg ProducerConfig, saramaCfg *sarama.Co
 	p := &AsyncProducer{
 		producer:  producer,
 		config:    cfg,
-		logger:    logger,
+		logger:    log,
 		successCh: make(chan *ProducerResult, 100),
 		errorCh:   make(chan error, 100),
 		stopCh:    make(chan struct{}),
@@ -250,6 +251,7 @@ func NewAsyncProducer(brokers []string, cfg ProducerConfig, saramaCfg *sarama.Co
 func (p *AsyncProducer) handleResults() {
 	defer p.wg.Done()
 
+	ctx := context.Background()
 	for {
 		select {
 		case <-p.stopCh:
@@ -265,18 +267,18 @@ func (p *AsyncProducer) handleResults() {
 				select {
 				case p.successCh <- result:
 				default:
-					p.logger.Warn("success channel full, dropping result")
+					p.logger.WarnCtx(ctx, "success channel full, dropping result")
 				}
 			}
 		case err := <-p.producer.Errors():
 			if err != nil {
-				p.logger.Error("async send failed",
+				p.logger.ErrorCtx(ctx, "async send failed",
 					zap.String("topic", err.Msg.Topic),
 					zap.Error(err.Err))
 				select {
 				case p.errorCh <- err.Err:
 				default:
-					p.logger.Warn("error channel full, dropping error")
+					p.logger.WarnCtx(ctx, "error channel full, dropping error")
 				}
 			}
 		}
@@ -414,7 +416,7 @@ func (p *AsyncProducer) Close() error {
 	close(p.successCh)
 	close(p.errorCh)
 
-	p.logger.Debug("async producer closed")
+	p.logger.DebugCtx(context.Background(), "async producer closed")
 	return nil
 }
 

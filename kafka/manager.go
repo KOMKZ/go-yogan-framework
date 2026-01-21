@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/IBM/sarama"
+	"github.com/KOMKZ/go-yogan-framework/logger"
 	"go.uber.org/zap"
 )
 
@@ -15,7 +16,7 @@ import (
 type Manager struct {
 	config       Config
 	saramaConfig *sarama.Config
-	logger       *zap.Logger
+	logger       *logger.CtxZapLogger
 
 	client        sarama.Client    // Sarama client
 	producer      Producer
@@ -27,8 +28,8 @@ type Manager struct {
 }
 
 // Create new Kafka manager
-func NewManager(cfg Config, logger *zap.Logger) (*Manager, error) {
-	if logger == nil {
+func NewManager(cfg Config, log *logger.CtxZapLogger) (*Manager, error) {
+	if log == nil {
 		return nil, fmt.Errorf("logger cannot be nil")
 	}
 
@@ -49,7 +50,7 @@ func NewManager(cfg Config, logger *zap.Logger) (*Manager, error) {
 	m := &Manager{
 		config:       cfg,
 		saramaConfig: saramaCfg,
-		logger:       logger,
+		logger:       log,
 		consumers:    make(map[string]*ConsumerGroup),
 	}
 
@@ -195,10 +196,10 @@ func (m *Manager) Connect(ctx context.Context) error {
 			return fmt.Errorf("create producer failed: %w", err)
 		}
 		m.producer = producer
-		m.logger.Debug("producer created")
+		m.logger.DebugCtx(ctx, "producer created")
 	}
 
-	m.logger.Info("kafka manager connected")
+	m.logger.InfoCtx(ctx, "kafka manager connected")
 
 	return nil
 }
@@ -246,6 +247,11 @@ func (m *Manager) GetAsyncProducer() (*AsyncProducer, error) {
 
 	m.asyncProducer = producer
 	return m.asyncProducer, nil
+}
+
+// GetLogger returns the logger for internal use
+func (m *Manager) GetLogger() *logger.CtxZapLogger {
+	return m.logger
 }
 
 // Create consumer object
@@ -373,10 +379,12 @@ func (m *Manager) Close() error {
 
 	var errs []error
 
+	ctx := context.Background()
+
 	// Close consumer
 	for name, consumer := range m.consumers {
 		if err := consumer.Stop(); err != nil {
-			m.logger.Error("close consumer failed",
+			m.logger.ErrorCtx(ctx, "close consumer failed",
 				zap.String("name", name),
 				zap.Error(err))
 			errs = append(errs, err)
@@ -386,7 +394,7 @@ func (m *Manager) Close() error {
 	// Shut down asynchronous producer
 	if m.asyncProducer != nil {
 		if err := m.asyncProducer.Close(); err != nil {
-			m.logger.Error("close async producer failed", zap.Error(err))
+			m.logger.ErrorCtx(ctx, "close async producer failed", zap.Error(err))
 			errs = append(errs, err)
 		}
 	}
@@ -394,7 +402,7 @@ func (m *Manager) Close() error {
 	// Shut down synchronous producer
 	if m.producer != nil {
 		if err := m.producer.Close(); err != nil {
-			m.logger.Error("close producer failed", zap.Error(err))
+			m.logger.ErrorCtx(ctx, "close producer failed", zap.Error(err))
 			errs = append(errs, err)
 		}
 	}
@@ -402,7 +410,7 @@ func (m *Manager) Close() error {
 	// Close client
 	if m.client != nil {
 		if err := m.client.Close(); err != nil {
-			m.logger.Error("close client failed", zap.Error(err))
+			m.logger.ErrorCtx(ctx, "close client failed", zap.Error(err))
 			errs = append(errs, err)
 		}
 	}
@@ -411,7 +419,7 @@ func (m *Manager) Close() error {
 		return fmt.Errorf("close manager with %d errors", len(errs))
 	}
 
-	m.logger.Info("kafka manager closed")
+	m.logger.InfoCtx(ctx, "kafka manager closed")
 	return nil
 }
 
@@ -459,7 +467,7 @@ func (m *Manager) CreateTopic(ctx context.Context, name string, partitions int32
 		return fmt.Errorf("create topic failed: %w", err)
 	}
 
-	m.logger.Info("topic created",
+	m.logger.InfoCtx(ctx, "topic created",
 		zap.String("topic", name),
 		zap.Int32("partitions", partitions),
 		zap.Int16("replication", replication))
@@ -483,7 +491,7 @@ func (m *Manager) DeleteTopic(ctx context.Context, name string) error {
 		return fmt.Errorf("delete topic failed: %w", err)
 	}
 
-	m.logger.Info("topic deleted", zap.String("topic", name))
+	m.logger.InfoCtx(ctx, "topic deleted", zap.String("topic", name))
 	return nil
 }
 
@@ -591,7 +599,7 @@ func (m *Manager) ResetOffset(ctx context.Context, groupID, topic string, offset
 	// Submit offset
 	offsetManager.Commit()
 
-	m.logger.Info("offset reset",
+	m.logger.InfoCtx(ctx, "offset reset",
 		zap.String("group", groupID),
 		zap.String("topic", topic),
 		zap.Int64("offset", offset))

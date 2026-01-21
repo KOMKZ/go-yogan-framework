@@ -5,17 +5,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/KOMKZ/go-yogan-framework/logger"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 )
 
 func TestNewHealthChecker(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	assert.NoError(t, err)
 
 	checker := NewHealthChecker(manager)
@@ -40,12 +40,12 @@ func TestHealthChecker_Check_NilManager(t *testing.T) {
 }
 
 func TestHealthChecker_Check_WithManager(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	assert.NoError(t, err)
 
 	checker := NewHealthChecker(manager)
@@ -68,12 +68,12 @@ func TestHealthChecker_SetTimeout(t *testing.T) {
 }
 
 func TestHealthChecker_Check_ContextTimeout(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	assert.NoError(t, err)
 
 	checker := NewHealthChecker(manager)
@@ -85,12 +85,12 @@ func TestHealthChecker_Check_ContextTimeout(t *testing.T) {
 }
 
 func TestHealthChecker_Check_CancelledContext(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	assert.NoError(t, err)
 
 	checker := NewHealthChecker(manager)

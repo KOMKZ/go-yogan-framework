@@ -165,7 +165,7 @@ func ProvideRedisManager(i do.Injector) (*redis.Manager, error) {
 		return nil, nil // Redis not configured
 	}
 
-	return redis.NewManager(redisConfigs, log.GetZapLogger())
+	return redis.NewManager(redisConfigs, log)
 }
 
 // ============================================
@@ -306,7 +306,7 @@ func ProvideKafkaManager(i do.Injector) (*kafka.Manager, error) {
 		return nil, nil // Kafka brokers not configured
 	}
 
-	return kafka.NewManager(cfg, log.GetZapLogger())
+	return kafka.NewManager(cfg, log)
 }
 
 // ============================================

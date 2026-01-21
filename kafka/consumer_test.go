@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/IBM/sarama"
+	"github.com/KOMKZ/go-yogan-framework/logger"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 )
 
 func TestConsumedMessage_Fields(t *testing.T) {
@@ -44,13 +44,13 @@ func TestNewConsumerGroup_NilLogger(t *testing.T) {
 }
 
 func TestNewConsumerGroup_EmptyGroupID(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := ConsumerConfig{
 		GroupID: "",
 		Topics:  []string{"test-topic"},
 	}
 
-	_, err := NewConsumerGroup([]string{"localhost:9092"}, cfg, nil, logger)
+	_, err := NewConsumerGroup([]string{"localhost:9092"}, cfg, nil, log)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "group_id cannot be empty")
 }
@@ -62,10 +62,10 @@ func TestNewSimpleConsumer_NilLogger(t *testing.T) {
 }
 
 func TestConsumerGroup_IsRunning(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 
 	cg := &ConsumerGroup{
-		logger:  logger,
+		logger:  log,
 		running: false,
 		stopCh:  make(chan struct{}),
 		doneCh:  make(chan struct{}),
@@ -78,10 +78,10 @@ func TestConsumerGroup_IsRunning(t *testing.T) {
 }
 
 func TestConsumerGroup_Stop_NotRunning(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 
 	cg := &ConsumerGroup{
-		logger:  logger,
+		logger:  log,
 		running: false,
 		stopCh:  make(chan struct{}),
 		doneCh:  make(chan struct{}),
@@ -92,10 +92,10 @@ func TestConsumerGroup_Stop_NotRunning(t *testing.T) {
 }
 
 func TestConsumerGroup_Start_AlreadyRunning(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 
 	cg := &ConsumerGroup{
-		logger:  logger,
+		logger:  log,
 		running: true,
 		stopCh:  make(chan struct{}),
 		doneCh:  make(chan struct{}),
@@ -109,10 +109,10 @@ func TestConsumerGroup_Start_AlreadyRunning(t *testing.T) {
 }
 
 func TestSimpleConsumer_IsRunning(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 
 	sc := &SimpleConsumer{
-		logger:  logger,
+		logger:  log,
 		running: false,
 		stopCh:  make(chan struct{}),
 	}
@@ -124,10 +124,10 @@ func TestSimpleConsumer_IsRunning(t *testing.T) {
 }
 
 func TestSimpleConsumer_ConsumePartition_AlreadyRunning(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 
 	sc := &SimpleConsumer{
-		logger:  logger,
+		logger:  log,
 		running: true,
 		stopCh:  make(chan struct{}),
 	}
@@ -138,10 +138,10 @@ func TestSimpleConsumer_ConsumePartition_AlreadyRunning(t *testing.T) {
 }
 
 func TestSimpleConsumer_Stop_NotRunning(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 
 	sc := &SimpleConsumer{
-		logger:  logger,
+		logger:  log,
 		running: false,
 		stopCh:  make(chan struct{}),
 	}
@@ -194,7 +194,7 @@ func TestMockMessageHandler_WithError(t *testing.T) {
 
 // Real Kafka consumer test
 func TestConsumerGroup_RealKafka(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 		Version: "3.8.0",
@@ -205,7 +205,7 @@ func TestConsumerGroup_RealKafka(t *testing.T) {
 		},
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	if err != nil {
 		t.Skip("Cannot create manager:", err)
 	}
@@ -254,14 +254,14 @@ func TestConsumerGroup_RealKafka(t *testing.T) {
 }
 
 func TestSimpleConsumer_RealKafka(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 
 	// Create sarama configuration
 	saramaCfg := sarama.NewConfig()
 	saramaCfg.Version = sarama.V3_0_0_0
 	saramaCfg.Consumer.Return.Errors = true
 
-	simpleConsumer, err := NewSimpleConsumer([]string{"localhost:9092"}, saramaCfg, logger)
+	simpleConsumer, err := NewSimpleConsumer([]string{"localhost:9092"}, saramaCfg, log)
 	if err != nil {
 		t.Skip("Cannot create simple consumer:", err)
 	}
@@ -292,13 +292,13 @@ func TestSimpleConsumer_RealKafka(t *testing.T) {
 }
 
 func TestConsumerGroup_Stop_NotRunning_RealKafka(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 		Version: "3.8.0",
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	if err != nil {
 		t.Skip("Cannot create manager:", err)
 	}
@@ -319,7 +319,7 @@ func TestConsumerGroup_Stop_NotRunning_RealKafka(t *testing.T) {
 
 // End-to-end test: send message and consume
 func TestConsumerGroup_ConsumeWithHandlerError(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	cfg := Config{
 		Brokers: []string{"localhost:9092"},
 		Version: "3.8.0",
@@ -334,7 +334,7 @@ func TestConsumerGroup_ConsumeWithHandlerError(t *testing.T) {
 		},
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	if err != nil {
 		t.Skip("Cannot create manager:", err)
 	}
@@ -380,7 +380,7 @@ func TestConsumerGroup_ConsumeWithHandlerError(t *testing.T) {
 }
 
 func TestProducerConsumer_EndToEnd(t *testing.T) {
-	logger := zap.NewNop()
+	log := logger.GetLogger("test")
 	testTopic := "test-topic" // Use existing topic
 
 	cfg := Config{
@@ -397,7 +397,7 @@ func TestProducerConsumer_EndToEnd(t *testing.T) {
 		},
 	}
 
-	manager, err := NewManager(cfg, logger)
+	manager, err := NewManager(cfg, log)
 	if err != nil {
 		t.Skip("Cannot create manager:", err)
 	}
