@@ -9,8 +9,8 @@ import (
 func TestRouter_Match_ExactMatch(t *testing.T) {
 	router := NewRouter()
 	router.LoadRoutes(map[string]RouteConfig{
-		"order.created": {Driver: DriverKafka, Topic: "events.order"},
-		"user.login":    {Driver: DriverKafka, Topic: "events.user"},
+		"order:created": {Driver: DriverKafka, Topic: "events.order"},
+		"user:login":    {Driver: DriverKafka, Topic: "events.user"},
 	})
 
 	// Exact match
@@ -27,7 +27,7 @@ func TestRouter_Match_ExactMatch(t *testing.T) {
 func TestRouter_Match_WildcardSuffix(t *testing.T) {
 	router := NewRouter()
 	router.LoadRoutes(map[string]RouteConfig{
-		"order.*": {Driver: DriverKafka, Topic: "events.order"},
+		"order:*": {Driver: DriverKafka, Topic: "events.order"},
 	})
 
 	// wildcard matching
@@ -56,8 +56,8 @@ func TestRouter_Match_Priority(t *testing.T) {
 	router := NewRouter()
 	router.LoadRoutes(map[string]RouteConfig{
 		"*":             {Driver: DriverKafka, Topic: "events.all"},
-		"order.*":       {Driver: DriverKafka, Topic: "events.order"},
-		"order.created": {Driver: DriverKafka, Topic: "events.order.created"},
+		"order:*":       {Driver: DriverKafka, Topic: "events.order"},
+		"order:created": {Driver: DriverKafka, Topic: "events.order.created"},
 	})
 
 	// Prefer exact matches
@@ -79,7 +79,7 @@ func TestRouter_Match_Priority(t *testing.T) {
 func TestRouter_Match_MiddleWildcard(t *testing.T) {
 	router := NewRouter()
 	router.LoadRoutes(map[string]RouteConfig{
-		"order.*.done": {Driver: DriverKafka, Topic: "events.order.done"},
+		"order:*:done": {Driver: DriverKafka, Topic: "events.order.done"},
 	})
 
 	// middle wildcard
@@ -97,7 +97,7 @@ func TestRouter_HasRoutes(t *testing.T) {
 	assert.False(t, router.HasRoutes())
 
 	router.LoadRoutes(map[string]RouteConfig{
-		"order.*": {Driver: DriverKafka, Topic: "events.order"},
+		"order:*": {Driver: DriverKafka, Topic: "events.order"},
 	})
 	assert.True(t, router.HasRoutes())
 	assert.Equal(t, 1, router.RouteCount())

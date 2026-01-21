@@ -108,13 +108,13 @@ func TestManager_InstanceMethods(t *testing.T) {
 	// Validate info file
 	infoContent, _ := os.ReadFile(filepath.Join(logDir, "test", "test-info.log"))
 	infoStr := string(infoContent)
-	assert.Contains(t, infoStr, "Info消息")
-	assert.Contains(t, infoStr, "Warn消息")
+	assert.Contains(t, infoStr, "InfoEnglish: Info message")
+	assert.Contains(t, infoStr, "WarnEnglish: Warn message")
 
 	// Validate error file
 	errorContent, _ := os.ReadFile(filepath.Join(logDir, "test", "test-error.log"))
 	errorStr := string(errorContent)
-	assert.Contains(t, errorStr, "Error消息")
+	assert.Contains(t, errorStr, "ErrorEnglish: Error message")
 }
 
 // TestManager_InstanceWithFields test instance with fields
@@ -189,7 +189,7 @@ func TestManager_InstanceTraceID(t *testing.T) {
 	errorStr := string(errorContent)
 	assert.Contains(t, errorStr, "trace_id")
 	assert.Contains(t, errorStr, "test-trace-123")
-	assert.Contains(t, errorStr, "订单失败")
+	assert.Contains(t, errorStr, "Order failed")
 }
 
 // TestManager_InstanceReloadConfig Hot reload configuration for test instance
@@ -235,8 +235,8 @@ func TestManager_InstanceReloadConfig(t *testing.T) {
 	// Validate log
 	infoContent, _ := os.ReadFile(filepath.Join(logDir, "test", "test-info.log"))
 	infoStr := string(infoContent)
-	assert.Contains(t, infoStr, "初始配置")
-	assert.Contains(t, infoStr, "重载后的Info")
+	assert.Contains(t, infoStr, "English: Initial configuration")
+	assert.Contains(t, infoStr, "Reloaded InfoInfo")
 }
 
 // TestManager_GlobalAndInstanceCoexist test global and instance coexistence
@@ -289,7 +289,7 @@ func TestManager_GlobalAndInstanceCoexist(t *testing.T) {
 	assert.Contains(t, string(globalContent), "全局订单创建")
 
 	customContent, _ := os.ReadFile(filepath.Join(customLogDir, "order", "order-info.log"))
-	assert.Contains(t, string(customContent), "自定义订单创建")
+	assert.Contains(t, string(customContent), "English: Custom order creation")
 }
 
 // TestManager_IsolatedTesting isolated unit test scenarios

@@ -18,6 +18,7 @@ func setupRateLimiterTest() (*gin.Engine, *limiter.Manager) {
 	router := gin.New()
 
 	// Create rate limiter configuration
+	// Note: 中间件 KeyFunc 生成的 key 格式是 "method:path"（小写），所以配置也需要用小写
 	cfg := limiter.Config{
 		Enabled:   true,
 		StoreType: "memory",
@@ -27,7 +28,7 @@ func setupRateLimiterTest() (*gin.Engine, *limiter.Manager) {
 			Capacity:  10,
 		},
 		Resources: map[string]limiter.ResourceConfig{
-			"GET:/api/limited": {
+			"get:/api/limited": {
 				Algorithm:  "token_bucket",
 				Rate:       2, // 2 req/s
 				Capacity:   2, // Up to 2 requests

@@ -137,7 +137,7 @@ func TestClientManager_GetConn_ConnectionFailed(t *testing.T) {
 	conn, err := manager.GetConn("invalid-service")
 	assert.Error(t, err)
 	assert.Nil(t, conn)
-	assert.Contains(t, err.Error(), "Connection to service failed")
+	assert.Contains(t, err.Error(), "Connection failed")
 }
 
 // TestClientManager_Close_TestCloseAllConnections

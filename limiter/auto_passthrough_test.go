@@ -115,12 +115,7 @@ func TestAutoPassthrough_MixedResources(t *testing.T) {
 	cfg := Config{
 		Enabled:   true,
 		StoreType: "memory",
-		Default: ResourceConfig{
-			Algorithm:  "token_bucket",
-			Rate:       100,
-			Capacity:   100,
-			InitTokens: 100,
-		},
+		// 不配置 Default，这样未配置的资源才会真正无限制
 		Resources: map[string]ResourceConfig{
 			"api:users": {
 				Algorithm:  "token_bucket",

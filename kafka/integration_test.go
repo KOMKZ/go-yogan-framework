@@ -16,7 +16,7 @@ import (
 
 func getTestConfig() Config {
 	return Config{
-		Brokers:  []string{"localhost:9092"},
+		Brokers:  []string{"localhost:19092"},
 		Version:  "3.8.0",
 		ClientID: "test-client",
 		Producer: ProducerConfig{

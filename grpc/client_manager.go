@@ -168,17 +168,17 @@ func (m *ClientManager) discoverHealthyInstance(ctx context.Context, serviceName
 
 	instances, err := m.discovery.Discover(ctx, serviceName)
 	if err != nil {
-		return "", fmt.Errorf("Service discovery query failed: %w: %w", err)
+		return "", fmt.Errorf("Service discovery query failed: %w", err)
 	}
 
 	if len(instances) == 0 {
-		return "", fmt.Errorf("Service instance not found: %s: %s", serviceName)
+		return "", fmt.Errorf("Service instance not found: %s", serviceName)
 	}
 
 	// Use the injected selector to choose an instance
 	selected := m.getSelector().Select(instances)
 	if selected == nil {
-		return "", fmt.Errorf("No healthy service instances: %s: %s", serviceName)
+		return "", fmt.Errorf("No healthy service instances: %s", serviceName)
 	}
 
 	return selected.GetAddress(), nil
@@ -323,7 +323,7 @@ func (m *ClientManager) runWatchLoop(serviceName string, cfg ClientConfig) error
 
 	watchCh, err := m.discovery.Watch(ctx, cfg.ServiceName)
 	if err != nil {
-		return fmt.Errorf("Failed to start Watch: %wWatchFailed to start Watch: %w: %w", err)
+		return fmt.Errorf("Failed to start Watch: %w", err)
 	}
 
 	m.logger.DebugCtx(ctx, "🔍 Service instance watch started",
@@ -378,7 +378,7 @@ func (m *ClientManager) GetConn(serviceName string) (*grpc.ClientConn, error) {
 	// Check if configuration exists
 	cfg, ok := m.configs[serviceName]
 	if !ok {
-		return nil, fmt.Errorf("Service not configured: %s: %s", serviceName)
+		return nil, fmt.Errorf("Service not configured: %s", serviceName)
 	}
 
 	m.mu.RLock()
@@ -416,7 +416,7 @@ func (m *ClientManager) connectOnDemand(serviceName string, cfg ClientConfig) (*
 	if cfg.DiscoveryMode != "" && cfg.ServiceName != "" && m.discovery != nil {
 		targetAddr, err = m.discoverHealthyInstance(ctx, cfg.ServiceName)
 		if err != nil {
-			return nil, fmt.Errorf("Service discovery failed: %w: %w", err)
+			return nil, fmt.Errorf("Service discovery failed: %w", err)
 		}
 	} else {
 		// Direct connection mode
@@ -426,7 +426,7 @@ func (m *ClientManager) connectOnDemand(serviceName string, cfg ClientConfig) (*
 	// ✅ Reuse dialWithOptions to establish connection
 	conn, err := m.dialWithOptions(ctx, serviceName, targetAddr, cfg)
 	if err != nil {
-		return nil, fmt.Errorf("Connection failed: %w: %w", err)
+		return nil, fmt.Errorf("Connection failed: %w", err)
 	}
 
 	// Cache connection

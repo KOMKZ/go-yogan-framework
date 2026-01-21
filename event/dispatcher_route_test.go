@@ -15,7 +15,7 @@ func TestDispatcher_RouteToKafka(t *testing.T) {
 	// Create router
 	router := NewRouter()
 	router.LoadRoutes(map[string]RouteConfig{
-		"order.*": {Driver: DriverKafka, Topic: "events.order"},
+		"order:*": {Driver: DriverKafka, Topic: "events.order"},
 	})
 
 	// Create simulated publisher
@@ -42,7 +42,7 @@ func TestDispatcher_RouteToMemory(t *testing.T) {
 	// Create router (no matching rules)
 	router := NewRouter()
 	router.LoadRoutes(map[string]RouteConfig{
-		"order.*": {Driver: DriverKafka, Topic: "events.order"},
+		"order:*": {Driver: DriverKafka, Topic: "events.order"},
 	})
 
 	// Create dispatcher
@@ -187,8 +187,8 @@ func TestDispatcher_RoutePriority(t *testing.T) {
 	router := NewRouter()
 	router.LoadRoutes(map[string]RouteConfig{
 		"*":             {Driver: DriverKafka, Topic: "events.all"},
-		"order.*":       {Driver: DriverKafka, Topic: "events.order"},
-		"order.created": {Driver: DriverKafka, Topic: "events.order.created"},
+		"order:*":       {Driver: DriverKafka, Topic: "events.order"},
+		"order:created": {Driver: DriverKafka, Topic: "events.order.created"},
 	})
 
 	// Create simulated publisher

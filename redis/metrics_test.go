@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
 )
 
@@ -132,3 +133,81 @@ func TestRedisMetrics_PoolCallbacks(t *testing.T) {
 		assert.Len(t, m.poolCallbacks, 1)
 	})
 }
+
+func TestRedisMetrics_RecordCommand_WithError(t *testing.T) {
+	mp := noop.NewMeterProvider()
+	meter := mp.Meter("test")
+
+	m := NewRedisMetrics(RedisMetricsConfig{
+		Enabled:       true,
+		RecordHitMiss: true,
+	})
+	err := m.RegisterMetrics(meter)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	// 测试有错误的命令
+	assert.NotPanics(t, func() {
+		m.RecordCommand(ctx, "main", "GET", 10*time.Millisecond, assert.AnError)
+	})
+}
+
+func TestRedisMetrics_RegisterMetrics_Disabled(t *testing.T) {
+	mp := noop.NewMeterProvider()
+	meter := mp.Meter("test")
+
+	// 未启用的 metrics
+	m := NewRedisMetrics(RedisMetricsConfig{
+		Enabled:         false,
+		RecordHitMiss:   false,
+		RecordPoolStats: false,
+	})
+	err := m.RegisterMetrics(meter)
+
+	require.NoError(t, err)
+}
+
+func TestRedisMetrics_RecordHitMiss_Disabled(t *testing.T) {
+	mp := noop.NewMeterProvider()
+	meter := mp.Meter("test")
+
+	m := NewRedisMetrics(RedisMetricsConfig{
+		Enabled:       true,
+		RecordHitMiss: false, // 禁用 hit/miss
+	})
+	err := m.RegisterMetrics(meter)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	// 即使禁用了 hit/miss，也不应该 panic
+	assert.NotPanics(t, func() {
+		m.RecordCacheHit(ctx, "main")
+		m.RecordCacheMiss(ctx, "main")
+	})
+}
+
+func TestRedisMetrics_RegisterWithPoolStats(t *testing.T) {
+	mp := noop.NewMeterProvider()
+	meter := mp.Meter("test")
+
+	m := NewRedisMetrics(RedisMetricsConfig{
+		Enabled:         true,
+		RecordPoolStats: true,
+	})
+
+	// 注册回调
+	callback := func() PoolStats { return PoolStats{ActiveCount: 10, IdleCount: 5} }
+	m.RegisterPoolCallback("main", callback)
+	m.RegisterPoolCallback("cache", func() PoolStats { return PoolStats{ActiveCount: 20, IdleCount: 10} })
+
+	// 注册 metrics 会创建 gauge 并使用 callbacks
+	err := m.RegisterMetrics(meter)
+	require.NoError(t, err)
+
+	assert.True(t, m.IsRegistered())
+}
+
+// 使用 _ 忽略 metric 包的导入检查
+var _ = metric.Int64Observable(nil)

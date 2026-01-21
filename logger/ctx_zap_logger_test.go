@@ -72,16 +72,16 @@ func TestCtxZapLogger_AllMethods(t *testing.T) {
 	// Verify the content of the info log
 	infoContent, _ := os.ReadFile(filepath.Join(logDir, "test", "test-info.log"))
 	infoStr := string(infoContent)
-	assert.Contains(t, infoStr, "Info 消息")
+	assert.Contains(t, infoStr, "Info English: Info Message")
 	assert.Contains(t, infoStr, "trace_id")
 	assert.Contains(t, infoStr, "test-trace-123")
-	assert.Contains(t, infoStr, "Debug 消息")
-	assert.Contains(t, infoStr, "Warn 消息")
+	assert.Contains(t, infoStr, "Debug English: Debug message")
+	assert.Contains(t, infoStr, "Warn English: Warning Message")
 
 	// Verify error log contents
 	errorContent, _ := os.ReadFile(filepath.Join(logDir, "test", "test-error.log"))
 	errorStr := string(errorContent)
-	assert.Contains(t, errorStr, "Error 消息")
+	assert.Contains(t, errorStr, "Error English: Error message")
 	assert.Contains(t, errorStr, "stack") // Should include stack
 }
 
@@ -123,8 +123,8 @@ func TestCtxZapLogger_With(t *testing.T) {
 	assert.Contains(t, contentStr, "order-service")
 	assert.Contains(t, contentStr, "order_id")
 	assert.Contains(t, contentStr, "12345")
-	assert.Contains(t, contentStr, "订单创建")
-	assert.Contains(t, contentStr, "订单支付")
+	assert.Contains(t, contentStr, "Order creation")
+	assert.Contains(t, contentStr, "Order payment")
 }
 
 // TestCtxZapLogger_GetZapLogger test the GetZapLogger method
@@ -158,7 +158,7 @@ func TestCtxZapLogger_GetZapLogger(t *testing.T) {
 
 	// Verify log file
 	content, _ := os.ReadFile(filepath.Join(logDir, "test", "test-info.log"))
-	assert.Contains(t, string(content), "直接使用 zap.Logger")
+	assert.Contains(t, string(content), "English: Use zap.Logger directly zap.Logger")
 }
 
 // TestCtxZapLogger_TraceIDFromDifferentKeys Test different TraceID keys
@@ -232,7 +232,7 @@ func TestCtxZapLogger_NoStacktraceWhenDisabled(t *testing.T) {
 
 	content, _ := os.ReadFile(filepath.Join(logDir, "test", "test-error.log"))
 	contentStr := string(content)
-	assert.Contains(t, contentStr, "Error 无堆栈")
+	assert.Contains(t, contentStr, "Error English: Error no stack trace")
 	assert.NotContains(t, contentStr, "\"stack\"") // There should not be a stack field
 }
 
@@ -263,5 +263,5 @@ func TestNewCtxZapLogger(t *testing.T) {
 	CloseAll()
 
 	content, _ := os.ReadFile(filepath.Join(logDir, "new_module", "new_module-info.log"))
-	assert.Contains(t, string(content), "使用 NewCtxZapLogger 创建")
+	assert.Contains(t, string(content), "English: Created using NewCtxZapLogger")
 }

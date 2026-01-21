@@ -155,5 +155,5 @@ func TestConsolePretty_ConfigValidation(t *testing.T) {
 	}
 	err = invalidCfg.Validate()
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "English: Invalid log encoding")
+	assert.Contains(t, err.Error(), "Invalid log encoding")
 }

@@ -33,20 +33,20 @@ func TestTestCtxLogger(t *testing.T) {
 	logger.InfoCtx(ctxWithTrace, "English: Message with TraceID TraceID English: Message with TraceID")
 
 	// Test HasLog (using uppercase level, consistent with TestCtxLogger storage format)
-	assert.True(t, logger.HasLog("INFO", "Info 消息"))
-	assert.True(t, logger.HasLog("DEBUG", "Debug 消息"))
-	assert.True(t, logger.HasLog("WARN", "Warn 消息"))
-	assert.True(t, logger.HasLog("ERROR", "Error 消息"))
+	assert.True(t, logger.HasLog("INFO", "Info English: Info Message"))
+	assert.True(t, logger.HasLog("DEBUG", "Debug English: Debug message"))
+	assert.True(t, logger.HasLog("WARN", "Warn English: Warning Message"))
+	assert.True(t, logger.HasLog("ERROR", "Error English: Error message"))
 	assert.False(t, logger.HasLog("INFO", "不存在的消息"))
 
 	// Test HasLogWithTraceID
-	assert.True(t, logger.HasLogWithTraceID("INFO", "带 TraceID 的消息", "test-trace-123"))
-	assert.False(t, logger.HasLogWithTraceID("INFO", "带 TraceID 的消息", "wrong-trace"))
+	assert.True(t, logger.HasLogWithTraceID("INFO", "English: Message with TraceID TraceID English: Message with TraceID", "test-trace-123"))
+	assert.False(t, logger.HasLogWithTraceID("INFO", "English: Message with TraceID TraceID English: Message with TraceID", "wrong-trace"))
 
 	// Test HasLogWithField
-	assert.True(t, logger.HasLogWithField("INFO", "Info 消息", "key", "value"))
-	assert.True(t, logger.HasLogWithField("DEBUG", "Debug 消息", "count", int64(10))) // zap.Int will be encoded as int64
-	assert.False(t, logger.HasLogWithField("INFO", "Info 消息", "key", "wrong"))
+	assert.True(t, logger.HasLogWithField("INFO", "Info English: Info Message", "key", "value"))
+	assert.True(t, logger.HasLogWithField("DEBUG", "Debug English: Debug message", "count", int64(10))) // zap.Int will be encoded as int64
+	assert.False(t, logger.HasLogWithField("INFO", "Info English: Info Message", "key", "wrong"))
 
 	// Test CountLogs
 	assert.Equal(t, 2, logger.CountLogs("INFO")) // Info message + message with TraceID
@@ -81,5 +81,5 @@ func TestTestCtxLogger_With(t *testing.T) {
 	orderLogger.InfoCtx(context.Background(), "Order creation")
 
 	// The new Logger can see its own records
-	assert.True(t, orderLogger.HasLog("INFO", "订单创建"))
+	assert.True(t, orderLogger.HasLog("INFO", "Order creation"))
 }

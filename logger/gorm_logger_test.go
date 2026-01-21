@@ -83,8 +83,8 @@ func TestGormLogger_Basic(t *testing.T) {
 
 	infoContent, _ := os.ReadFile(filepath.Join(logDir, "yogan_sql", "yogan_sql-info.log"))
 	infoStr := string(infoContent)
-	assert.Contains(t, infoStr, "GORM Info 消息")
-	assert.Contains(t, infoStr, "GORM Warn 消息")
+	assert.Contains(t, infoStr, "GORM Info Message")
+	assert.Contains(t, infoStr, "GORM Warning Message")
 	assert.Contains(t, infoStr, "SELECT")
 }
 

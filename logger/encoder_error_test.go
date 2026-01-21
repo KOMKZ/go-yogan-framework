@@ -48,7 +48,7 @@ func TestPrettyConsoleEncoder_ErrorField(t *testing.T) {
 	assert.Contains(t, output, "[🔴ERRO]")
 	assert.Contains(t, output, "[database]")
 	assert.Contains(t, output, "数据库错误")
-	assert.Contains(t, output, `"error":"连接超时"`) // Validating key correctness
+	assert.Contains(t, output, `"error":"Connection timeout"`) // Validating key correctness
 	assert.Contains(t, output, `"host":"localhost"`)
 	assert.NotContains(t, output, `"error":null`) // Should not be null
 }

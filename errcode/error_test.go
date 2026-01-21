@@ -50,7 +50,7 @@ func TestLayeredError_Error_WithCause(t *testing.T) {
 	originalErr := errors.New("database connection failed")
 	err := New(10, 1, "user", "error.user.not_found", "User not found").Wrap(originalErr)
 
-	expected := "用户不存在: database connection failed"
+	expected := "User not found: database connection failed"
 	if err.Error() != expected {
 		t.Errorf("expected error message '%s', got %s", expected, err.Error())
 	}
@@ -226,7 +226,7 @@ func TestLayeredError_String(t *testing.T) {
 	err := New(10, 1, "user", "error.user.not_found", "User not found")
 	str := err.String()
 
-	expected := "LayeredError{code:100001, module:user, msg:用户不存在}"
+	expected := "LayeredError{code:100001, module:user, msg:User not found}"
 	if str != expected {
 		t.Errorf("expected '%s', got '%s'", expected, str)
 	}
@@ -238,7 +238,7 @@ func TestLayeredError_String_WithCause(t *testing.T) {
 	err := New(10, 1, "user", "error.user.not_found", "User not found").Wrap(originalErr)
 	str := err.String()
 
-	expected := "LayeredError{code:100001, module:user, msg:用户不存在, cause:database connection failed}"
+	expected := "LayeredError{code:100001, module:user, msg:User not found, cause:database connection failed}"
 	if str != expected {
 		t.Errorf("expected '%s', got '%s'", expected, str)
 	}

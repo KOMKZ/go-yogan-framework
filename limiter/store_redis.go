@@ -125,9 +125,18 @@ func (s *RedisStore) Exists(ctx context.Context, key string) (bool, error) {
 }
 
 // Get the remaining time-to-live for the key
+// Returns 0 if key doesn't exist or has no TTL
 func (s *RedisStore) TTL(ctx context.Context, key string) (time.Duration, error) {
 	fullKey := s.buildKey(key)
-	return s.client.TTL(ctx, fullKey).Result()
+	ttl, err := s.client.TTL(ctx, fullKey).Result()
+	if err != nil {
+		return 0, err
+	}
+	// Redis returns -2 if key doesn't exist, -1 if no TTL
+	if ttl < 0 {
+		return 0, nil
+	}
+	return ttl, nil
 }
 
 // Add ordered set members

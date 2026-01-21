@@ -198,7 +198,7 @@ func (app *DoApplication) Setup() error {
 
 	loader, err := do.Invoke[*config.Loader](app.injector)
 	if err != nil {
-		return fmt.Errorf("Initialization configuration failed: %w: %w", err)
+		return fmt.Errorf("initialization configuration failed: %w", err)
 	}
 	app.configLoader = loader
 
@@ -208,7 +208,7 @@ func (app *DoApplication) Setup() error {
 
 	appLogger, err := do.Invoke[*logger.CtxZapLogger](app.injector)
 	if err != nil {
-		return fmt.Errorf("Log initialization failed: %w: %w", err)
+		return fmt.Errorf("log initialization failed: %w", err)
 	}
 	app.logger = appLogger
 
@@ -221,7 +221,7 @@ func (app *DoApplication) Setup() error {
 	// Call Setup callback
 	if app.onSetup != nil {
 		if err := app.onSetup(app); err != nil {
-			return fmt.Errorf("setup setup callback failed: %w: %w", err)
+			return fmt.Errorf("setup callback failed: %w", err)
 		}
 	}
 
@@ -241,7 +241,7 @@ func (app *DoApplication) Start() error {
 	// Call Ready callback
 	if app.onReady != nil {
 		if err := app.onReady(app); err != nil {
-			return fmt.Errorf("ready Ready callback failed: %w: %w", err)
+			return fmt.Errorf("ready callback failed: %w", err)
 		}
 	}
 

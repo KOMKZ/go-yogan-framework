@@ -73,6 +73,25 @@ func TestConfig_Validate(t *testing.T) {
 			wantErr: true,
 			errMsg:  "pool_size must be >= 0",
 		},
+		{
+			name: "负数最小空闲连接数",
+			config: Config{
+				Mode:         "standalone",
+				Addrs:        []string{"localhost:6379"},
+				MinIdleConns: -1,
+			},
+			wantErr: true,
+			errMsg:  "min_idle_conns must be >= 0",
+		},
+		{
+			name: "集群模式 DB 可以任意值",
+			config: Config{
+				Mode:  "cluster",
+				Addrs: []string{"localhost:7000", "localhost:7001"},
+				DB:    16, // cluster 模式不验证 DB
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -131,3 +150,27 @@ func TestConfig_ApplyDefaults_PreservesExisting(t *testing.T) {
 	assert.Equal(t, 5*time.Second, cfg.WriteTimeout)
 }
 
+func TestConfig_ApplyDefaults_AddrBackwardCompat(t *testing.T) {
+	// 测试 Addr (单数) 到 Addrs (复数) 的向后兼容
+	cfg := Config{
+		Addr: "localhost:6379", // 使用旧的 Addr 字段
+	}
+
+	cfg.ApplyDefaults()
+
+	assert.Equal(t, []string{"localhost:6379"}, cfg.Addrs)
+	assert.Equal(t, "standalone", cfg.Mode)
+}
+
+func TestConfig_ApplyDefaults_AddrsHasPriority(t *testing.T) {
+	// 如果同时设置了 Addr 和 Addrs，Addrs 优先
+	cfg := Config{
+		Addr:  "localhost:6379",
+		Addrs: []string{"localhost:7000", "localhost:7001"},
+	}
+
+	cfg.ApplyDefaults()
+
+	// Addrs 不应被覆盖
+	assert.Equal(t, []string{"localhost:7000", "localhost:7001"}, cfg.Addrs)
+}

@@ -252,3 +252,76 @@ func TestManager_Shutdown(t *testing.T) {
 		t.Error("The service should be in an unregistered state after shutdown.")
 	}
 }
+
+// TestManager_DeregisterService_NotRegistered test deregistration when not registered
+func TestManager_DeregisterService_NotRegistered(t *testing.T) {
+	mockRegistry := &MockRegistry{}
+	ctxLogger := logger.GetLogger("yogan")
+	manager := NewManager(mockRegistry, nil, ctxLogger)
+
+	ctx := context.Background()
+	err := manager.DeregisterService(ctx)
+	if err != ErrNotRegistered {
+		t.Errorf("Expected ErrNotRegistered, got %v", err)
+	}
+}
+
+// TestManager_UpdateMetadata_NotRegistered test update metadata when not registered
+func TestManager_UpdateMetadata_NotRegistered(t *testing.T) {
+	mockRegistry := &MockRegistry{}
+	ctxLogger := logger.GetLogger("yogan")
+	manager := NewManager(mockRegistry, nil, ctxLogger)
+
+	ctx := context.Background()
+	err := manager.UpdateMetadata(ctx, map[string]string{"key": "value"})
+	if err != ErrNotRegistered {
+		t.Errorf("Expected ErrNotRegistered, got %v", err)
+	}
+}
+
+// TestManager_PerformHealthCheck test health check
+func TestManager_PerformHealthCheck(t *testing.T) {
+	mockRegistry := &MockRegistry{}
+	ctxLogger := logger.GetLogger("yogan")
+	manager := NewManager(mockRegistry, nil, ctxLogger)
+
+	ctx := context.Background()
+	err := manager.PerformHealthCheck(ctx)
+	if err != nil {
+		t.Errorf("PerformHealthCheck() error = %v", err)
+	}
+}
+
+// TestManager_GetHealthStatus test get health status
+func TestManager_GetHealthStatus(t *testing.T) {
+	mockRegistry := &MockRegistry{}
+	ctxLogger := logger.GetLogger("yogan")
+	manager := NewManager(mockRegistry, nil, ctxLogger)
+
+	status := manager.GetHealthStatus()
+	if !status.Healthy {
+		t.Error("Default health status should be healthy")
+	}
+}
+
+// TestNewManager_NilLogger test NewManager with nil logger
+func TestNewManager_NilLogger(t *testing.T) {
+	mockRegistry := &MockRegistry{}
+	manager := NewManager(mockRegistry, nil, nil)
+	if manager == nil {
+		t.Error("NewManager should not return nil")
+	}
+}
+
+// TestServiceInfo_GetFullAddress test GetFullAddress
+func TestServiceInfo_GetFullAddress(t *testing.T) {
+	info := &ServiceInfo{
+		Address: "192.168.1.100",
+		Port:    9002,
+	}
+
+	expected := "192.168.1.100:9002"
+	if info.GetFullAddress() != expected {
+		t.Errorf("Expected %s, got %s", expected, info.GetFullAddress())
+	}
+}
