@@ -39,7 +39,7 @@ func (s *FileSource) Load() (map[string]interface{}, error) {
 			// File does not exist, return empty configuration (not an error)
 			return make(map[string]interface{}), nil
 		}
-		return nil, fmt.Errorf("Failed to access configuration file %s: %w %s: %w", s.path, err)
+		return nil, fmt.Errorf("failed to access configuration file %s: %w", s.path, err)
 	}
 
 	// Use Viper to load file
@@ -47,7 +47,7 @@ func (s *FileSource) Load() (map[string]interface{}, error) {
 	v.SetConfigFile(s.path)
 
 	if err := v.ReadInConfig(); err != nil {
-		return nil, fmt.Errorf("Failed to read configuration file %s: %w %s: %w", s.path, err)
+		return nil, fmt.Errorf("failed to read configuration file %s: %w", s.path, err)
 	}
 
 	// Convert to flat map (keys with dots)
