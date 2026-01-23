@@ -46,11 +46,8 @@ func TestJWTMetrics_RegisterMetrics(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.True(t, m.IsRegistered())
-		assert.NotNil(t, m.tokensGenerated)
-		assert.NotNil(t, m.tokensVerified)
-		assert.NotNil(t, m.tokensRefreshed)
-		assert.NotNil(t, m.tokensRevoked)
-		assert.NotNil(t, m.verificationDuration)
+		// 使用 MetricsBuilder 模板后，检查模板是否创建成功
+		assert.NotNil(t, m.tokens) // TokenMetrics 模板
 	})
 
 	t.Run("idempotent registration", func(t *testing.T) {

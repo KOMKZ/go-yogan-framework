@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/KOMKZ/go-yogan-framework/telemetry"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 )
@@ -15,17 +16,19 @@ type AuthMetricsConfig struct {
 }
 
 // AuthMetrics implements component.MetricsProvider for Auth instrumentation.
+// 使用 telemetry.RequestMetrics 模板减少样板代码
 type AuthMetrics struct {
 	config     AuthMetricsConfig
 	meter      metric.Meter
 	registered bool
 	mu         sync.RWMutex
 
-	// Metrics instruments
-	loginsTotal          metric.Int64Counter     // Login attempts
-	loginDuration        metric.Float64Histogram // Login duration
-	passwordValidations  metric.Int64Counter     // Password validations
-	failedAttempts       metric.Int64Counter     // Failed login attempts
+	// 使用预定义模板
+	login *telemetry.RequestMetrics // 登录指标
+
+	// 额外指标
+	passwordValidations metric.Int64Counter
+	failedAttempts      metric.Int64Counter
 }
 
 // NewAuthMetrics creates a new Auth metrics provider
@@ -46,6 +49,7 @@ func (m *AuthMetrics) IsMetricsEnabled() bool {
 }
 
 // RegisterMetrics registers all Auth metrics with the provided Meter
+// 使用 MetricsBuilder 模板，代码量从 50+ 行减少到 20 行
 func (m *AuthMetrics) RegisterMetrics(meter metric.Meter) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -55,44 +59,23 @@ func (m *AuthMetrics) RegisterMetrics(meter metric.Meter) error {
 	}
 
 	m.meter = meter
-	var err error
+	builder := telemetry.NewMetricsBuilder(meter, "auth")
 
-	// Counter: login attempts
-	m.loginsTotal, err = meter.Int64Counter(
-		"auth_logins_total",
-		metric.WithDescription("Total number of login attempts"),
-		metric.WithUnit("{login}"),
-	)
+	// 使用 RequestMetrics 模板创建登录指标（total, duration, errors）
+	login, err := builder.NewRequestMetrics("login")
+	if err != nil {
+		return err
+	}
+	m.login = login
+
+	// 额外指标：密码验证
+	m.passwordValidations, err = builder.Counter("password_validations_total", "Total number of password validations")
 	if err != nil {
 		return err
 	}
 
-	// Histogram: login duration
-	m.loginDuration, err = meter.Float64Histogram(
-		"auth_login_duration_seconds",
-		metric.WithDescription("Login duration distribution"),
-		metric.WithUnit("s"),
-	)
-	if err != nil {
-		return err
-	}
-
-	// Counter: password validations
-	m.passwordValidations, err = meter.Int64Counter(
-		"auth_password_validations_total",
-		metric.WithDescription("Total number of password validations"),
-		metric.WithUnit("{validation}"),
-	)
-	if err != nil {
-		return err
-	}
-
-	// Counter: failed attempts
-	m.failedAttempts, err = meter.Int64Counter(
-		"auth_failed_attempts_total",
-		metric.WithDescription("Total number of failed authentication attempts"),
-		metric.WithUnit("{attempt}"),
-	)
+	// 额外指标：失败尝试
+	m.failedAttempts, err = builder.Counter("failed_attempts_total", "Total number of failed authentication attempts")
 	if err != nil {
 		return err
 	}
@@ -103,24 +86,31 @@ func (m *AuthMetrics) RegisterMetrics(meter metric.Meter) error {
 
 // RecordLogin records a login attempt
 func (m *AuthMetrics) RecordLogin(ctx context.Context, provider, result string, duration time.Duration) {
-	if !m.registered {
+	if !m.registered || m.login == nil {
 		return
 	}
 
-	attrs := []attribute.KeyValue{
-		attribute.String("provider", provider),
-		attribute.String("result", result),
+	var err error
+	if result != "success" {
+		err = &loginError{result: result}
 	}
 
-	m.loginsTotal.Add(ctx, 1, metric.WithAttributes(attrs...))
-	m.loginDuration.Record(ctx, duration.Seconds(), metric.WithAttributes(
+	m.login.Record(ctx, duration.Seconds(), err,
 		attribute.String("provider", provider),
-	))
+		attribute.String("result", result),
+	)
 }
+
+// loginError 用于标识登录失败
+type loginError struct {
+	result string
+}
+
+func (e *loginError) Error() string { return e.result }
 
 // RecordPasswordValidation records a password validation
 func (m *AuthMetrics) RecordPasswordValidation(ctx context.Context, result string) {
-	if !m.registered {
+	if !m.registered || m.passwordValidations == nil {
 		return
 	}
 	m.passwordValidations.Add(ctx, 1, metric.WithAttributes(
@@ -130,7 +120,7 @@ func (m *AuthMetrics) RecordPasswordValidation(ctx context.Context, result strin
 
 // RecordFailedAttempt records a failed authentication attempt
 func (m *AuthMetrics) RecordFailedAttempt(ctx context.Context, reason string) {
-	if !m.registered {
+	if !m.registered || m.failedAttempts == nil {
 		return
 	}
 	m.failedAttempts.Add(ctx, 1, metric.WithAttributes(

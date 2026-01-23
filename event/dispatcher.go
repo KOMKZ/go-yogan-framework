@@ -6,6 +6,7 @@ import (
 	"sort"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/KOMKZ/go-yogan-framework/logger"
 	"github.com/panjf2000/ants/v2"
@@ -49,6 +50,7 @@ type dispatcher struct {
 	kafkaPublisher KafkaPublisher // Kafka publisher (optional)
 	router         *Router        // Event router (optional)
 	setAllSync     bool
+	metrics        *EventMetrics  // Optional: metrics provider (injected after creation)
 }
 
 // Create event dispatcher
@@ -72,6 +74,31 @@ func NewDispatcher(opts ...DispatcherOption) *dispatcher {
 	}
 
 	return d
+}
+
+// SetMetrics injects the Event metrics provider.
+// This should be called after the dispatcher is created when metrics are enabled.
+func (d *dispatcher) SetMetrics(metrics *EventMetrics) {
+	d.metrics = metrics
+	// Optionally set queue size callback
+	if metrics != nil {
+		metrics.SetQueueSizeCallback(func() int64 {
+			if d.pool != nil {
+				return int64(d.pool.Running())
+			}
+			return 0
+		})
+	}
+}
+
+// SetDispatcherMetrics is a helper function to inject metrics into a Dispatcher.
+// Returns true if successful, false if the Dispatcher doesn't support metrics injection.
+func SetDispatcherMetrics(disp Dispatcher, metrics *EventMetrics) bool {
+	if impl, ok := disp.(*dispatcher); ok {
+		impl.SetMetrics(metrics)
+		return true
+	}
+	return false
 }
 
 // Subscribe to event
@@ -134,6 +161,8 @@ func (d *dispatcher) Dispatch(ctx context.Context, event Event, opts ...Dispatch
 		return nil
 	}
 
+	start := time.Now()
+
 	// Parse options
 	options := &dispatchOptions{}
 	for _, opt := range opts {
@@ -158,17 +187,29 @@ func (d *dispatcher) Dispatch(ctx context.Context, event Event, opts ...Dispatch
 	options.applyDefaults()
 
 	// Distribute based on drive selection
+	var err error
 	switch options.driver {
 	case DriverKafka:
-		return d.dispatchToKafka(ctx, event, options)
+		err = d.dispatchToKafka(ctx, event, options)
 	default:
 		// setAllSync force synchronization distribution (ignore options.async)
 		if options.async && !d.setAllSync {
 			d.dispatchAsyncMemory(ctx, event)
+			// Record Metrics for async dispatch
+			if d.metrics != nil {
+				d.metrics.RecordDispatched(ctx, event.Name(), time.Since(start))
+			}
 			return nil
 		}
-		return d.dispatchMemory(ctx, event)
+		err = d.dispatchMemory(ctx, event)
 	}
+
+	// Record Metrics
+	if d.metrics != nil {
+		d.metrics.RecordDispatched(ctx, event.Name(), time.Since(start))
+	}
+
+	return err
 }
 
 // dispatch memory synchronization distribution
@@ -300,16 +341,27 @@ func (d *dispatcher) buildHandlerChain(ctx context.Context, entries []listenerEn
 
 // execute listeners
 func (d *dispatcher) executeListeners(ctx context.Context, event Event, entries []listenerEntry) error {
-	for _, entry := range entries {
+	for i, entry := range entries {
+		handlerName := "handler_" + string(rune('0'+i))
 		if entry.async {
 			// Asynchronous listener submitted to coroutine pool
 			listener := entry.listener
 			eventName := event.Name()
 			_ = d.pool.Submit(func() {
-				if err := listener.Handle(ctx, event); err != nil && !errors.Is(err, ErrStopPropagation) {
+				err := listener.Handle(ctx, event)
+				if err != nil && !errors.Is(err, ErrStopPropagation) {
 					d.logger.ErrorCtx(ctx, "Asynchronous listener execution failed",
 						zap.String("event", eventName),
 						zap.Error(err))
+					// Record Metrics: async handler error
+					if d.metrics != nil {
+						d.metrics.RecordHandled(ctx, eventName, handlerName, "error")
+					}
+				} else {
+					// Record Metrics: async handler success
+					if d.metrics != nil {
+						d.metrics.RecordHandled(ctx, eventName, handlerName, "success")
+					}
 				}
 			})
 			continue
@@ -317,7 +369,15 @@ func (d *dispatcher) executeListeners(ctx context.Context, event Event, entries 
 
 		// Synchronous execution
 		if err := entry.listener.Handle(ctx, event); err != nil {
+			// Record Metrics: sync handler error
+			if d.metrics != nil {
+				d.metrics.RecordHandled(ctx, event.Name(), handlerName, "error")
+			}
 			return err
+		}
+		// Record Metrics: sync handler success
+		if d.metrics != nil {
+			d.metrics.RecordHandled(ctx, event.Name(), handlerName, "success")
 		}
 	}
 

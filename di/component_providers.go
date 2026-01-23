@@ -3,6 +3,8 @@ package di
 import (
 	"context"
 
+	"github.com/KOMKZ/go-yogan-framework/auth"
+	"github.com/KOMKZ/go-yogan-framework/breaker"
 	"github.com/KOMKZ/go-yogan-framework/cache"
 	"github.com/KOMKZ/go-yogan-framework/config"
 	"github.com/KOMKZ/go-yogan-framework/database"
@@ -348,6 +350,36 @@ func ProvideTelemetryManager(i do.Injector) (*telemetry.Manager, error) {
 	return mgr, nil
 }
 
+// ProvideMetricsRegistry creates an independent Provider for telemetry.MetricsRegistry
+// Dependencies: TelemetryManager
+func ProvideMetricsRegistry(i do.Injector) (*telemetry.MetricsRegistry, error) {
+	// Get TelemetryManager (optional)
+	mgr, err := do.Invoke[*telemetry.Manager](i)
+	if err != nil || mgr == nil {
+		// Telemetry not enabled, return nil registry
+		return nil, nil
+	}
+
+	// Get MetricsManager from TelemetryManager
+	metricsMgr := mgr.GetMetricsManager()
+	if metricsMgr == nil || !metricsMgr.IsEnabled() {
+		return nil, nil
+	}
+
+	log, _ := do.Invoke[*logger.CtxZapLogger](i)
+	if log == nil {
+		log = logger.GetLogger("yogan")
+	}
+
+	// Create MetricsRegistry with global MeterProvider
+	registry := telemetry.NewMetricsRegistry(nil,
+		telemetry.WithNamespace(mgr.GetConfig().Metrics.Namespace),
+		telemetry.WithLogger(log),
+	)
+
+	return registry, nil
+}
+
 // ============================================
 // Health component provider
 // Dependencies: Config, Logger
@@ -496,4 +528,81 @@ func ProvideGRPCClientManager(i do.Injector) (*grpc.ClientManager, error) {
 	}
 
 	return grpc.NewClientManager(cfg.Clients, log), nil
+}
+
+// ============================================
+// Auth Component Provider
+// Dependencies: Config
+// ============================================
+
+// ProvidePasswordService creates an independent Provider for auth.PasswordService
+func ProvidePasswordService(i do.Injector) (*auth.PasswordService, error) {
+	loader, err := do.Invoke[*config.Loader](i)
+	if err != nil {
+		return nil, err
+	}
+
+	// Read auth configuration
+	if !loader.IsSet("auth") {
+		return nil, nil // auth not configured
+	}
+
+	// Default password policy
+	policy := auth.PasswordPolicy{
+		MinLength:          6,
+		MaxLength:          128,
+		RequireUppercase:   false,
+		RequireLowercase:   false,
+		RequireDigit:       false,
+		RequireSpecialChar: false,
+	}
+
+	// Override from config if exists
+	if loader.IsSet("auth.password.policy") {
+		if err := loader.GetViper().UnmarshalKey("auth.password.policy", &policy); err != nil {
+			// Use defaults on error
+		}
+	}
+
+	// Bcrypt cost (default 10)
+	bcryptCost := 10
+	if loader.IsSet("auth.password.bcrypt_cost") {
+		bcryptCost = loader.GetViper().GetInt("auth.password.bcrypt_cost")
+	}
+
+	return auth.NewPasswordService(policy, bcryptCost), nil
+}
+
+// ============================================
+// Breaker Component Provider
+// Dependencies: Config, Logger
+// ============================================
+
+// ProvideBreakerManager creates an independent Provider for breaker.Manager
+func ProvideBreakerManager(i do.Injector) (*breaker.Manager, error) {
+	loader, err := do.Invoke[*config.Loader](i)
+	if err != nil {
+		return nil, err
+	}
+
+	// Read breaker configuration
+	if !loader.IsSet("breaker") {
+		return nil, nil // breaker not configured
+	}
+
+	var cfg breaker.Config
+	if err := loader.GetViper().UnmarshalKey("breaker", &cfg); err != nil {
+		return nil, nil
+	}
+
+	if !cfg.Enabled {
+		return nil, nil
+	}
+
+	log, _ := do.Invoke[*logger.CtxZapLogger](i)
+	if log == nil {
+		log = logger.GetLogger("yogan")
+	}
+
+	return breaker.NewManagerWithLogger(cfg, log)
 }

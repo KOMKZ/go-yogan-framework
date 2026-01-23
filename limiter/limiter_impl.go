@@ -13,13 +13,14 @@ import (
 
 // Rate Limiter Manager
 type Manager struct {
-	config   Config
-	store    Store
-	limiters map[string]*rateLimiter
-	eventBus EventBus
-	provider AdaptiveProvider
-	logger   *logger.CtxZapLogger
-	mu       sync.RWMutex
+	config      Config
+	store       Store
+	limiters    map[string]*rateLimiter
+	eventBus    EventBus
+	provider    AdaptiveProvider
+	logger      *logger.CtxZapLogger
+	otelMetrics *OTelMetrics // Optional: OTel metrics provider (injected after creation)
+	mu          sync.RWMutex
 }
 
 // rateLimiter rate limiter for a single resource
@@ -93,6 +94,12 @@ func NewManagerWithLogger(config Config, ctxLogger *logger.CtxZapLogger, redisCl
 	}, nil
 }
 
+// SetMetrics injects the OTel metrics provider.
+// This should be called after the Manager is created when metrics are enabled.
+func (m *Manager) SetMetrics(metrics *OTelMetrics) {
+	m.otelMetrics = metrics
+}
+
 // Allow check if the request is permitted
 func (m *Manager) Allow(ctx context.Context, resource string) (bool, error) {
 	return m.AllowN(ctx, resource, 1)
@@ -109,6 +116,10 @@ func (m *Manager) AllowN(ctx context.Context, resource string, n int64) (bool, e
 
 	// If not enabled, allow directly
 	if !m.config.Enabled {
+		// Record OTel metrics for disabled limiter
+		if m.otelMetrics != nil {
+			m.otelMetrics.RecordAllowed(ctx, resource, "disabled")
+		}
 		return true, nil
 	}
 
@@ -123,6 +134,10 @@ func (m *Manager) AllowN(ctx context.Context, resource string, n int64) (bool, e
 			if m.logger != nil {
 				m.logger.DebugCtx(ctx, "🔓 [LimiterManager] Resource not configured and default config is invalid, auto-allowing",
 					zap.String("resource", resource))
+			}
+			// Record OTel metrics for auto-allowed requests
+			if m.otelMetrics != nil {
+				m.otelMetrics.RecordAllowed(ctx, resource, "none")
 			}
 			return true, nil
 		}
@@ -146,9 +161,14 @@ func (m *Manager) AllowN(ctx context.Context, resource string, n int64) (bool, e
 		return false, fmt.Errorf("algorithm allow failed: %w", err)
 	}
 
-	// Record metrics
+	// Record metrics (internal collector)
 	if resp.Allowed {
 		limiter.metrics.RecordAllowed(resp.Remaining)
+
+		// Record OTel metrics
+		if m.otelMetrics != nil {
+			m.otelMetrics.RecordAllowed(ctx, resource, limiter.config.Algorithm)
+		}
 
 		// Publish allow event
 		if m.eventBus != nil {
@@ -160,6 +180,11 @@ func (m *Manager) AllowN(ctx context.Context, resource string, n int64) (bool, e
 		}
 	} else {
 		limiter.metrics.RecordRejected("limit exceeded")
+
+		// Record OTel metrics
+		if m.otelMetrics != nil {
+			m.otelMetrics.RecordRejected(ctx, resource, limiter.config.Algorithm, "limit_exceeded")
+		}
 
 		// Publish rejection event
 		if m.eventBus != nil {

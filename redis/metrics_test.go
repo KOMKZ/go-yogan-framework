@@ -55,11 +55,9 @@ func TestRedisMetrics_RegisterMetrics(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.True(t, m.IsRegistered())
-		assert.NotNil(t, m.commandsTotal)
-		assert.NotNil(t, m.commandDuration)
-		assert.NotNil(t, m.errorsTotal)
-		assert.NotNil(t, m.cacheHits)
-		assert.NotNil(t, m.cacheMisses)
+		// 使用 MetricsBuilder 模板后，检查模板是否创建成功
+		assert.NotNil(t, m.operations) // OperationMetrics 模板
+		assert.NotNil(t, m.cache)      // CacheMetrics 模板
 	})
 
 	t.Run("idempotent registration", func(t *testing.T) {

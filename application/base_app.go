@@ -11,9 +11,18 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/KOMKZ/go-yogan-framework/auth"
+	"github.com/KOMKZ/go-yogan-framework/breaker"
 	"github.com/KOMKZ/go-yogan-framework/config"
+	"github.com/KOMKZ/go-yogan-framework/database"
 	"github.com/KOMKZ/go-yogan-framework/di"
+	"github.com/KOMKZ/go-yogan-framework/event"
+	"github.com/KOMKZ/go-yogan-framework/jwt"
+	"github.com/KOMKZ/go-yogan-framework/kafka"
+	"github.com/KOMKZ/go-yogan-framework/limiter"
 	"github.com/KOMKZ/go-yogan-framework/logger"
+	"github.com/KOMKZ/go-yogan-framework/redis"
+	"github.com/KOMKZ/go-yogan-framework/telemetry"
 	"github.com/samber/do/v2"
 	"go.uber.org/zap"
 )
@@ -162,6 +171,9 @@ func (b *BaseApplication) GetStartupTimeMs() int64 {
 func (b *BaseApplication) Setup() error {
 	b.setState(StateSetup)
 
+	// 🎯 Register component Metrics to MetricsRegistry (all app types)
+	b.registerComponentMetrics()
+
 	// Trigger OnSetup callback
 	if b.onSetup != nil {
 		if err := b.onSetup(b); err != nil {
@@ -170,6 +182,159 @@ func (b *BaseApplication) Setup() error {
 	}
 
 	return nil
+}
+
+// registerComponentMetrics registers all component metrics to the MetricsRegistry
+// This is called during Setup for all application types (HTTP, gRPC, CLI, Cron)
+func (b *BaseApplication) registerComponentMetrics() {
+	// Get MetricsRegistry from DI (optional)
+	registry, err := do.Invoke[*telemetry.MetricsRegistry](b.injector)
+	if err != nil || registry == nil {
+		return // Telemetry/Metrics not enabled
+	}
+
+	b.logger.DebugCtx(b.ctx, "telemetry is enabled.")
+
+	// Get TelemetryManager for config
+	telemetryMgr, _ := do.Invoke[*telemetry.Manager](b.injector)
+	if telemetryMgr == nil || !telemetryMgr.IsEnabled() {
+		return
+	}
+
+	metricsCfg := telemetryMgr.GetConfig().Metrics
+
+	// Register Redis Metrics
+	if metricsCfg.Redis.Enabled {
+		if redisMgr, err := do.Invoke[*redis.Manager](b.injector); err == nil && redisMgr != nil {
+			redisMetrics := redis.NewRedisMetrics(redis.RedisMetricsConfig{
+				Enabled:         true,
+				RecordHitMiss:   metricsCfg.Redis.RecordHitMiss,
+				RecordPoolStats: metricsCfg.Redis.RecordPoolStats,
+			})
+			if err := registry.Register(redisMetrics); err == nil {
+				// 注入 Hook 到 Redis Manager，实现自动指标记录
+				redisMgr.SetMetrics(redisMetrics)
+				b.logger.DebugCtx(b.ctx, "✅ Redis Metrics registered with Hook")
+			}
+		}
+	}
+
+	// Register JWT Metrics
+	if metricsCfg.JWT.Enabled {
+		if jwtMgr, err := do.Invoke[jwt.TokenManager](b.injector); err == nil && jwtMgr != nil {
+			jwtMetrics := jwt.NewJWTMetrics(jwt.JWTMetricsConfig{Enabled: true})
+			if err := registry.Register(jwtMetrics); err == nil {
+				// 注入 Metrics 到 TokenManager，实现自动指标记录
+				if jwt.SetTokenManagerMetrics(jwtMgr, jwtMetrics) {
+					b.logger.DebugCtx(b.ctx, "✅ JWT Metrics registered with Hook")
+				} else {
+					b.logger.DebugCtx(b.ctx, "✅ JWT Metrics registered (no hook support)")
+				}
+			}
+		}
+	}
+
+	// Register Auth Metrics
+	if metricsCfg.Auth.Enabled {
+		authMetrics := auth.NewAuthMetrics(auth.AuthMetricsConfig{Enabled: true})
+		if err := registry.Register(authMetrics); err == nil {
+			// 注入 Metrics 到 PasswordService，实现密码验证指标记录
+			if pwdSvc, err := do.Invoke[*auth.PasswordService](b.injector); err == nil && pwdSvc != nil {
+				pwdSvc.SetMetrics(authMetrics)
+				b.logger.DebugCtx(b.ctx, "✅ Auth Metrics registered with PasswordService")
+			} else {
+				b.logger.DebugCtx(b.ctx, "✅ Auth Metrics registered (no PasswordService)")
+			}
+		}
+	}
+
+	// Register Event Metrics
+	if metricsCfg.Event.Enabled {
+		if eventDisp, err := do.Invoke[event.Dispatcher](b.injector); err == nil && eventDisp != nil {
+			eventMetrics := event.NewEventMetrics(event.EventMetricsConfig{Enabled: true})
+			if err := registry.Register(eventMetrics); err == nil {
+				// 注入 Metrics 到 Dispatcher，实现事件指标记录
+				if event.SetDispatcherMetrics(eventDisp, eventMetrics) {
+					b.logger.DebugCtx(b.ctx, "✅ Event Metrics registered with Dispatcher")
+				} else {
+					b.logger.DebugCtx(b.ctx, "✅ Event Metrics registered (no hook support)")
+				}
+			}
+		}
+	}
+
+	// Register Kafka Metrics
+	if metricsCfg.Kafka.Enabled {
+		if kafkaMgr, err := do.Invoke[*kafka.Manager](b.injector); err == nil && kafkaMgr != nil {
+			kafkaMetrics := kafka.NewKafkaMetrics(kafka.KafkaMetricsConfig{
+				Enabled:   true,
+				RecordLag: metricsCfg.Kafka.RecordLag,
+			})
+			if err := registry.Register(kafkaMetrics); err == nil {
+				// 注入 Metrics 到 Kafka Manager，实现消息指标记录
+				kafkaMgr.SetMetrics(kafkaMetrics)
+				b.logger.DebugCtx(b.ctx, "✅ Kafka Metrics registered with Manager")
+			}
+		}
+	}
+
+	// Register Database Metrics
+	if metricsCfg.Database.Enabled {
+		if dbMgr, err := do.Invoke[*database.Manager](b.injector); err == nil && dbMgr != nil {
+			// 为每个数据库实例创建并注册 DBMetrics
+			for _, dbName := range dbMgr.GetDBNames() {
+				db := dbMgr.DB(dbName)
+				if db == nil {
+					continue
+				}
+				dbMetrics, err := database.NewDBMetrics(
+					db,
+					metricsCfg.Database.RecordSQLText,
+					metricsCfg.Database.SlowQuerySeconds,
+				)
+				if err != nil {
+					b.logger.WarnCtx(b.ctx, "⚠️ Failed to create DB Metrics",
+						zap.String("db", dbName), zap.Error(err))
+					continue
+				}
+				// 注册 GORM Plugin 到数据库实例
+				if err := dbMgr.SetMetricsPlugin(dbName, dbMetrics); err != nil {
+					b.logger.WarnCtx(b.ctx, "⚠️ Failed to set DB Metrics Plugin",
+						zap.String("db", dbName), zap.Error(err))
+					continue
+				}
+				b.logger.DebugCtx(b.ctx, "✅ Database Metrics registered",
+					zap.String("db", dbName))
+			}
+		}
+	}
+
+	// Register Breaker Metrics
+	if metricsCfg.Breaker.Enabled {
+		if breakerMgr, err := do.Invoke[*breaker.Manager](b.injector); err == nil && breakerMgr != nil {
+			breakerMetrics := breaker.NewOTelBreakerMetrics(breaker.BreakerMetricsConfig{
+				Enabled:     true,
+				RecordState: metricsCfg.Breaker.RecordState,
+			})
+			if err := registry.Register(breakerMetrics); err == nil {
+				// 注入 Metrics 到 Breaker Manager，实现熔断指标记录
+				breakerMgr.SetMetrics(breakerMetrics)
+				b.logger.DebugCtx(b.ctx, "✅ Breaker Metrics registered with Manager")
+			}
+		}
+	}
+
+	// Register Limiter Metrics
+	if metricsCfg.Limiter.Enabled {
+		if limiterMgr, err := do.Invoke[*limiter.Manager](b.injector); err == nil && limiterMgr != nil {
+			limiterMetrics := limiter.NewOTelMetrics(limiter.MetricsConfig{Enabled: true})
+			if err := registry.Register(limiterMetrics); err == nil {
+				// 注入 Metrics 到 Limiter Manager，实现限流指标记录
+				limiterMgr.SetMetrics(limiterMetrics)
+				b.logger.DebugCtx(b.ctx, "✅ Limiter Metrics registered with Manager")
+			}
+		}
+	}
 }
 
 // Shut down gracefully (core logic)

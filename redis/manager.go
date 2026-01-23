@@ -17,6 +17,7 @@ type Manager struct {
 	configs   map[string]Config               // Configuration
 	logger    *logger.CtxZapLogger            // Injector logger (supports TraceID)
 	mu        sync.RWMutex                    // read-write lock
+	metrics   *RedisMetrics                   // Optional: metrics provider (injected after creation)
 }
 
 // Create Redis manager
@@ -257,4 +258,66 @@ func (m *Manager) Close() error {
 // For automatically closing Redis connections when the DI container shuts down
 func (m *Manager) Shutdown() error {
 	return m.Close()
+}
+
+// SetMetrics injects the RedisMetrics provider and adds Hooks to all clients
+// This should be called after Manager creation, only when metrics are enabled
+// Safe to call multiple times (idempotent)
+func (m *Manager) SetMetrics(metrics *RedisMetrics) {
+	if metrics == nil || !metrics.IsMetricsEnabled() {
+		return
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Prevent duplicate injection
+	if m.metrics != nil {
+		return
+	}
+
+	m.metrics = metrics
+	ctx := context.Background()
+
+	// Add Hook to all standalone clients
+	for name, client := range m.instances {
+		hook := NewMetricsHook(metrics, name)
+		client.AddHook(hook)
+
+		// Register pool stats callback if enabled
+		if metrics.config.RecordPoolStats {
+			metrics.RegisterPoolCallback(name, func() PoolStats {
+				stats := client.PoolStats()
+				return PoolStats{
+					ActiveCount: int64(stats.TotalConns - stats.IdleConns),
+					IdleCount:   int64(stats.IdleConns),
+				}
+			})
+		}
+
+		m.logger.DebugCtx(ctx, "Redis Metrics Hook added",
+			zap.String("instance", name),
+			zap.String("mode", "standalone"))
+	}
+
+	// Add Hook to all cluster clients
+	for name, cluster := range m.clusters {
+		hook := NewMetricsHook(metrics, name)
+		cluster.AddHook(hook)
+
+		// Register pool stats callback if enabled
+		if metrics.config.RecordPoolStats {
+			metrics.RegisterPoolCallback(name, func() PoolStats {
+				stats := cluster.PoolStats()
+				return PoolStats{
+					ActiveCount: int64(stats.TotalConns - stats.IdleConns),
+					IdleCount:   int64(stats.IdleConns),
+				}
+			})
+		}
+
+		m.logger.DebugCtx(ctx, "Redis Metrics Hook added",
+			zap.String("instance", name),
+			zap.String("mode", "cluster"))
+	}
 }

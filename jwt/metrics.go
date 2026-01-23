@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/KOMKZ/go-yogan-framework/telemetry"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 )
@@ -15,18 +16,15 @@ type JWTMetricsConfig struct {
 }
 
 // JWTMetrics implements component.MetricsProvider for JWT instrumentation.
+// 使用 telemetry.TokenMetrics 模板减少样板代码
 type JWTMetrics struct {
 	config     JWTMetricsConfig
 	meter      metric.Meter
 	registered bool
 	mu         sync.RWMutex
 
-	// Metrics instruments
-	tokensGenerated     metric.Int64Counter     // Tokens generated
-	tokensVerified      metric.Int64Counter     // Tokens verified
-	tokensRefreshed     metric.Int64Counter     // Tokens refreshed
-	tokensRevoked       metric.Int64Counter     // Tokens revoked
-	verificationDuration metric.Float64Histogram // Verification duration
+	// 使用预定义模板
+	tokens *telemetry.TokenMetrics
 }
 
 // NewJWTMetrics creates a new JWT metrics provider
@@ -47,6 +45,7 @@ func (m *JWTMetrics) IsMetricsEnabled() bool {
 }
 
 // RegisterMetrics registers all JWT metrics with the provided Meter
+// 使用 MetricsBuilder 模板，代码量从 50+ 行减少到 10 行
 func (m *JWTMetrics) RegisterMetrics(meter metric.Meter) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -56,57 +55,14 @@ func (m *JWTMetrics) RegisterMetrics(meter metric.Meter) error {
 	}
 
 	m.meter = meter
-	var err error
 
-	// Counter: tokens generated
-	m.tokensGenerated, err = meter.Int64Counter(
-		"jwt_tokens_generated_total",
-		metric.WithDescription("Total number of JWT tokens generated"),
-		metric.WithUnit("{token}"),
-	)
+	// 使用 MetricsBuilder 的 TokenMetrics 模板，一行创建 5 个指标
+	builder := telemetry.NewMetricsBuilder(meter, "")
+	tokens, err := builder.NewTokenMetrics("jwt")
 	if err != nil {
 		return err
 	}
-
-	// Counter: tokens verified
-	m.tokensVerified, err = meter.Int64Counter(
-		"jwt_tokens_verified_total",
-		metric.WithDescription("Total number of JWT tokens verified"),
-		metric.WithUnit("{token}"),
-	)
-	if err != nil {
-		return err
-	}
-
-	// Counter: tokens refreshed
-	m.tokensRefreshed, err = meter.Int64Counter(
-		"jwt_tokens_refreshed_total",
-		metric.WithDescription("Total number of JWT tokens refreshed"),
-		metric.WithUnit("{token}"),
-	)
-	if err != nil {
-		return err
-	}
-
-	// Counter: tokens revoked
-	m.tokensRevoked, err = meter.Int64Counter(
-		"jwt_tokens_revoked_total",
-		metric.WithDescription("Total number of JWT tokens revoked"),
-		metric.WithUnit("{token}"),
-	)
-	if err != nil {
-		return err
-	}
-
-	// Histogram: verification duration
-	m.verificationDuration, err = meter.Float64Histogram(
-		"jwt_verification_duration_seconds",
-		metric.WithDescription("JWT verification duration distribution"),
-		metric.WithUnit("s"),
-	)
-	if err != nil {
-		return err
-	}
+	m.tokens = tokens
 
 	m.registered = true
 	return nil
@@ -114,41 +70,35 @@ func (m *JWTMetrics) RegisterMetrics(meter metric.Meter) error {
 
 // RecordGenerated records a token generation
 func (m *JWTMetrics) RecordGenerated(ctx context.Context, tokenType string) {
-	if !m.registered {
+	if !m.registered || m.tokens == nil {
 		return
 	}
-	m.tokensGenerated.Add(ctx, 1, metric.WithAttributes(
-		attribute.String("type", tokenType),
-	))
+	m.tokens.RecordGenerated(ctx, attribute.String("type", tokenType))
 }
 
 // RecordVerified records a token verification
 func (m *JWTMetrics) RecordVerified(ctx context.Context, result string, duration time.Duration) {
-	if !m.registered {
+	if !m.registered || m.tokens == nil {
 		return
 	}
-	m.tokensVerified.Add(ctx, 1, metric.WithAttributes(
-		attribute.String("result", result),
-	))
-	m.verificationDuration.Record(ctx, duration.Seconds())
+	m.tokens.RecordVerified(ctx, duration.Seconds(), result == "success",
+		attribute.String("result", result))
 }
 
 // RecordRefreshed records a token refresh
 func (m *JWTMetrics) RecordRefreshed(ctx context.Context, result string) {
-	if !m.registered {
+	if !m.registered || m.tokens == nil {
 		return
 	}
-	m.tokensRefreshed.Add(ctx, 1, metric.WithAttributes(
-		attribute.String("result", result),
-	))
+	m.tokens.RecordRefreshed(ctx, attribute.String("result", result))
 }
 
 // RecordRevoked records a token revocation
 func (m *JWTMetrics) RecordRevoked(ctx context.Context) {
-	if !m.registered {
+	if !m.registered || m.tokens == nil {
 		return
 	}
-	m.tokensRevoked.Add(ctx, 1)
+	m.tokens.RecordRevoked(ctx)
 }
 
 // IsRegistered returns whether metrics have been registered

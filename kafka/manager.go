@@ -17,6 +17,7 @@ type Manager struct {
 	config       Config
 	saramaConfig *sarama.Config
 	logger       *logger.CtxZapLogger
+	metrics      *KafkaMetrics // Optional: OTel metrics provider (injected after creation)
 
 	client        sarama.Client    // Sarama client
 	producer      Producer
@@ -365,6 +366,46 @@ func (m *Manager) ListTopics(ctx context.Context) ([]string, error) {
 // GetConfig Retrieve configuration
 func (m *Manager) GetConfig() Config {
 	return m.config
+}
+
+// SetMetrics injects the OTel metrics provider.
+// This should be called after the Manager is created when metrics are enabled.
+func (m *Manager) SetMetrics(metrics *KafkaMetrics) {
+	m.metrics = metrics
+}
+
+// GetMetrics returns the OTel metrics provider (may be nil).
+func (m *Manager) GetMetrics() *KafkaMetrics {
+	return m.metrics
+}
+
+// Produce sends a message and records metrics.
+// This is a convenience method that wraps the Producer.Send call with metrics recording.
+func (m *Manager) Produce(ctx context.Context, msg *Message) (*ProducerResult, error) {
+	start := time.Now()
+
+	if m.producer == nil {
+		err := fmt.Errorf("producer is not initialized")
+		// Record metrics for initialization failure
+		if m.metrics != nil {
+			m.metrics.RecordProduce(ctx, msg.Topic, -1, time.Since(start), err)
+		}
+		return nil, err
+	}
+
+	result, err := m.producer.Send(ctx, msg)
+	duration := time.Since(start)
+
+	// Record metrics
+	if m.metrics != nil {
+		partition := int32(-1)
+		if result != nil {
+			partition = result.Partition
+		}
+		m.metrics.RecordProduce(ctx, msg.Topic, partition, duration, err)
+	}
+
+	return result, err
 }
 
 // Close manager

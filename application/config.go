@@ -32,9 +32,20 @@ type ApiServerConfig struct {
 
 // MiddlewareConfig middleware configuration
 type MiddlewareConfig struct {
-	CORS       *CORSConfig       `mapstructure:"cors,omitempty"`
-	TraceID    *TraceIDConfig    `mapstructure:"trace_id,omitempty"`
-	RequestLog *RequestLogConfig `mapstructure:"request_log,omitempty"`
+	CORS       *CORSConfig            `mapstructure:"cors,omitempty"`
+	TraceID    *TraceIDConfig         `mapstructure:"trace_id,omitempty"`
+	RequestLog *RequestLogConfig      `mapstructure:"request_log,omitempty"`
+	Metrics    *MiddlewareMetricsConfig `mapstructure:"metrics,omitempty"`
+}
+
+// MiddlewareMetricsConfig HTTP metrics middleware configuration
+type MiddlewareMetricsConfig struct {
+	// Enabled whether to enable HTTP metrics collection (default false)
+	Enabled bool `mapstructure:"enabled"`
+	// RecordRequestSize whether to record request body size
+	RecordRequestSize bool `mapstructure:"record_request_size"`
+	// RecordResponseSize whether to record response body size
+	RecordResponseSize bool `mapstructure:"record_response_size"`
 }
 
 // TraceIDConfig Trace ID middleware configuration
