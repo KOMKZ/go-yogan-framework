@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/KOMKZ/go-yogan-framework/telemetry"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 )
@@ -18,20 +19,20 @@ type RedisMetricsConfig struct {
 }
 
 // RedisMetrics implements component.MetricsProvider for Redis instrumentation.
+// 使用 telemetry.OperationMetrics + telemetry.CacheMetrics 模板减少样板代码
 type RedisMetrics struct {
 	config     RedisMetricsConfig
 	meter      metric.Meter
 	registered bool
 	mu         sync.RWMutex
 
-	// Metrics instruments
-	commandsTotal    metric.Int64Counter       // Total commands executed
-	commandDuration  metric.Float64Histogram   // Command duration
-	errorsTotal      metric.Int64Counter       // Total errors
-	connectionsActive metric.Int64ObservableGauge // Active connections
-	connectionsIdle  metric.Int64ObservableGauge // Idle connections
-	cacheHits        metric.Int64Counter       // Cache hits (optional)
-	cacheMisses      metric.Int64Counter       // Cache misses (optional)
+	// 使用预定义模板
+	operations *telemetry.OperationMetrics // 命令操作指标
+	cache      *telemetry.CacheMetrics     // 缓存命中指标（可选）
+
+	// 连接池指标（需要 callback，保留原始实现）
+	connectionsActive metric.Int64ObservableGauge
+	connectionsIdle   metric.Int64ObservableGauge
 
 	// Pool stats callbacks
 	poolCallbacks map[string]func() PoolStats
@@ -63,6 +64,7 @@ func (m *RedisMetrics) IsMetricsEnabled() bool {
 }
 
 // RegisterMetrics registers all Redis metrics with the provided Meter
+// 使用 MetricsBuilder 模板，代码量从 80+ 行减少到 30 行
 func (m *RedisMetrics) RegisterMetrics(meter metric.Meter) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -72,60 +74,25 @@ func (m *RedisMetrics) RegisterMetrics(meter metric.Meter) error {
 	}
 
 	m.meter = meter
-	var err error
+	builder := telemetry.NewMetricsBuilder(meter, "redis")
 
-	// Counter: total commands
-	m.commandsTotal, err = meter.Int64Counter(
-		"redis_commands_total",
-		metric.WithDescription("Total number of Redis commands executed"),
-		metric.WithUnit("{command}"),
-	)
+	// 使用 OperationMetrics 模板创建命令操作指标
+	operations, err := builder.NewOperationMetrics("command")
 	if err != nil {
 		return err
 	}
+	m.operations = operations
 
-	// Histogram: command duration
-	m.commandDuration, err = meter.Float64Histogram(
-		"redis_command_duration_seconds",
-		metric.WithDescription("Redis command duration distribution"),
-		metric.WithUnit("s"),
-	)
-	if err != nil {
-		return err
-	}
-
-	// Counter: errors
-	m.errorsTotal, err = meter.Int64Counter(
-		"redis_errors_total",
-		metric.WithDescription("Total number of Redis errors"),
-		metric.WithUnit("{error}"),
-	)
-	if err != nil {
-		return err
-	}
-
-	// Optional: cache hits/misses
+	// Optional: cache hits/misses 使用 CacheMetrics 模板
 	if m.config.RecordHitMiss {
-		m.cacheHits, err = meter.Int64Counter(
-			"redis_cache_hits_total",
-			metric.WithDescription("Total number of cache hits"),
-			metric.WithUnit("{hit}"),
-		)
+		cache, err := builder.NewCacheMetrics("")
 		if err != nil {
 			return err
 		}
-
-		m.cacheMisses, err = meter.Int64Counter(
-			"redis_cache_misses_total",
-			metric.WithDescription("Total number of cache misses"),
-			metric.WithUnit("{miss}"),
-		)
-		if err != nil {
-			return err
-		}
+		m.cache = cache
 	}
 
-	// Optional: connection pool stats
+	// Optional: connection pool stats（需要 callback，保留原始实现）
 	if m.config.RecordPoolStats {
 		m.connectionsActive, err = meter.Int64ObservableGauge(
 			"redis_connections_active",
@@ -196,7 +163,7 @@ func (m *RedisMetrics) UnregisterPoolCallback(instance string) {
 
 // RecordCommand records a command execution
 func (m *RedisMetrics) RecordCommand(ctx context.Context, instance, command string, duration time.Duration, err error) {
-	if !m.registered {
+	if !m.registered || m.operations == nil {
 		return
 	}
 
@@ -205,31 +172,23 @@ func (m *RedisMetrics) RecordCommand(ctx context.Context, instance, command stri
 		attribute.String("command", command),
 	}
 
-	m.commandsTotal.Add(ctx, 1, metric.WithAttributes(attrs...))
-	m.commandDuration.Record(ctx, duration.Seconds(), metric.WithAttributes(attrs...))
-
-	if err != nil {
-		m.errorsTotal.Add(ctx, 1, metric.WithAttributes(
-			attribute.String("instance", instance),
-			attribute.String("error_type", "command_error"),
-		))
-	}
+	m.operations.Record(ctx, duration.Seconds(), err, attrs...)
 }
 
 // RecordCacheHit records a cache hit
 func (m *RedisMetrics) RecordCacheHit(ctx context.Context, instance string) {
-	if !m.registered || m.cacheHits == nil {
+	if !m.registered || m.cache == nil {
 		return
 	}
-	m.cacheHits.Add(ctx, 1, metric.WithAttributes(attribute.String("instance", instance)))
+	m.cache.RecordHit(ctx, attribute.String("instance", instance))
 }
 
 // RecordCacheMiss records a cache miss
 func (m *RedisMetrics) RecordCacheMiss(ctx context.Context, instance string) {
-	if !m.registered || m.cacheMisses == nil {
+	if !m.registered || m.cache == nil {
 		return
 	}
-	m.cacheMisses.Add(ctx, 1, metric.WithAttributes(attribute.String("instance", instance)))
+	m.cache.RecordMiss(ctx, attribute.String("instance", instance))
 }
 
 // IsRegistered returns whether metrics have been registered

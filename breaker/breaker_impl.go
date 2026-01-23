@@ -280,11 +280,12 @@ func (cb *circuitBreaker) Reset() {
 
 // Circuit breaker manager
 type Manager struct {
-	config   Config
-	breakers map[string]*circuitBreaker
-	eventBus EventBus
-	logger   *logger.CtxZapLogger
-	mu       sync.RWMutex
+	config      Config
+	breakers    map[string]*circuitBreaker
+	eventBus    EventBus
+	logger      *logger.CtxZapLogger
+	otelMetrics *OTelBreakerMetrics // Optional: OTel metrics provider (injected after creation)
+	mu          sync.RWMutex
 }
 
 // Create circuit breaker manager
@@ -330,6 +331,12 @@ func NewManagerWithLogger(config Config, ctxLogger *logger.CtxZapLogger) (*Manag
 	}, nil
 }
 
+// SetMetrics injects the OTel metrics provider.
+// This should be called after the Manager is created when metrics are enabled.
+func (m *Manager) SetMetrics(metrics *OTelBreakerMetrics) {
+	m.otelMetrics = metrics
+}
+
 // Execute the protected operation
 func (m *Manager) Execute(ctx context.Context, req *Request) (interface{}, error) {
 	if m.logger != nil {
@@ -344,7 +351,17 @@ func (m *Manager) Execute(ctx context.Context, req *Request) (interface{}, error
 			m.logger.DebugCtx(ctx, "🔍 [BreakerManager] Not enabled, executing directly",
 				zap.String("resource", req.Resource))
 		}
-		return req.Execute(ctx)
+		start := time.Now()
+		result, err := req.Execute(ctx)
+		// Record OTel metrics for disabled breaker
+		if m.otelMetrics != nil {
+			if err != nil {
+				m.otelMetrics.RecordFailure(ctx, req.Resource, time.Since(start), "error")
+			} else {
+				m.otelMetrics.RecordSuccess(ctx, req.Resource, time.Since(start))
+			}
+		}
+		return result, err
 	}
 
 	// Get or create the circuit breaker
@@ -356,12 +373,27 @@ func (m *Manager) Execute(ctx context.Context, req *Request) (interface{}, error
 	}
 
 	// Perform operation
+	start := time.Now()
 	result, err := breaker.Execute(ctx, req)
+	duration := time.Since(start)
+
 	if m.logger != nil {
 		m.logger.DebugCtx(ctx, "🔍 [BreakerManager] Execution completed",
 			zap.String("resource", req.Resource),
 			zap.Error(err))
 	}
+
+	// Record OTel metrics
+	if m.otelMetrics != nil {
+		if errors.Is(err, ErrCircuitOpen) || errors.Is(err, ErrTooManyRequests) {
+			m.otelMetrics.RecordRejection(ctx, req.Resource)
+		} else if err != nil {
+			m.otelMetrics.RecordFailure(ctx, req.Resource, duration, "error")
+		} else {
+			m.otelMetrics.RecordSuccess(ctx, req.Resource, duration)
+		}
+	}
+
 	return result, err
 }
 

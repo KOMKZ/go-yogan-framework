@@ -44,7 +44,11 @@ func RegisterCoreProviders(injector *do.RootScope, opts ConfigOptions) {
 	do.Provide(injector, ProvideEventDispatcherIndependent)
 	do.Provide(injector, ProvideCacheOrchestrator)
 	do.Provide(injector, ProvideLimiterManager)
+	do.Provide(injector, ProvideBreakerManager)
 	do.Provide(injector, ProvideHealthAggregator)
+	do.Provide(injector, ProvideTelemetryManager)
+	do.Provide(injector, ProvideMetricsRegistry)
+	do.Provide(injector, ProvidePasswordService)
 
 	// ═══════════════════════════════════════════════════════════
 	// Layer 4: Documentation and auxiliary components (lazy loading)

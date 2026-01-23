@@ -46,10 +46,10 @@ func TestAuthMetrics_RegisterMetrics(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.True(t, m.IsRegistered())
-		assert.NotNil(t, m.loginsTotal)
-		assert.NotNil(t, m.loginDuration)
-		assert.NotNil(t, m.passwordValidations)
-		assert.NotNil(t, m.failedAttempts)
+		// 使用 MetricsBuilder 模板后，检查模板是否创建成功
+		assert.NotNil(t, m.login)               // RequestMetrics 模板
+		assert.NotNil(t, m.passwordValidations) // 额外 Counter
+		assert.NotNil(t, m.failedAttempts)      // 额外 Counter
 	})
 
 	t.Run("idempotent registration", func(t *testing.T) {

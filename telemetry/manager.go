@@ -41,7 +41,13 @@ func (m *Manager) Start(ctx context.Context) error {
 		return nil
 	}
 
-	// Create TracerProvider
+	// 1. Create Resource (shared by Traces and Metrics)
+	res, err := m.createResource(ctx)
+	if err != nil {
+		return err
+	}
+
+	// 2. Create TracerProvider
 	tp, shutdownFn, err := m.createTracerProvider(ctx)
 	if err != nil {
 		return err
@@ -53,18 +59,54 @@ func (m *Manager) Start(ctx context.Context) error {
 	// Set global TracerProvider
 	otel.SetTracerProvider(tp)
 
-	m.logger.InfoCtx(ctx, "✅ Telemetry started",
+	m.logger.InfoCtx(ctx, "✅ Telemetry Traces started",
 		zap.String("service_name", m.config.ServiceName),
 		zap.String("exporter", m.config.Exporter.Type),
 	)
+
+	// 3. Create MetricsManager (if metrics enabled)
+	if m.config.Metrics.Enabled {
+		mm, err := NewMetricsManager(m.config, res)
+		if err != nil {
+			m.logger.WarnCtx(ctx, "⚠️ MetricsManager creation failed, metrics disabled",
+				zap.Error(err),
+			)
+			// Don't return error, allow traces to work without metrics
+		} else {
+			m.metricsManager = mm
+			m.logger.InfoCtx(ctx, "✅ Telemetry Metrics started",
+				zap.Duration("export_interval", m.config.Metrics.ExportInterval),
+			)
+		}
+	}
 
 	return nil
 }
 
 // Shut down telemetry component
 func (m *Manager) Shutdown(ctx context.Context) error {
+	if m == nil {
+		return nil
+	}
+
+	var errs []error
+
+	// Shutdown MetricsManager first
+	if m.metricsManager != nil {
+		if err := m.metricsManager.Shutdown(ctx); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	// Shutdown TracerProvider
 	if m.shutdownFn != nil {
-		return m.shutdownFn(ctx)
+		if err := m.shutdownFn(ctx); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	if len(errs) > 0 {
+		return errs[0] // Return first error
 	}
 	return nil
 }

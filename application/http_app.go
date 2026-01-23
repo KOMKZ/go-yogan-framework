@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/KOMKZ/go-yogan-framework/health"
 	"github.com/KOMKZ/go-yogan-framework/limiter"
 	"github.com/KOMKZ/go-yogan-framework/swagger"
 	"github.com/KOMKZ/go-yogan-framework/telemetry"
@@ -131,13 +132,20 @@ func (a *Application) startHTTPServer() error {
 		limiterMgr = mgr
 	}
 
-	// Create HTTP Server (pass middleware configuration, httpx configuration, rate limiter, and telemetry)
-	a.httpServer = NewHTTPServerWithTelemetry(
+	// 🎯 Obtain Health Aggregator via DI (optional)
+	var healthAgg *health.Aggregator
+	if agg, err := do.Invoke[*health.Aggregator](a.GetInjector()); err == nil && agg != nil {
+		healthAgg = agg
+	}
+
+	// Create HTTP Server (pass middleware configuration, httpx configuration, rate limiter, telemetry, and health)
+	a.httpServer = NewHTTPServerWithTelemetryAndHealth(
 		a.appConfig.ApiServer,
 		a.appConfig.Middleware,
 		a.appConfig.Httpx,
 		limiterMgr,
 		telemetryMgr,
+		healthAgg,
 	)
 
 	// Register route for business application (passing Application dependencies container)

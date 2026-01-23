@@ -40,6 +40,7 @@ type tokenManagerImpl struct {
 	verifyKey     interface{}
 	tokenStore    TokenStore
 	logger        *logger.CtxZapLogger
+	metrics       *JWTMetrics // Optional: metrics provider (injected after creation)
 }
 
 // NewTokenManager creates TokenManager
@@ -60,6 +61,22 @@ func NewTokenManager(config *Config, tokenStore TokenStore, log *logger.CtxZapLo
 	}
 
 	return manager, nil
+}
+
+// SetMetrics injects the JWT metrics provider.
+// This should be called after the TokenManager is created when metrics are enabled.
+func (m *tokenManagerImpl) SetMetrics(metrics *JWTMetrics) {
+	m.metrics = metrics
+}
+
+// SetTokenManagerMetrics is a helper function to inject metrics into a TokenManager.
+// Returns true if successful, false if the TokenManager doesn't support metrics injection.
+func SetTokenManagerMetrics(mgr TokenManager, metrics *JWTMetrics) bool {
+	if impl, ok := mgr.(*tokenManagerImpl); ok {
+		impl.SetMetrics(metrics)
+		return true
+	}
+	return false
 }
 
 // set up signing method
@@ -140,6 +157,11 @@ func (m *tokenManagerImpl) GenerateAccessToken(ctx context.Context, subject stri
 		zap.Duration("ttl", m.config.AccessToken.TTL),
 	)
 
+	// Record Metrics
+	if m.metrics != nil {
+		m.metrics.RecordGenerated(ctx, "access")
+	}
+
 	return tokenString, nil
 }
 
@@ -175,11 +197,18 @@ func (m *tokenManagerImpl) GenerateRefreshToken(ctx context.Context, subject str
 		zap.Duration("ttl", m.config.RefreshToken.TTL),
 	)
 
+	// Record Metrics
+	if m.metrics != nil {
+		m.metrics.RecordGenerated(ctx, "refresh")
+	}
+
 	return tokenString, nil
 }
 
 // VerifyToken validate and parse Token
 func (m *tokenManagerImpl) VerifyToken(ctx context.Context, tokenString string) (*Claims, error) {
+	start := time.Now()
+
 	// Parse Token
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		// Verify signature algorithm
@@ -193,16 +222,25 @@ func (m *tokenManagerImpl) VerifyToken(ctx context.Context, tokenString string) 
 		m.logger.WarnCtx(ctx, "token verification failed",
 			zap.Error(err),
 		)
+		if m.metrics != nil {
+			m.metrics.RecordVerified(ctx, "error", time.Since(start))
+		}
 		return nil, m.parseJWTError(err)
 	}
 
 	if !token.Valid {
+		if m.metrics != nil {
+			m.metrics.RecordVerified(ctx, "invalid", time.Since(start))
+		}
 		return nil, ErrTokenInvalid
 	}
 
 	// Extract claims
 	mapClaims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
+		if m.metrics != nil {
+			m.metrics.RecordVerified(ctx, "invalid", time.Since(start))
+		}
 		return nil, ErrInvalidClaims
 	}
 
@@ -212,6 +250,9 @@ func (m *tokenManagerImpl) VerifyToken(ctx context.Context, tokenString string) 
 		m.logger.WarnCtx(ctx, "failed to parse claims",
 			zap.Error(err),
 		)
+		if m.metrics != nil {
+			m.metrics.RecordVerified(ctx, "error", time.Since(start))
+		}
 		return nil, err
 	}
 
@@ -223,12 +264,18 @@ func (m *tokenManagerImpl) VerifyToken(ctx context.Context, tokenString string) 
 			m.logger.ErrorCtx(ctx, "failed to check token blacklist",
 				zap.Error(err),
 			)
+			if m.metrics != nil {
+				m.metrics.RecordVerified(ctx, "error", time.Since(start))
+			}
 			return nil, fmt.Errorf("check blacklist failed: %w", err)
 		}
 		if blacklisted {
 			m.logger.WarnCtx(ctx, "token is blacklisted",
 				zap.String("subject", claims.Subject),
 			)
+			if m.metrics != nil {
+				m.metrics.RecordVerified(ctx, "blacklisted", time.Since(start))
+			}
 			return nil, ErrTokenBlacklisted
 		}
 
@@ -238,12 +285,18 @@ func (m *tokenManagerImpl) VerifyToken(ctx context.Context, tokenString string) 
 			m.logger.ErrorCtx(ctx, "failed to check user blacklist",
 				zap.Error(err),
 			)
+			if m.metrics != nil {
+				m.metrics.RecordVerified(ctx, "error", time.Since(start))
+			}
 			return nil, fmt.Errorf("check user blacklist failed: %w", err)
 		}
 		if userBlacklisted {
 			m.logger.WarnCtx(ctx, "user is blacklisted",
 				zap.String("subject", claims.Subject),
 			)
+			if m.metrics != nil {
+				m.metrics.RecordVerified(ctx, "blacklisted", time.Since(start))
+			}
 			return nil, ErrTokenBlacklisted
 		}
 	}
@@ -251,6 +304,11 @@ func (m *tokenManagerImpl) VerifyToken(ctx context.Context, tokenString string) 
 	m.logger.DebugCtx(ctx, "token verified",
 		zap.String("subject", claims.Subject),
 	)
+
+	// Record successful verification
+	if m.metrics != nil {
+		m.metrics.RecordVerified(ctx, "success", time.Since(start))
+	}
 
 	return claims, nil
 }
@@ -260,11 +318,17 @@ func (m *tokenManagerImpl) RefreshToken(ctx context.Context, refreshToken string
 	// Validate Refresh Token
 	claims, err := m.VerifyToken(ctx, refreshToken)
 	if err != nil {
+		if m.metrics != nil {
+			m.metrics.RecordRefreshed(ctx, "error")
+		}
 		return "", fmt.Errorf("invalid refresh token: %w", err)
 	}
 
 	// Check token type
 	if claims.TokenType != "refresh" {
+		if m.metrics != nil {
+			m.metrics.RecordRefreshed(ctx, "invalid_type")
+		}
 		return "", fmt.Errorf("not a refresh token")
 	}
 
@@ -291,6 +355,11 @@ func (m *tokenManagerImpl) RefreshToken(ctx context.Context, refreshToken string
 	m.logger.InfoCtx(ctx, "token refreshed",
 		zap.String("subject", claims.Subject),
 	)
+
+	// Record Metrics
+	if m.metrics != nil {
+		m.metrics.RecordRefreshed(ctx, "success")
+	}
 
 	return accessToken, nil
 }
@@ -323,6 +392,11 @@ func (m *tokenManagerImpl) RevokeToken(ctx context.Context, tokenString string) 
 		zap.String("subject", claims.Subject),
 		zap.Duration("ttl", ttl),
 	)
+
+	// Record Metrics
+	if m.metrics != nil {
+		m.metrics.RecordRevoked(ctx)
+	}
 
 	return nil
 }
