@@ -23,6 +23,7 @@ func TestGormLogger_Basic(t *testing.T) {
 
 	InitManager(ManagerConfig{
 		BaseLogDir:            logDir,
+		LogDirMode:            LogDirModeModule,
 		Level:                 "debug",
 		Encoding:              "json",
 		EnableConsole:         false,
@@ -122,6 +123,7 @@ func TestGormLogger_SilentMode(t *testing.T) {
 
 	InitManager(ManagerConfig{
 		BaseLogDir:            logDir,
+		LogDirMode:            LogDirModeModule,
 		Level:                 "debug",
 		Encoding:              "json",
 		EnableConsole:         false,

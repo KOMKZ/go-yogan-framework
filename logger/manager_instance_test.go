@@ -19,6 +19,7 @@ func TestNewManager(t *testing.T) {
 
 	cfg := ManagerConfig{
 		BaseLogDir: logDir,
+		LogDirMode: LogDirModeModule,
 		Level:      "info",
 		Encoding:   "json",
 	}
@@ -39,6 +40,7 @@ func TestManager_IndependentInstances(t *testing.T) {
 	// Create application log Manager
 	appManager := NewManager(ManagerConfig{
 		BaseLogDir:            appLogDir,
+		LogDirMode:            LogDirModeModule,
 		Level:                 "info",
 		Encoding:              "json",
 		EnableConsole:         false,
@@ -50,6 +52,7 @@ func TestManager_IndependentInstances(t *testing.T) {
 	// Create audit log Manager
 	auditManager := NewManager(ManagerConfig{
 		BaseLogDir:            auditLogDir,
+		LogDirMode:            LogDirModeModule,
 		Level:                 "info",
 		Encoding:              "json",
 		EnableConsole:         false,
@@ -89,6 +92,7 @@ func TestManager_InstanceMethods(t *testing.T) {
 
 	manager := NewManager(ManagerConfig{
 		BaseLogDir:            logDir,
+		LogDirMode:            LogDirModeModule,
 		Level:                 "debug",
 		Encoding:              "json",
 		EnableConsole:         false,
@@ -124,6 +128,7 @@ func TestManager_InstanceWithFields(t *testing.T) {
 
 	manager := NewManager(ManagerConfig{
 		BaseLogDir:            logDir,
+		LogDirMode:            LogDirModeModule,
 		Level:                 "info",
 		Encoding:              "json",
 		EnableConsole:         false,
@@ -159,6 +164,7 @@ func TestManager_InstanceTraceID(t *testing.T) {
 
 	manager := NewManager(ManagerConfig{
 		BaseLogDir:            logDir,
+		LogDirMode:            LogDirModeModule,
 		Level:                 "info",
 		Encoding:              "json",
 		EnableConsole:         false,
@@ -199,6 +205,7 @@ func TestManager_InstanceReloadConfig(t *testing.T) {
 
 	manager := NewManager(ManagerConfig{
 		BaseLogDir:            logDir,
+		LogDirMode:            LogDirModeModule,
 		Level:                 "info",
 		Encoding:              "json",
 		EnableConsole:         false,
@@ -213,6 +220,7 @@ func TestManager_InstanceReloadConfig(t *testing.T) {
 	// Override configuration (change to debug level)
 	newCfg := ManagerConfig{
 		BaseLogDir:            logDir,
+		LogDirMode:            LogDirModeModule,
 		Level:                 "debug",
 		Encoding:              "json",
 		EnableConsole:         false,
@@ -253,6 +261,7 @@ func TestManager_GlobalAndInstanceCoexist(t *testing.T) {
 	// Initialize global Manager
 	InitManager(ManagerConfig{
 		BaseLogDir:            globalLogDir,
+		LogDirMode:            LogDirModeModule,
 		Level:                 "info",
 		Encoding:              "json",
 		EnableConsole:         false,
@@ -264,6 +273,7 @@ func TestManager_GlobalAndInstanceCoexist(t *testing.T) {
 	// Create custom Manager
 	customManager := NewManager(ManagerConfig{
 		BaseLogDir:            customLogDir,
+		LogDirMode:            LogDirModeModule,
 		Level:                 "info",
 		Encoding:              "json",
 		EnableConsole:         false,
@@ -299,7 +309,9 @@ func TestManager_IsolatedTesting(t *testing.T) {
 		tmpDir := t.TempDir()
 		logDir := filepath.Join(tmpDir, "test1")
 
-		m := NewManager(DefaultManagerConfig())
+		cfg := DefaultManagerConfig()
+		cfg.LogDirMode = LogDirModeModule
+		m := NewManager(cfg)
 		m.baseConfig.BaseLogDir = logDir
 		m.InfoCtx(context.Background(), "module1", "English: Test 11")
 		m.CloseAll()
@@ -311,7 +323,9 @@ func TestManager_IsolatedTesting(t *testing.T) {
 		tmpDir := t.TempDir()
 		logDir := filepath.Join(tmpDir, "test2")
 
-		m := NewManager(DefaultManagerConfig())
+		cfg := DefaultManagerConfig()
+		cfg.LogDirMode = LogDirModeModule
+		m := NewManager(cfg)
 		m.baseConfig.BaseLogDir = logDir
 		m.InfoCtx(context.Background(), "module2", "English: Test 22")
 		m.CloseAll()

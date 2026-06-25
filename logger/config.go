@@ -18,8 +18,10 @@ type Config struct {
 	ConsoleEncoding string
 
 	// Internal fields (set automatically by Manager, no user action required)
-	moduleName string // Business module name (e.g., order, auth, user)
-	logDir     string // Log root directory (default logs/)
+	moduleName     string // Business module name (e.g., order, auth, user)
+	logDir         string // Log root directory (default logs/)
+	logDirMode     string // Log directory mode: single/module
+	fileNamePrefix string // Shared file prefix in single mode
 
 	EnableFile    bool
 	EnableConsole bool
@@ -48,7 +50,7 @@ type Config struct {
 type ManagerConfig struct {
 	BaseLogDir               string `mapstructure:"base_log_dir"` // Fix root directory (default logs/)
 	Level                    string `mapstructure:"level"`
-	AppName                  string `mapstructure:"app_name"`      // Application name (automatically injects all logs, including null values)
+	AppName                  string `mapstructure:"app_name"` // Application name (automatically injects all logs, including null values)
 	Encoding                 string `mapstructure:"encoding"`
 	ConsoleEncoding          string `mapstructure:"console_encoding"`
 	EnableConsole            bool   `mapstructure:"enable_console"`
@@ -66,6 +68,7 @@ type ManagerConfig struct {
 	StacktraceDepth          int    `mapstructure:"stacktrace_depth"` // stack depth (0=unlimited)
 	LoggerName               string `mapstructure:"logger_name"`
 	ModuleNumber             int    `mapstructure:"module_number"`
+	LogDirMode               string `mapstructure:"log_dir_mode"` // single (default) / module
 
 	// Render style configuration (valid for console_pretty encoder only)
 	// Optional values: single_line (default), key_value
@@ -77,11 +80,17 @@ type ManagerConfig struct {
 	TraceIDFieldName string `mapstructure:"trace_id_field_name"` // Log field name (default "trace_id")
 }
 
+const (
+	LogDirModeSingle = "single"
+	LogDirModeModule = "module"
+)
+
 // Returns default manager configuration
 func DefaultManagerConfig() ManagerConfig {
 	return ManagerConfig{
 		BaseLogDir:               "logs",
 		LoggerName:               "logger",
+		LogDirMode:               LogDirModeSingle,
 		Level:                    "info",
 		Encoding:                 "json",
 		EnableConsole:            true,
@@ -117,6 +126,9 @@ func (c *ManagerConfig) ApplyDefaults() {
 	}
 	if c.LoggerName == "" {
 		c.LoggerName = defaults.LoggerName
+	}
+	if c.LogDirMode == "" {
+		c.LogDirMode = defaults.LogDirMode
 	}
 	if c.Level == "" {
 		c.Level = defaults.Level
@@ -246,6 +258,10 @@ func (c ManagerConfig) Validate() error {
 		return fmt.Errorf("Invalid stack trace level: %s (valid values: %v)", c.StacktraceLevel, validLevels)
 	}
 
+	if !contains([]string{LogDirModeSingle, LogDirModeModule}, normalizeLogDirMode(c.LogDirMode)) {
+		return fmt.Errorf("Invalid log directory mode: %s (valid values: [%s %s])", c.LogDirMode, LogDirModeSingle, LogDirModeModule)
+	}
+
 	return nil
 }
 
@@ -265,7 +281,20 @@ func (c Config) getModuleLogDir() string {
 	if c.moduleName == "" {
 		return c.logDir
 	}
+
+	if normalizeLogDirMode(c.logDirMode) == LogDirModeSingle {
+		return c.logDir
+	}
+
 	return filepath.Join(c.logDir, c.moduleName)
+}
+
+func normalizeLogDirMode(mode string) string {
+	normalized := strings.ToLower(strings.TrimSpace(mode))
+	if normalized == "" {
+		return LogDirModeSingle
+	}
+	return normalized
 }
 
 // getInfoFilePath Get the complete path of the Info log (internal method)
@@ -286,7 +315,17 @@ func (c Config) getErrorFilePath() string {
 // - logs/order/order-info-2024-12-19.log (module name + level + date)
 // - logs/order/order-info-01-2024-12-19.log (full format)
 func (c Config) buildFilePath(level string) string {
-	parts := []string{c.moduleName}
+	filePrefix := strings.TrimSpace(c.moduleName)
+	if normalizeLogDirMode(c.logDirMode) == LogDirModeSingle {
+		if strings.TrimSpace(c.fileNamePrefix) != "" {
+			filePrefix = strings.TrimSpace(c.fileNamePrefix)
+		}
+	}
+	if filePrefix == "" {
+		filePrefix = "logger"
+	}
+
+	parts := []string{filePrefix}
 
 	// Add level
 	if c.EnableLevelInFilename {

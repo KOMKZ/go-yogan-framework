@@ -18,6 +18,7 @@ func TestManagerConfig_ApplyDefaults(t *testing.T) {
 			expected: ManagerConfig{
 				BaseLogDir:               "logs",
 				LoggerName:               "logger",
+				LogDirMode:               LogDirModeSingle,
 				Level:                    "info",
 				Encoding:                 "json",
 				ConsoleEncoding:          "",
@@ -45,48 +46,51 @@ func TestManagerConfig_ApplyDefaults(t *testing.T) {
 				MaxSize: 200,
 			},
 			expected: ManagerConfig{
-				BaseLogDir:       "logs",      // Fill with default values
-				LoggerName:       "logger",    // Fill with default values
-				Level:            "debug",     // preserve user values
-				Encoding:         "json",      // Fill with default values
+				BaseLogDir:       "logs",   // Fill with default values
+				LoggerName:       "logger", // Fill with default values
+				LogDirMode:       LogDirModeSingle,
+				Level:            "debug",      // preserve user values
+				Encoding:         "json",       // Fill with default values
 				DateFormat:       "2006-01-02", // Set default values
-				MaxSize:          200,         // preserve user values
-				MaxBackups:       3,           // Set default values
-				MaxAge:           28,          // Fill with default values
-				StacktraceLevel:  "error",     // Fill with default values
-				TraceIDKey:       "trace_id",  // Fill with default values
-				TraceIDFieldName: "trace_id",  // Fill with default values
+				MaxSize:          200,          // preserve user values
+				MaxBackups:       3,            // Set default values
+				MaxAge:           28,           // Fill with default values
+				StacktraceLevel:  "error",      // Fill with default values
+				TraceIDKey:       "trace_id",   // Fill with default values
+				TraceIDFieldName: "trace_id",   // Fill with default values
 			},
 		},
 		{
 			name: "完整配置不应被覆盖",
 			input: ManagerConfig{
-				BaseLogDir:      "custom/logs",
-				LoggerName:      "custom",
-				Level:           "warn",
-				Encoding:        "console",
-				ConsoleEncoding: "console_pretty",
-				DateFormat:      "2006-01-02-15",
-				MaxSize:         500,
-				MaxBackups:      10,
-				MaxAge:          90,
-				StacktraceLevel: "fatal",
-				TraceIDKey:      "request_id",
+				BaseLogDir:       "custom/logs",
+				LoggerName:       "custom",
+				LogDirMode:       LogDirModeModule,
+				Level:            "warn",
+				Encoding:         "console",
+				ConsoleEncoding:  "console_pretty",
+				DateFormat:       "2006-01-02-15",
+				MaxSize:          500,
+				MaxBackups:       10,
+				MaxAge:           90,
+				StacktraceLevel:  "fatal",
+				TraceIDKey:       "request_id",
 				TraceIDFieldName: "req_id",
 			},
 			expected: ManagerConfig{
-				BaseLogDir:       "custom/logs",     // preserve user values
-				LoggerName:       "custom",          // preserve user values
-				Level:            "warn",            // preserve user values
-				Encoding:         "console",         // preserve user values
-				ConsoleEncoding:  "console_pretty",  // preserve user values
-				DateFormat:       "2006-01-02-15",   // preserve user values
-				MaxSize:          500,               // preserve user values
-				MaxBackups:       10,                // preserve user values
-				MaxAge:           90,                // preserve user values
-				StacktraceLevel:  "fatal",           // preserve user values
-				TraceIDKey:       "request_id",      // preserve user values
-				TraceIDFieldName: "req_id",          // retain user values
+				BaseLogDir:       "custom/logs", // preserve user values
+				LoggerName:       "custom",      // preserve user values
+				LogDirMode:       LogDirModeModule,
+				Level:            "warn",           // preserve user values
+				Encoding:         "console",        // preserve user values
+				ConsoleEncoding:  "console_pretty", // preserve user values
+				DateFormat:       "2006-01-02-15",  // preserve user values
+				MaxSize:          500,              // preserve user values
+				MaxBackups:       10,               // preserve user values
+				MaxAge:           90,               // preserve user values
+				StacktraceLevel:  "fatal",          // preserve user values
+				TraceIDKey:       "request_id",     // preserve user values
+				TraceIDFieldName: "req_id",         // retain user values
 			},
 		},
 	}
@@ -102,6 +106,9 @@ func TestManagerConfig_ApplyDefaults(t *testing.T) {
 			}
 			if cfg.LoggerName != tt.expected.LoggerName {
 				t.Errorf("LoggerName: got %s, want %s", cfg.LoggerName, tt.expected.LoggerName)
+			}
+			if cfg.LogDirMode != tt.expected.LogDirMode {
+				t.Errorf("LogDirMode: got %s, want %s", cfg.LogDirMode, tt.expected.LogDirMode)
 			}
 			if cfg.Level != tt.expected.Level {
 				t.Errorf("Level: got %s, want %s", cfg.Level, tt.expected.Level)
@@ -147,6 +154,9 @@ func TestNewManager_ApplyDefaults(t *testing.T) {
 	m1 := NewManager(ManagerConfig{})
 	if m1.baseConfig.Level != "info" {
 		t.Errorf("Empty configuration should be filled with default Level=info, actual: %s", m1.baseConfig.Level)
+	}
+	if m1.baseConfig.LogDirMode != LogDirModeSingle {
+		t.Errorf("Empty configuration should be filled with default LogDirMode=%s, actual: %s", LogDirModeSingle, m1.baseConfig.LogDirMode)
 	}
 	if m1.baseConfig.MaxSize != 100 {
 		t.Errorf("Empty configuration should be filled with default MaxSize=100, actual: %d", m1.baseConfig.MaxSize)
@@ -229,6 +239,18 @@ func TestManagerConfig_Validate(t *testing.T) {
 			},
 			wantError: true,
 		},
+		{
+			name: "日志目录模式非法应报错",
+			cfg: ManagerConfig{
+				Level:           "info",
+				Encoding:        "json",
+				MaxSize:         100,
+				MaxAge:          28,
+				StacktraceLevel: "error",
+				LogDirMode:      "invalid",
+			},
+			wantError: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -240,4 +262,3 @@ func TestManagerConfig_Validate(t *testing.T) {
 		})
 	}
 }
-

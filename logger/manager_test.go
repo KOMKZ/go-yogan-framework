@@ -19,6 +19,7 @@ func TestManager_Demo01(t *testing.T) {
 	defer os.RemoveAll("logs")
 	InitManager(ManagerConfig{
 		BaseLogDir:            "logs",
+		LogDirMode:            LogDirModeModule,
 		Level:                 "info",
 		Encoding:              "json",
 		ConsoleEncoding:       "console",
@@ -50,6 +51,7 @@ func TestManager_MultipleModules(t *testing.T) {
 	// Initialize manager
 	InitManager(ManagerConfig{
 		BaseLogDir:            "logs",
+		LogDirMode:            LogDirModeModule,
 		Level:                 "info",
 		Encoding:              "json",
 		EnableConsole:         false,
@@ -93,7 +95,9 @@ func TestManager_DynamicModules(t *testing.T) {
 	managerOnce = sync.Once{}
 
 	// Without preconfiguration, use directly (automatically create module)
-	InitManager(DefaultManagerConfig())
+	cfg := DefaultManagerConfig()
+	cfg.LogDirMode = LogDirModeModule
+	InitManager(cfg)
 
 	// Dynamically create multiple modules
 	Info("order", "Order creation")
@@ -118,7 +122,9 @@ func TestManager_ConcurrentAccess(t *testing.T) {
 	globalManager = nil
 	managerOnce = sync.Once{}
 
-	InitManager(DefaultManagerConfig())
+	cfg := DefaultManagerConfig()
+	cfg.LogDirMode = LogDirModeModule
+	InitManager(cfg)
 
 	// Concurrently obtain the same Logger
 	done := make(chan bool, 10)
@@ -155,7 +161,7 @@ func TestManager_ZeroConfig(t *testing.T) {
 
 	// Should use default configuration for creation
 	assert.NotNil(t, globalManager)
-	assert.DirExists(t, "logs/default")
+	assert.FileExists(t, "logs/logger-info-"+time.Now().Format("2006-01-02")+".log")
 }
 
 // TestManager_DateInFilename test date in filename functionality
@@ -169,6 +175,7 @@ func TestManager_DateInFilename(t *testing.T) {
 	// Configure enable date filename
 	InitManager(ManagerConfig{
 		BaseLogDir:            "logs",
+		LogDirMode:            LogDirModeModule,
 		Level:                 "info",
 		Encoding:              "json",
 		EnableConsole:         false,
@@ -201,6 +208,7 @@ func TestManager_FileSplit(t *testing.T) {
 	// Configure small file size to trigger splitting (1KB)
 	InitManager(ManagerConfig{
 		BaseLogDir:            "logs",
+		LogDirMode:            LogDirModeModule,
 		Level:                 "info",
 		Encoding:              "json",
 		EnableConsole:         false,
@@ -245,6 +253,7 @@ func TestManager_Stacktrace(t *testing.T) {
 	// Configure stack trace enabled
 	InitManager(ManagerConfig{
 		BaseLogDir:            "logs",
+		LogDirMode:            LogDirModeModule,
 		Level:                 "info",
 		Encoding:              "json",
 		EnableConsole:         false,
@@ -295,6 +304,7 @@ func TestManager_CallerInfo(t *testing.T) {
 	// Enable caller information
 	InitManager(ManagerConfig{
 		BaseLogDir:            "logs",
+		LogDirMode:            LogDirModeModule,
 		Level:                 "info",
 		Encoding:              "json",
 		EnableConsole:         false,
@@ -326,6 +336,7 @@ func TestManager_WithFields(t *testing.T) {
 
 	InitManager(ManagerConfig{
 		BaseLogDir:            "logs",
+		LogDirMode:            LogDirModeModule,
 		Level:                 "info",
 		Encoding:              "json",
 		EnableConsole:         false,
@@ -365,6 +376,7 @@ func TestManager_LevelSeparation(t *testing.T) {
 
 	InitManager(ManagerConfig{
 		BaseLogDir:            "logs",
+		LogDirMode:            LogDirModeModule,
 		Level:                 "info",
 		Encoding:              "json",
 		EnableConsole:         false,
@@ -410,6 +422,7 @@ func TestManager_TraceIDBasic(t *testing.T) {
 	// Initialize (enable TraceID)
 	InitManager(ManagerConfig{
 		BaseLogDir:            "logs",
+		LogDirMode:            LogDirModeModule,
 		Level:                 "info",
 		Encoding:              "json",
 		EnableConsole:         false,
@@ -458,6 +471,7 @@ func TestManager_TraceIDDisabled(t *testing.T) {
 	// Initialize (disable TraceID)
 	InitManager(ManagerConfig{
 		BaseLogDir:            "logs",
+		LogDirMode:            LogDirModeModule,
 		Level:                 "info",
 		Encoding:              "json",
 		EnableConsole:         false,
@@ -491,6 +505,7 @@ func TestManager_TraceIDCustomKey(t *testing.T) {
 	// Initialize (custom key name)
 	InitManager(ManagerConfig{
 		BaseLogDir:            "logs",
+		LogDirMode:            LogDirModeModule,
 		Level:                 "info",
 		Encoding:              "json",
 		EnableConsole:         false,
@@ -525,6 +540,7 @@ func TestManager_TraceIDEmptyContext(t *testing.T) {
 
 	InitManager(ManagerConfig{
 		BaseLogDir:            "logs",
+		LogDirMode:            LogDirModeModule,
 		Level:                 "info",
 		Encoding:              "json",
 		EnableConsole:         false,
@@ -559,6 +575,7 @@ func TestManager_TraceIDAllLevels(t *testing.T) {
 
 	InitManager(ManagerConfig{
 		BaseLogDir:            "logs",
+		LogDirMode:            LogDirModeModule,
 		Level:                 "debug", // Enable debug
 		Encoding:              "json",
 		EnableConsole:         false,
@@ -602,7 +619,9 @@ func TestManager_TraceIDConcurrent(t *testing.T) {
 	globalManager = nil
 	managerOnce = sync.Once{}
 
-	InitManager(DefaultManagerConfig())
+	cfg := DefaultManagerConfig()
+	cfg.LogDirMode = LogDirModeModule
+	InitManager(cfg)
 
 	// Concurrent writing of logs with different traceIDs
 	done := make(chan bool, 10)

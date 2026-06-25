@@ -23,6 +23,7 @@ func TestConsolePretty_Integration(t *testing.T) {
 	// Initialize manager, use console_pretty encoding
 	InitManager(ManagerConfig{
 		BaseLogDir:            tmpDir,
+		LogDirMode:            LogDirModeModule,
 		Level:                 "info",
 		Encoding:              "json",           // The file uses JSON
 		ConsoleEncoding:       "console_pretty", // Use pretty for console output
@@ -74,6 +75,7 @@ func TestConsolePretty_Pure(t *testing.T) {
 	// Both file and console use console_pretty
 	InitManager(ManagerConfig{
 		BaseLogDir:            tmpDir,
+		LogDirMode:            LogDirModeModule,
 		Level:                 "debug",
 		Encoding:              "console_pretty", // The file also uses pretty formatting
 		EnableConsole:         false,            // Close console, view only files
@@ -105,7 +107,7 @@ func TestConsolePretty_Pure(t *testing.T) {
 
 	// Verify pretty format features
 	assert.Contains(t, orderStr, "[🔵INFO]") // Emoji + Level
-	assert.Contains(t, orderStr, "[order]")  // module name
+	assert.Contains(t, orderStr, "[order]") // module name
 	assert.Contains(t, orderStr, "Order creation")
 	assert.Contains(t, orderStr, `"order_id":"001"`) // JSON field
 
@@ -133,6 +135,7 @@ func TestConsolePretty_ConfigValidation(t *testing.T) {
 	// Test valid configuration
 	validCfg := ManagerConfig{
 		BaseLogDir:      tmpDir,
+		LogDirMode:      LogDirModeModule,
 		Level:           "info",
 		Encoding:        "console_pretty",
 		MaxSize:         100,
@@ -146,6 +149,7 @@ func TestConsolePretty_ConfigValidation(t *testing.T) {
 	// Test invalid encoding
 	invalidCfg := ManagerConfig{
 		BaseLogDir:      tmpDir,
+		LogDirMode:      LogDirModeModule,
 		Level:           "info",
 		Encoding:        "invalid_encoding",
 		MaxSize:         100,

@@ -119,6 +119,8 @@ func (m *Manager) buildModuleConfig(moduleName string) Config {
 		ConsoleEncoding:          m.baseConfig.ConsoleEncoding,
 		moduleName:               moduleName, // Internal fields: Each module is independent
 		logDir:                   m.baseConfig.BaseLogDir,
+		logDirMode:               m.baseConfig.LogDirMode,
+		fileNamePrefix:           m.baseConfig.LoggerName,
 		EnableFile:               true,
 		EnableConsole:            m.baseConfig.EnableConsole,
 		EnableLevelInFilename:    m.baseConfig.EnableLevelInFilename,
@@ -536,6 +538,7 @@ func Panic(module string, msg string, fields ...zap.Field) {
 // Usage:
 //
 //	orderLogger := logger.WithFields("order", zap.String("service", "order-service"))
+//
 // orderLogger.InfoCtx(ctx, "Order creation")  // automatically includes service field
 func WithFields(module string, fields ...zap.Field) *CtxZapLogger {
 	if globalManager == nil {

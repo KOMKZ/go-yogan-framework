@@ -22,6 +22,7 @@ func TestCtxZapLogger_AllMethods(t *testing.T) {
 
 	InitManager(ManagerConfig{
 		BaseLogDir:            logDir,
+		LogDirMode:            LogDirModeModule,
 		Level:                 "debug",
 		Encoding:              "json",
 		EnableConsole:         false,
@@ -95,6 +96,7 @@ func TestCtxZapLogger_With(t *testing.T) {
 
 	InitManager(ManagerConfig{
 		BaseLogDir:            logDir,
+		LogDirMode:            LogDirModeModule,
 		Level:                 "info",
 		Encoding:              "json",
 		EnableConsole:         false,
@@ -137,6 +139,7 @@ func TestCtxZapLogger_GetZapLogger(t *testing.T) {
 
 	InitManager(ManagerConfig{
 		BaseLogDir:            logDir,
+		LogDirMode:            LogDirModeModule,
 		Level:                 "info",
 		Encoding:              "json",
 		EnableConsole:         false,
@@ -171,6 +174,7 @@ func TestCtxZapLogger_TraceIDFromDifferentKeys(t *testing.T) {
 
 	InitManager(ManagerConfig{
 		BaseLogDir:            logDir,
+		LogDirMode:            LogDirModeModule,
 		Level:                 "info",
 		Encoding:              "json",
 		EnableConsole:         false,
@@ -216,6 +220,7 @@ func TestCtxZapLogger_NoStacktraceWhenDisabled(t *testing.T) {
 
 	InitManager(ManagerConfig{
 		BaseLogDir:            logDir,
+		LogDirMode:            LogDirModeModule,
 		Level:                 "info",
 		Encoding:              "json",
 		EnableConsole:         false,
@@ -246,6 +251,7 @@ func TestNewCtxZapLogger(t *testing.T) {
 
 	InitManager(ManagerConfig{
 		BaseLogDir:            logDir,
+		LogDirMode:            LogDirModeModule,
 		Level:                 "info",
 		Encoding:              "json",
 		EnableConsole:         false,

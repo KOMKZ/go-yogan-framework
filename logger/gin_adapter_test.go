@@ -19,6 +19,7 @@ func TestGinLogWriter(t *testing.T) {
 
 	InitManager(ManagerConfig{
 		BaseLogDir:            logDir,
+		LogDirMode:            LogDirModeModule,
 		Level:                 "debug",
 		Encoding:              "json",
 		EnableConsole:         false,
