@@ -5,6 +5,7 @@ logs/
 # 测试覆盖率
 *.out
 coverage.html
+.codegraph/
 
 # IDE
 .idea/
