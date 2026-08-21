@@ -22,7 +22,8 @@ import (
 type HTTPServer struct {
 	engine     *gin.Engine
 	httpServer *http.Server
-	port       int
+	port       int // Configured port (0 = auto-assign)
+	actualPort int // Actual listening port, resolved at bind time
 	mode       string
 }
 
@@ -149,33 +150,35 @@ func (s *HTTPServer) GetEngine() *gin.Engine {
 }
 
 // Start non-blocking HTTP Server (will wait for confirmation of successful startup)
+// 🎯 The listener is bound first so the actual port is known immediately
+// (port 0 = auto-assigned, retrievable via GetActualPort) and there is no
+// TOCTOU gap between an availability pre-check and the real bind.
 func (s *HTTPServer) Start() error {
-	addr := fmt.Sprintf(":%d", s.port)
-
-	// 1. Pre-check port availability
-	if err := s.checkPortAvailable(); err != nil {
+	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", s.port))
+	if err != nil {
 		return fmt.Errorf("Port %d is not available: %w", s.port, err)
 	}
+	s.actualPort = ln.Addr().(*net.TCPAddr).Port
 
 	s.httpServer = &http.Server{
-		Addr:    addr,
+		Addr:    ln.Addr().String(),
 		Handler: s.engine,
 	}
 
-	// 2. Use channel to wait for startup result
+	// 1. Use channel to wait for startup result
 	errChan := make(chan error, 1)
 
 	go func() {
 		logger.Debug("yogan", "🚀 HTTP server starting",
-			zap.Int("port", s.port),
+			zap.Int("port", s.actualPort),
 			zap.String("mode", s.mode))
 
-		if err := s.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := s.httpServer.Serve(ln); err != nil && err != http.ErrServerClosed {
 			errChan <- err
 		}
 	}()
 
-	// 3. Briefly wait to confirm successful startup (50ms is sufficient to detect port binding errors)
+	// 2. Briefly wait to confirm successful startup (50ms is sufficient to detect serving errors)
 	select {
 	case err := <-errChan:
 		logger.Error("yogan", "❌ HTTP server start failed", zap.Error(err))
@@ -183,20 +186,16 @@ func (s *HTTPServer) Start() error {
 	case <-time.After(50 * time.Millisecond):
 		// startup successful
 		logger.Debug("yogan", "✅ HTTP server started successfully",
-			zap.Int("port", s.port))
+			zap.Int("port", s.actualPort))
 		return nil
 	}
 }
 
-// checkPortAvailable Check if the port is available
-func (s *HTTPServer) checkPortAvailable() error {
-	addr := fmt.Sprintf(":%d", s.port)
-	ln, err := net.Listen("tcp", addr)
-	if err != nil {
-		return err
-	}
-	ln.Close()
-	return nil
+// GetActualPort returns the actual listening port, resolved at bind time
+// (0 until Start succeeds). For port 0 configuration this is the only way
+// to obtain the real port.
+func (s *HTTPServer) GetActualPort() int {
+	return s.actualPort
 }
 
 // Shut down HTTP Server gracefully

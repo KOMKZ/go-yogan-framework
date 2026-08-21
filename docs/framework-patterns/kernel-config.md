@@ -62,3 +62,5 @@ redis:
 | 环境变量前缀 | 每应用独立前缀：`*WithDefaults` 构造器从 appName 推导（`EnvPrefixFor`：`user-api` → `USER_API`）；显式构造时由调用方传入，**空前缀表示禁用 env source**，不再兜底 `"APP"` |
 | `ParseFlags` | 只读每应用变量（`{APP}_ENV` 等），**绝不写全局 `APP_ENV`**——同一进程内多个应用互不串扰 |
 | env 扫描 | `EnvSource` 只扫描 `{prefix}_` 开头的变量；不要依赖 `APP_*` 通用前缀 |
+| port/address 绑定 | builder 按 appType 注入显式绑定：http → `{PREFIX}_PORT`→`api_server.port`、`{PREFIX}_ADDRESS`→`api_server.host`；grpc → `grpc.server.port/address`。绑定与通用扫描合并生效，绑定变量不再产生顶层杂键 |
+| 实际端口 | `HTTPServer` 先绑 listener 再 Serve（消除预检 TOCTOU）；`port: 0` 时用 `GetActualPort()` 取系统分配端口 |

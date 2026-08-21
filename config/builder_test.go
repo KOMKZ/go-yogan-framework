@@ -128,6 +128,52 @@ func TestLoaderBuilder_Build_WithFlags(t *testing.T) {
 	assert.Equal(t, 9999, loader.GetInt("grpc.server.port"))
 }
 
+// TestLoaderBuilder_Build_EnvPortMapping regression: {PREFIX}_PORT must map to
+// the appType-aware config key (api_server.port for http) instead of a
+// meaningless top-level "port" key from the generic prefix scan.
+func TestLoaderBuilder_Build_EnvPortMapping(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := filepath.Join(tmpDir, "config.yaml")
+	os.WriteFile(configFile, []byte("api_server:\n  port: 8080\n"), 0644)
+
+	os.Setenv("TEST_PORT", "8081")
+	os.Setenv("TEST_ADDRESS", "127.0.0.9")
+	defer func() {
+		os.Unsetenv("TEST_PORT")
+		os.Unsetenv("TEST_ADDRESS")
+	}()
+
+	loader, err := NewLoaderBuilder().
+		WithConfigPath(tmpDir).
+		WithEnvPrefix("TEST").
+		WithAppType("http").
+		Build()
+
+	require.NoError(t, err)
+	assert.Equal(t, 8081, loader.GetInt("api_server.port"), "{PREFIX}_PORT must map to api_server.port")
+	assert.Equal(t, "127.0.0.9", loader.GetString("api_server.host"))
+	assert.Equal(t, 0, loader.GetInt("port"), "no stray top-level port key")
+}
+
+// TestLoaderBuilder_Build_EnvPortMappingGRPC same mapping for gRPC app type
+func TestLoaderBuilder_Build_EnvPortMappingGRPC(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := filepath.Join(tmpDir, "config.yaml")
+	os.WriteFile(configFile, []byte("grpc:\n  server:\n    port: 9000\n"), 0644)
+
+	os.Setenv("TEST_PORT", "9001")
+	defer os.Unsetenv("TEST_PORT")
+
+	loader, err := NewLoaderBuilder().
+		WithConfigPath(tmpDir).
+		WithEnvPrefix("TEST").
+		WithAppType("grpc").
+		Build()
+
+	require.NoError(t, err)
+	assert.Equal(t, 9001, loader.GetInt("grpc.server.port"))
+}
+
 // TestLoaderBuilder_Build_NoConfigPath test without configuration path
 func TestLoaderBuilder_Build_NoConfigPath(t *testing.T) {
 	loader, err := NewLoaderBuilder().Build()

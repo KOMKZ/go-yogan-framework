@@ -38,25 +38,27 @@ func (s *EnvSource) Priority() int {
 }
 
 // Load environment variable configuration
+// 🎯 Explicit bindings (appType-aware port/address mappings) are applied
+// first, then the generic prefix scan fills the remaining keys; bound env
+// variables are skipped by the scan to avoid duplicate top-level keys.
 func (s *EnvSource) Load() (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 
-	// If there are explicit bindings, use the bindings
-	if len(s.bindings) > 0 {
-		for key, envKey := range s.bindings {
-			fullEnvKey := envKey
-			if s.prefix != "" && !strings.HasPrefix(envKey, s.prefix+"_") {
-				fullEnvKey = s.prefix + "_" + envKey
-			}
-
-			if value := os.Getenv(fullEnvKey); value != "" {
-				result[key] = value
-			}
+	// 1. Explicit bindings (e.g., api_server.port <- {PREFIX}_PORT)
+	boundEnvKeys := make(map[string]bool, len(s.bindings))
+	for key, envKey := range s.bindings {
+		fullEnvKey := envKey
+		if s.prefix != "" && !strings.HasPrefix(envKey, s.prefix+"_") {
+			fullEnvKey = s.prefix + "_" + envKey
 		}
-		return result, nil
+		boundEnvKeys[fullEnvKey] = true
+
+		if value := os.Getenv(fullEnvKey); value != "" {
+			result[key] = value
+		}
 	}
 
-	// Otherwise, scan all environment variables (prefix matching)
+	// 2. Generic scan of all environment variables (prefix matching)
 	if s.prefix == "" {
 		return result, nil
 	}
@@ -71,7 +73,7 @@ func (s *EnvSource) Load() (map[string]interface{}, error) {
 		key := parts[0]
 		value := parts[1]
 
-		if strings.HasPrefix(key, prefix) {
+		if strings.HasPrefix(key, prefix) && !boundEnvKeys[key] {
 			// Convert configuration key: APP_GRPC_SERVER_PORT -> grpc.server.port
 			configKey := strings.TrimPrefix(key, prefix)
 			configKey = strings.ToLower(configKey)

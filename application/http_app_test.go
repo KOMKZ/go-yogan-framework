@@ -530,6 +530,46 @@ func TestApplication_FlagsEnvSelectsEnvFile(t *testing.T) {
 	assert.Empty(t, os.Getenv("APP_ENV"), "loader must not depend on global APP_ENV")
 }
 
+// TestApplication_HTTPServer_ActualPort regression: with api_server.port 0 the
+// framework must expose the auto-assigned port via GetActualPort (previously
+// only the configured value was kept, so the real port was unreachable).
+func TestApplication_HTTPServer_ActualPort(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := filepath.Join(tmpDir, "config.yaml")
+	require.NoError(t, os.WriteFile(configFile, []byte(
+		"api_server:\n  host: \"127.0.0.1\"\n  port: 0\n  mode: test\n"), 0644))
+
+	app := New(tmpDir, "TEST", nil)
+	app.RegisterRoutes(&mockRouterRegistrar{})
+
+	err := app.RunNonBlocking()
+	require.NoError(t, err)
+
+	server := app.GetHTTPServer()
+	require.NotNil(t, server)
+	assert.Greater(t, server.GetActualPort(), 0, "auto-assigned port must be exposed")
+
+	require.NoError(t, app.Shutdown())
+}
+
+// TestApplication_EnvPortOverride regression: {PREFIX}_PORT environment
+// variable must override api_server.port through the appType-aware binding.
+func TestApplication_EnvPortOverride(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := filepath.Join(tmpDir, "config.yaml")
+	require.NoError(t, os.WriteFile(configFile, []byte(
+		"api_server:\n  port: 8080\n  mode: test\n"), 0644))
+
+	os.Setenv("TEST_PORT", "8082")
+	defer os.Unsetenv("TEST_PORT")
+
+	app := New(tmpDir, "TEST", nil)
+
+	cfg, err := app.LoadAppConfig()
+	require.NoError(t, err)
+	assert.Equal(t, 8082, cfg.ApiServer.Port, "{PREFIX}_PORT must override api_server.port")
+}
+
 // TestApplication_RunNonBlocking_NoRoutes_test_non-blocking_run_with_no_routes
 func TestApplication_RunNonBlocking_NoRoutes(t *testing.T) {
 	tmpDir := t.TempDir()

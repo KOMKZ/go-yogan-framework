@@ -77,8 +77,25 @@ func (b *LoaderBuilder) Build() (*Loader, error) {
 	}
 
 	// 3. Environment variables (priority 50)
+	// 🎯 appType-aware port/address bindings: {PREFIX}_PORT maps to the real
+	// config key (api_server.port for http, grpc.server.port for grpc) instead
+	// of a meaningless top-level "port" key from the generic scan.
 	if b.envPrefix != "" {
-		loader.AddSource(NewEnvSource(b.envPrefix, 50))
+		envSource := NewEnvSource(b.envPrefix, 50)
+		switch b.appType {
+		case "http":
+			envSource.AddBinding("api_server.port", "PORT")
+			envSource.AddBinding("api_server.host", "ADDRESS")
+		case "grpc":
+			envSource.AddBinding("grpc.server.port", "PORT")
+			envSource.AddBinding("grpc.server.address", "ADDRESS")
+		case "mixed":
+			envSource.AddBinding("api_server.port", "PORT")
+			envSource.AddBinding("api_server.host", "ADDRESS")
+			envSource.AddBinding("grpc.server.port", "PORT")
+			envSource.AddBinding("grpc.server.address", "ADDRESS")
+		}
+		loader.AddSource(envSource)
 	}
 
 	// 4. Command line arguments (priority 100)
