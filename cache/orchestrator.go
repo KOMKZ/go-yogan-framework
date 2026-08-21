@@ -283,15 +283,18 @@ func (o *DefaultOrchestrator) buildKey(pattern string, args ...any) string {
 	return result
 }
 
-// hashArgs calculates a real parameter hash: sha256 over the string form of
-// every argument, hex-encoded and truncated to 32 chars (128 bits).
+// hashArgs calculates a real parameter hash: sha256 over the length-prefixed
+// string form of every argument, hex-encoded and truncated to 32 chars
+// (128 bits).
 // 🎯 Previously the concatenated string was truncated directly, so different
 // argument combinations like ("ab","c") and ("a","bc") produced the same key
-// and polluted each other's cache entries.
+// and polluted each other's cache entries. Length-prefixing keeps different
+// splits unambiguous.
 func hashArgs(args ...any) string {
 	h := sha256.New()
 	for _, arg := range args {
-		h.Write([]byte(fmt.Sprintf("%v", arg)))
+		s := fmt.Sprintf("%v", arg)
+		fmt.Fprintf(h, "%d:%s", len(s), s)
 	}
 	return hex.EncodeToString(h.Sum(nil))[:32]
 }
