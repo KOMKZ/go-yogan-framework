@@ -247,3 +247,29 @@ func TestOtelPlugin_WithParentSpan(t *testing.T) {
 	t.Logf("   Parent TraceID: %s", parentSpanContext.TraceID())
 	t.Logf("   GORM TraceID:   %s", gormSpan.SpanContext().TraceID())
 }
+
+// TestOtelPlugin_ValueCopyIndependent regression: Manager.SetOtelPlugin now
+// copies the plugin per instance, so a value copy must stay independent
+// (tracer reuse is fine, per-instance trace_sql / max_len must not leak).
+func TestOtelPlugin_ValueCopyIndependent(t *testing.T) {
+	tp := trace.NewTracerProvider()
+	plugin := NewOtelPlugin(tp)
+	plugin.WithSQLMaxLen(500)
+
+	instanceCopy := *plugin
+	instanceCopy.WithTraceSQL(true)
+	instanceCopy.WithSQLMaxLen(1000)
+
+	if plugin.traceSQL {
+		t.Error("original plugin must not be affected by the copy")
+	}
+	if plugin.sqlMaxLen != 500 {
+		t.Errorf("original sqlMaxLen = %d, want 500", plugin.sqlMaxLen)
+	}
+	if !instanceCopy.traceSQL {
+		t.Error("copy must carry its own traceSQL setting")
+	}
+	if instanceCopy.sqlMaxLen != 1000 {
+		t.Errorf("copy sqlMaxLen = %d, want 1000", instanceCopy.sqlMaxLen)
+	}
+}

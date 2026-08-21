@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sort"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -339,10 +340,17 @@ func (d *dispatcher) buildHandlerChain(ctx context.Context, entries []listenerEn
 	return handler
 }
 
+// handlerNameForIndex builds the metrics label for the i-th listener.
+// 🎯 strconv keeps names sane for i >= 10 (rune('0'+i) produced ':' and
+// other junk in metrics labels from the 10th listener on).
+func handlerNameForIndex(i int) string {
+	return "handler_" + strconv.Itoa(i)
+}
+
 // execute listeners
 func (d *dispatcher) executeListeners(ctx context.Context, event Event, entries []listenerEntry) error {
 	for i, entry := range entries {
-		handlerName := "handler_" + string(rune('0'+i))
+		handlerName := handlerNameForIndex(i)
 		if entry.async {
 			// Asynchronous listener submitted to coroutine pool
 			listener := entry.listener

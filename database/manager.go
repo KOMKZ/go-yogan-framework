@@ -218,24 +218,24 @@ func (m *Manager) SetOtelPlugin(plugin *OtelPlugin) error {
 	defer m.mu.Unlock()
 	
 	m.otelPlugin = plugin
-	
-	// 🎯 Read trace_sql and trace_sql_max_len settings from configuration
-	// Note: Assumes all database instances use the same OTel configuration
-	for _, cfg := range m.configs {
+
+	// 🎯 Per-instance plugin configuration: copy the plugin (the struct is
+	// value-copy safe) so each database's own trace_sql / max_len settings
+	// apply, instead of silently using only the first instance's config.
+	for name, db := range m.instances {
+		instancePlugin := *plugin
+		cfg := m.configs[name]
 		if cfg.TraceSQL {
-			plugin.WithTraceSQL(true)
-			m.logger.Debug("✅ GORM OTel trace_sql enabled")
+			instancePlugin.WithTraceSQL(true)
+			m.logger.Debug("✅ GORM OTel trace_sql enabled", zap.String("instance", name))
 		}
 		if cfg.TraceSQLMaxLen > 0 {
-			plugin.WithSQLMaxLen(cfg.TraceSQLMaxLen)
-			m.logger.Debug("✅ GORM OTel trace_sql_max_len set", zap.Int("max_len", cfg.TraceSQLMaxLen))
+			instancePlugin.WithSQLMaxLen(cfg.TraceSQLMaxLen)
+			m.logger.Debug("✅ GORM OTel trace_sql_max_len set",
+				zap.String("instance", name),
+				zap.Int("max_len", cfg.TraceSQLMaxLen))
 		}
-		break // Only take the first configuration
-	}
-	
-	// Register the plugin for all existing database instances
-	for name, db := range m.instances {
-		if err := db.Use(plugin); err != nil {
+		if err := db.Use(&instancePlugin); err != nil {
 			m.logger.Error("Failed to register otel plugin",
 				zap.String("instance", name),
 				zap.Error(err))

@@ -30,13 +30,19 @@ type RateLimiterConfig struct {
 	SkipPaths []string
 }
 
+// defaultRateLimiterKeyFunc is the single canonical default key function
+// (lowercased method + path). Both DefaultRateLimiterConfig and the fallback
+// in RateLimiterWithConfig must use it so the same rate-limit resource never
+// gets two key formats.
+func defaultRateLimiterKeyFunc(c *gin.Context) string {
+	return fmt.Sprintf("%s:%s", strings.ToLower(c.Request.Method), c.Request.URL.Path)
+}
+
 // DefaultRateLimiterConfig default rate limiting configuration
 func DefaultRateLimiterConfig(manager *limiter.Manager) RateLimiterConfig {
 	return RateLimiterConfig{
 		Manager: manager,
-		KeyFunc: func(c *gin.Context) string {
-			return fmt.Sprintf("%s:%s", strings.ToLower(c.Request.Method), c.Request.URL.Path)
-		},
+		KeyFunc: defaultRateLimiterKeyFunc,
 		ErrorHandler: func(c *gin.Context, err error) {
 			// Default: Allow requests through when the rate limiter encounters an internal error (degradation strategy)
 			c.Next()
@@ -85,9 +91,7 @@ func RateLimiterWithConfig(cfg RateLimiterConfig) gin.HandlerFunc {
 
 	// Apply default values
 	if cfg.KeyFunc == nil {
-		cfg.KeyFunc = func(c *gin.Context) string {
-			return fmt.Sprintf("%s:%s", c.Request.Method, c.Request.URL.Path)
-		}
+		cfg.KeyFunc = defaultRateLimiterKeyFunc
 	}
 
 	if cfg.ErrorHandler == nil {

@@ -359,3 +359,16 @@ func TestRateLimiter_PanicOnNilManager(t *testing.T) {
 	})
 }
 
+
+// TestRateLimiter_DefaultKeyFuncConsistency regression: the default config
+// and the fallback path must build the same canonical key (previously one
+// lowercased the method and the other did not, splitting one rate-limit
+// resource into two key formats).
+func TestRateLimiter_DefaultKeyFuncConsistency(t *testing.T) {
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	c.Request = httptest.NewRequest("GET", "/api/orders", nil)
+
+	want := "get:/api/orders"
+	assert.Equal(t, want, defaultRateLimiterKeyFunc(c))
+	assert.Equal(t, want, DefaultRateLimiterConfig(nil).KeyFunc(c))
+}
