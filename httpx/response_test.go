@@ -246,6 +246,9 @@ func TestHandleError_DatabaseNotFound(t *testing.T) {
 	HandleError(c, database.ErrRecordNotFound)
 
 	assert.Equal(t, http.StatusNotFound, w.Code)
+	// 🎯 Fixed default message: gorm internals must not leak to clients
+	assert.Contains(t, w.Body.String(), "资源不存在")
+	assert.NotContains(t, w.Body.String(), "record not found")
 }
 
 // TestHandleError_UnknownError test unknown error

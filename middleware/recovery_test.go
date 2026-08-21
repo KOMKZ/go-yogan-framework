@@ -56,8 +56,11 @@ func TestRecovery_WithPanic(t *testing.T) {
 	router.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusInternalServerError, resp.Code)
-	assert.Contains(t, resp.Body.String(), "Internal Server Error")
-	assert.Contains(t, resp.Body.String(), "test panic")
+	// 🎯 Site-wide unified response with a fixed message; the panic value
+	// must NOT leak into the client response.
+	assert.Contains(t, resp.Body.String(), "内部服务器错误")
+	assert.NotContains(t, resp.Body.String(), "test panic")
+	assert.NotContains(t, resp.Body.String(), "error")
 }
 
 func TestRecovery_WithPanicError(t *testing.T) {
@@ -88,6 +91,7 @@ func TestRecovery_WithPanicError(t *testing.T) {
 	router.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusInternalServerError, resp.Code)
+	assert.NotContains(t, resp.Body.String(), "index out of range", "panic details must not leak")
 
 	// 验证日志文件存在（单目录模式下文件名以 logger 前缀 + level 命名，如 logger-error.log）
 	matches, err := filepath.Glob(filepath.Join(logDir, "*.log"))

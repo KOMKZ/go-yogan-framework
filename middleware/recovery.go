@@ -1,11 +1,11 @@
 package middleware
 
 import (
-	"fmt"
 	"net/http"
 	"runtime/debug"
 
 	"github.com/gin-gonic/gin"
+	"github.com/KOMKZ/go-yogan-framework/httpx"
 	"github.com/KOMKZ/go-yogan-framework/logger"
 	"go.uber.org/zap"
 )
@@ -33,10 +33,12 @@ func Recovery() gin.HandlerFunc {
 					zap.String("stack", stack),
 				)
 
-				// Return unified error response (do not expose stack information)
-				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
-					"error":   "Internal Server Error",
-					"message": fmt.Sprintf("%v", err),
+				// Return the site-wide unified response with a fixed default
+				// message; panic details (err) stay in the log only to avoid
+				// leaking internals (SQL, paths, variables) to clients.
+				c.AbortWithStatusJSON(http.StatusInternalServerError, httpx.Response{
+					Code: 500,
+					Msg:  "内部服务器错误",
 				})
 			}
 		}()

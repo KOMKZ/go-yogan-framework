@@ -139,7 +139,9 @@ func HandleError(c *gin.Context, err error) {
 		if cfg.Enable {
 			logger.WarnCtx(ctx, "httpx", "English: Resource does not exist", zap.Error(err))
 		}
-		NotFoundJson(c, err.Error())
+		// Fixed default message: err.Error() carries gorm internals and must
+		// not be forwarded to clients (same leak pattern as branch 3).
+		NotFoundJson(c, "资源不存在")
 		return
 	}
 
