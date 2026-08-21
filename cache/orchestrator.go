@@ -2,6 +2,8 @@ package cache
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"strings"
 	"sync"
@@ -281,19 +283,17 @@ func (o *DefaultOrchestrator) buildKey(pattern string, args ...any) string {
 	return result
 }
 
-// hashArgs calculates parameter hash
+// hashArgs calculates a real parameter hash: sha256 over the string form of
+// every argument, hex-encoded and truncated to 32 chars (128 bits).
+// 🎯 Previously the concatenated string was truncated directly, so different
+// argument combinations like ("ab","c") and ("a","bc") produced the same key
+// and polluted each other's cache entries.
 func hashArgs(args ...any) string {
-	// Simple implementation: concatenate parameter string
-	var sb strings.Builder
+	h := sha256.New()
 	for _, arg := range args {
-		sb.WriteString(fmt.Sprintf("%v", arg))
+		h.Write([]byte(fmt.Sprintf("%v", arg)))
 	}
-	// Return simple hash (should actually use MD5/SHA1)
-	s := sb.String()
-	if len(s) > 32 {
-		return s[:32]
-	}
-	return s
+	return hex.EncodeToString(h.Sum(nil))[:32]
 }
 
 // subscribeInvalidationEvents

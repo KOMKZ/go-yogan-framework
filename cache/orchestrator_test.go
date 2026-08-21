@@ -364,6 +364,21 @@ func TestOrchestrator_BuildKeyWithHash(t *testing.T) {
 	}
 }
 
+// TestOrchestrator_BuildKeyWithHash_NoConcatenationCollision regression:
+// different argument splits of the same concatenated string must produce
+// different keys (previously the plain truncation made them identical).
+func TestOrchestrator_BuildKeyWithHash_NoConcatenationCollision(t *testing.T) {
+	cfg := &Config{Enabled: true}
+	o := NewOrchestrator(cfg, nil, nil)
+
+	keyAB_C := o.buildKey("key:{hash}", "ab", "c")
+	keyA_BC := o.buildKey("key:{hash}", "a", "bc")
+
+	if keyAB_C == keyA_BC {
+		t.Errorf("hash collision: (\"ab\",\"c\") and (\"a\",\"bc\") both produced %q", keyAB_C)
+	}
+}
+
 func TestOrchestrator_InvalidateCacheableNotFound(t *testing.T) {
 	cfg := &Config{Enabled: true}
 	o := NewOrchestrator(cfg, nil, nil)
