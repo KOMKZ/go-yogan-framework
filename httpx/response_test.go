@@ -1,16 +1,21 @@
 package httpx
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/KOMKZ/go-yogan-framework/database"
 	"github.com/KOMKZ/go-yogan-framework/errcode"
+	"github.com/KOMKZ/go-yogan-framework/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func init() {
@@ -227,6 +232,55 @@ func TestHandleError_LayeredError_InfoLevel(t *testing.T) {
 	HandleError(c, layeredErr)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// TestHandleError_LayeredError_InfoLevel_LogsAtInfo regression: with
+// log_level=info the business error must actually reach the info log file.
+// (Previously InfoCtx was mistakenly DebugCtx, so the message was filtered
+// out entirely at the default info level.)
+func TestHandleError_LayeredError_InfoLevel_LogsAtInfo(t *testing.T) {
+	logDir := t.TempDir()
+	logger.MustResetManager(logger.ManagerConfig{
+		BaseLogDir:            logDir,
+		Level:                 "info",
+		Encoding:              "json",
+		EnableConsole:         false,
+		EnableLevelInFilename: true,
+		EnableDateInFilename:  false,
+		MaxSize:               10,
+	})
+	defer logger.CloseAll()
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request, _ = http.NewRequest("GET", "/test", nil)
+
+	c.Set(errorLoggingConfigKey, errorLoggingConfigInternal{
+		Enable:          true,
+		IgnoreStatusMap: make(map[int]bool),
+		FullErrorChain:  false,
+		LogLevel:        "info",
+	})
+
+	layeredErr := errcode.New(10, 1, "test", "test.error", "参数错误", http.StatusBadRequest)
+	HandleError(c, layeredErr)
+
+	// The 业务错误 message must be present in the log output
+	matches, err := filepath.Glob(filepath.Join(logDir, "*.log"))
+	require.NoError(t, err)
+	require.NotEmpty(t, matches, "expected log files to be written")
+	found := false
+	for _, m := range matches {
+		data, err := os.ReadFile(m)
+		if err != nil {
+			continue
+		}
+		if bytes.Contains(data, []byte("业务错误")) {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "info-level business error must be written to the log files")
 }
 
 // TestHandleError_DatabaseNotFound test database record not found error

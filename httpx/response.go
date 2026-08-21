@@ -119,7 +119,7 @@ func HandleError(c *gin.Context, err error) {
 			case "warn":
 				logger.WarnCtx(ctx, "httpx", logMessage, fields...)
 			case "info":
-				logger.DebugCtx(ctx, "httpx", logMessage, fields...)
+				logger.InfoCtx(ctx, "httpx", logMessage, fields...)
 			default: // "error"
 				logger.ErrorCtx(ctx, "httpx", logMessage, fields...)
 			}
