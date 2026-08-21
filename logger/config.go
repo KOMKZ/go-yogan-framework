@@ -25,6 +25,7 @@ type Config struct {
 
 	EnableFile    bool
 	EnableConsole bool
+	RenderStyle   string // console_pretty rendering style (single_line/key_value/modern_compact)
 
 	// file name format configuration
 	EnableLevelInFilename    bool   // Whether it includes level (info/error)
@@ -54,6 +55,7 @@ type ManagerConfig struct {
 	Encoding                 string `mapstructure:"encoding"`
 	ConsoleEncoding          string `mapstructure:"console_encoding"`
 	EnableConsole            bool   `mapstructure:"enable_console"`
+	EnableFile               *bool  `mapstructure:"enable_file"` // nil = default true
 	EnableLevelInFilename    bool   `mapstructure:"enable_level_in_filename"`
 	EnableSequenceInFilename bool   `mapstructure:"enable_sequence_in_filename"`
 	EnableDateInFilename     bool   `mapstructure:"enable_date_in_filename"`
@@ -84,6 +86,13 @@ const (
 	LogDirModeSingle = "single"
 	LogDirModeModule = "module"
 )
+
+// EnableFileValue returns whether file output is enabled (nil = default true).
+// A plain bool cannot distinguish "unset" from "explicit false", so the
+// pointer form keeps file output on by default while allowing opt-out.
+func (c *ManagerConfig) EnableFileValue() bool {
+	return c.EnableFile == nil || *c.EnableFile
+}
 
 // Returns default manager configuration
 func DefaultManagerConfig() ManagerConfig {

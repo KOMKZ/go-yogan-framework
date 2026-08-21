@@ -45,19 +45,24 @@ func NewManager(cfg ManagerConfig) *Manager {
 	}
 }
 
-// Initialize Manager for global Logger manager (call once only)
-func InitManager(cfg ManagerConfig) {
+// InitManager initializes (or returns the existing) global Manager.
+// 🎯 Returns the singleton so DI providers can hand out the same instance
+// instead of creating a second manager that opens a second set of file
+// handles writing the same log files. The first caller's configuration
+// wins; use MustResetManager (tests) to swap it.
+func InitManager(cfg ManagerConfig) *Manager {
 	managerOnce.Do(func() {
 		globalManager = NewManager(cfg)
 	})
+	return globalManager
 }
 
-func MustResetManager(cfg ManagerConfig) {
+// MustResetManager replaces the global Manager (used by tests to swap config).
+// Marks initialization as done so a later InitManager keeps this manager.
+func MustResetManager(cfg ManagerConfig) *Manager {
+	managerOnce.Do(func() {})
 	globalManager = NewManager(cfg)
-}
-
-func getSelfLogger() *CtxZapLogger {
-	return GetLogger(globalManager.baseConfig.LoggerName)
+	return globalManager
 }
 
 // ============================================
@@ -121,7 +126,8 @@ func (m *Manager) buildModuleConfig(moduleName string) Config {
 		logDir:                   m.baseConfig.BaseLogDir,
 		logDirMode:               m.baseConfig.LogDirMode,
 		fileNamePrefix:           m.baseConfig.LoggerName,
-		EnableFile:               true,
+		EnableFile:               m.baseConfig.EnableFileValue(),
+		RenderStyle:              m.baseConfig.RenderStyle,
 		EnableConsole:            m.baseConfig.EnableConsole,
 		EnableLevelInFilename:    m.baseConfig.EnableLevelInFilename,
 		EnableSequenceInFilename: m.baseConfig.EnableSequenceInFilename,
@@ -425,8 +431,9 @@ func createEncoder(cfg Config) zapcore.Encoder {
 	case "console":
 		return zapcore.NewConsoleEncoder(encoderConfig)
 	case "console_pretty":
-		// Use rendering style to create encoder
-		style := ParseRenderStyle(globalManager.baseConfig.RenderStyle)
+		// 🎯 Style comes from this logger's own config (no global state):
+		// the manager must not depend on globalManager for isolated instances.
+		style := ParseRenderStyle(cfg.RenderStyle)
 		return NewPrettyConsoleEncoderWithStyle(encoderConfig, style)
 	default:
 		return zapcore.NewJSONEncoder(encoderConfig)

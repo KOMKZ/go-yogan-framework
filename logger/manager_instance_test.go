@@ -333,3 +333,84 @@ func TestManager_IsolatedTesting(t *testing.T) {
 		assert.FileExists(t, filepath.Join(logDir, "module2", "module2-info-"+time.Now().Format("2006-01-02")+".log"))
 	})
 }
+
+// TestManager_EnableFileDisabled regression: EnableFile=false must disable
+// file output entirely (previously EnableFile was hardcoded true and the
+// ManagerConfig had no such field, so container stdout-only setups were
+// impossible).
+func TestManager_EnableFileDisabled(t *testing.T) {
+	tmpDir := t.TempDir()
+	logDir := filepath.Join(tmpDir, "nofile")
+
+	enableFile := false
+	cfg := DefaultManagerConfig()
+	cfg.BaseLogDir = logDir
+	cfg.EnableFile = &enableFile
+	cfg.EnableConsole = false
+
+	m := NewManager(cfg)
+	m.InfoCtx(context.Background(), "nofile", "should not hit disk")
+	m.CloseAll()
+
+	entries, err := os.ReadDir(logDir)
+	if err == nil && len(entries) != 0 {
+		t.Fatalf("expected no log files with EnableFile=false, found %d entries", len(entries))
+	}
+}
+
+// TestManager_ConsolePretty_NoGlobalManager regression: a standalone manager
+// with console_pretty encoding must not read the global manager state
+// (previously ParseRenderStyle(globalManager.baseConfig...) nil-panicked
+// when only NewManager was used).
+func TestManager_ConsolePretty_NoGlobalManager(t *testing.T) {
+	savedGlobal := globalManager
+	savedOnce := managerOnce
+	defer func() {
+		globalManager = savedGlobal
+		managerOnce = savedOnce
+	}()
+
+	globalManager = nil
+	managerOnce = sync.Once{}
+
+	cfg := DefaultManagerConfig()
+	cfg.Encoding = "console_pretty"
+	cfg.EnableConsole = true
+	enableFile := false
+	cfg.EnableFile = &enableFile
+
+	m := NewManager(cfg)
+	// Would have panicked on nil globalManager before the fix
+	m.InfoCtx(context.Background(), "pretty", "isolated console_pretty works")
+	m.CloseAll()
+}
+
+// TestInitManager_ReturnsSingleton regression: repeated InitManager calls
+// must return the same manager instance (the first config wins), so the DI
+// provider cannot create a second manager writing the same log files.
+func TestInitManager_ReturnsSingleton(t *testing.T) {
+	savedGlobal := globalManager
+	savedOnce := managerOnce
+	defer func() {
+		globalManager = savedGlobal
+		managerOnce = savedOnce
+	}()
+
+	globalManager = nil
+	managerOnce = sync.Once{}
+
+	cfg1 := DefaultManagerConfig()
+	cfg1.LoggerName = "first"
+	cfg2 := DefaultManagerConfig()
+	cfg2.LoggerName = "second"
+
+	m1 := InitManager(cfg1)
+	m2 := InitManager(cfg2)
+
+	if m1 != m2 {
+		t.Fatal("InitManager must return the same singleton manager")
+	}
+	if m1.baseConfig.LoggerName != "first" {
+		t.Fatalf("first config must win, got logger_name=%s", m1.baseConfig.LoggerName)
+	}
+}

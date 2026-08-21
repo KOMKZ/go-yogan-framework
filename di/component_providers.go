@@ -76,10 +76,10 @@ func ProvideLoggerManager(i do.Injector) (*logger.Manager, error) {
 
 	loggerCfg.ApplyDefaults()
 
-	// Initialize the global Manager concurrently (compatible with old code)
-	logger.InitManager(loggerCfg)
-
-	return logger.NewManager(loggerCfg), nil
+	// 🎯 Single manager: initialize (or reuse) the global manager and hand
+	// out the same instance. Creating a second manager with the same config
+	// would open a second set of lumberjack handles writing the same files.
+	return logger.InitManager(loggerCfg), nil
 }
 
 // CreateCtxLogger provides a factory for the named CtxZapLogger provider
