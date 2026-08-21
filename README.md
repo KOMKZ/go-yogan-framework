@@ -72,26 +72,42 @@ No need to dig through docs—the CLI tells you how to integrate.
 
 ## Quick Start
 
+Create `./config/config.yaml` with your `api_server` settings, then:
+
 ```go
 package main
 
 import (
     "github.com/KOMKZ/go-yogan-framework/application"
-    "github.com/KOMKZ/go-yogan-framework/database"
-    "github.com/KOMKZ/go-yogan-framework/redis"
+    "github.com/KOMKZ/go-yogan-framework/logger"
+    "github.com/gin-gonic/gin"
+    "go.uber.org/zap"
 )
 
+// routerRegistrar implements application.RouterRegistrar to register business routes
+type routerRegistrar struct{}
+
+func (r routerRegistrar) RegisterRoutes(engine *gin.Engine, app *application.Application) {
+    engine.GET("/api/hello", func(c *gin.Context) {
+        c.JSON(200, gin.H{"message": "hello"})
+    })
+}
+
 func main() {
-    app := application.New("./configs", "MY_APP", nil)
-    
-    app.Register(
-        database.NewComponent(),
-        redis.NewComponent(),
-    )
-    
-    app.Run()
+    // Parse per-app flags and environment variables (USER_API_PORT, USER_API_ENV, ...)
+    flags := application.ParseFlags("user-api", "./config")
+
+    app := application.NewWithFlags("./config", "USER_API", flags).
+        WithVersion("0.1.0").
+        RegisterRoutes(routerRegistrar{})
+
+    if err := app.Run(); err != nil {
+        logger.Fatal("main", "Application start failed", zap.Error(err))
+    }
 }
 ```
+
+All components are wired through samber/do providers — see `docs/` for the full API.
 
 ## License
 

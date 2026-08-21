@@ -72,26 +72,42 @@ go-ygctl component add kafka
 
 ## 快速开始
 
+创建 `./config/config.yaml` 配置 `api_server` 后：
+
 ```go
 package main
 
 import (
     "github.com/KOMKZ/go-yogan-framework/application"
-    "github.com/KOMKZ/go-yogan-framework/database"
-    "github.com/KOMKZ/go-yogan-framework/redis"
+    "github.com/KOMKZ/go-yogan-framework/logger"
+    "github.com/gin-gonic/gin"
+    "go.uber.org/zap"
 )
 
+// routerRegistrar 实现 application.RouterRegistrar，注册业务路由
+type routerRegistrar struct{}
+
+func (r routerRegistrar) RegisterRoutes(engine *gin.Engine, app *application.Application) {
+    engine.GET("/api/hello", func(c *gin.Context) {
+        c.JSON(200, gin.H{"message": "hello"})
+    })
+}
+
 func main() {
-    app := application.New("./configs", "MY_APP", nil)
-    
-    app.Register(
-        database.NewComponent(),
-        redis.NewComponent(),
-    )
-    
-    app.Run()
+    // 解析每应用独立的 flags 与环境变量（USER_API_PORT、USER_API_ENV 等）
+    flags := application.ParseFlags("user-api", "./config")
+
+    app := application.NewWithFlags("./config", "USER_API", flags).
+        WithVersion("0.1.0").
+        RegisterRoutes(routerRegistrar{})
+
+    if err := app.Run(); err != nil {
+        logger.Fatal("main", "Application start failed", zap.Error(err))
+    }
 }
 ```
+
+所有组件通过 samber/do provider 装配——完整 API 见 `docs/`。
 
 ## 协议
 
