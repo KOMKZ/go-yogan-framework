@@ -150,7 +150,9 @@ func HandleError(c *gin.Context, err error) {
 			zap.String("error_chain", err.Error()),
 		)
 	}
-	InternalErrorJson(c, err.Error())
+	// Return a fixed default message instead of err.Error() to avoid leaking
+	// internal error details to clients (regression from f9a954c).
+	InternalErrorJson(c, "内部服务器错误")
 }
 
 // determine whether logging should occur based on configuration

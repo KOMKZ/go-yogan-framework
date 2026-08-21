@@ -3,7 +3,6 @@ package middleware
 import (
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -90,7 +89,8 @@ func TestRecovery_WithPanicError(t *testing.T) {
 
 	assert.Equal(t, http.StatusInternalServerError, resp.Code)
 
-	// 验证日志文件存在
-	_, err := os.Stat(filepath.Join(logDir, "gin-error"))
+	// 验证日志文件存在（单目录模式下文件名以 logger 前缀 + level 命名，如 logger-error.log）
+	matches, err := filepath.Glob(filepath.Join(logDir, "*.log"))
 	assert.NoError(t, err)
+	assert.NotEmpty(t, matches)
 }
