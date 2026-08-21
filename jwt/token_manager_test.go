@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/KOMKZ/go-yogan-framework/logger"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -169,6 +170,7 @@ func TestTokenManager_VerifyToken_Success(t *testing.T) {
 func TestTokenManager_VerifyToken_ExpiredToken(t *testing.T) {
 	config := newTestConfig()
 	config.AccessToken.TTL = 10 * time.Millisecond // Very short TTL
+	config.Security.ClockSkew = 0                 // Strict expiry (no leeway)
 	manager := newTestTokenManager(t, config)
 
 	ctx := context.Background()
@@ -296,6 +298,7 @@ func TestTokenManager_RevokeToken_ExpiredToken(t *testing.T) {
 	config := newTestConfig()
 	config.Blacklist.Enabled = true
 	config.AccessToken.TTL = 10 * time.Millisecond
+	config.Security.ClockSkew = 0 // Strict expiry (no leeway)
 	manager := newTestTokenManager(t, config)
 
 	ctx := context.Background()
@@ -400,3 +403,30 @@ func TestTokenManager_DifferentAlgorithms(t *testing.T) {
 	}
 }
 
+
+// TestTokenManager_VerifyToken_ClockSkewLeeway regression: the configured
+// ClockSkew must be applied as parse leeway — a token expired 30s ago stays
+// valid within the 60s default skew (previously ClockSkew was dead config).
+func TestTokenManager_VerifyToken_ClockSkewLeeway(t *testing.T) {
+	config := newTestConfig()
+	manager := newTestTokenManager(t, config)
+
+	ctx := context.Background()
+
+	// Craft a token that expired 30s ago (within the 60s ClockSkew)
+	now := time.Now()
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub":        "user-skew",
+		"iat":        now.Add(-2 * time.Hour).Unix(),
+		"exp":        now.Add(-30 * time.Second).Unix(),
+		"iss":        config.AccessToken.Issuer,
+		"token_type": "access",
+	})
+	tokenString, err := token.SignedString([]byte(config.Secret))
+	require.NoError(t, err)
+
+	claims, err := manager.VerifyToken(ctx, tokenString)
+	require.NoError(t, err, "token within clock skew must verify")
+	require.NotNil(t, claims)
+	assert.Equal(t, "user-skew", claims.Subject)
+}

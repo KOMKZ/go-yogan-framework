@@ -69,9 +69,9 @@ func (c *Config) Validate() error {
 			return ErrSecretEmpty
 		}
 	case "RS256", "RS384", "RS512":
-		if c.PrivateKeyPath == "" || c.PublicKeyPath == "" {
-			return fmt.Errorf("jwt: RSA keys not configured")
-		}
+		// 🎯 Only HS is implemented today; reject RS at config time instead
+		// of passing validation and failing later inside setupSigningMethod.
+		return fmt.Errorf("jwt: algorithm %s is not yet implemented", c.Algorithm)
 	default:
 		return ErrAlgorithmNotSupported
 	}

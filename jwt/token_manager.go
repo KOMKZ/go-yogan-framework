@@ -210,13 +210,16 @@ func (m *tokenManagerImpl) VerifyToken(ctx context.Context, tokenString string) 
 	start := time.Now()
 
 	// Parse Token
+	// 🎯 ClockSkew is applied as leeway so tokens are not misjudged as
+	// expired/not-yet-valid under distributed clock drift (previously the
+	// configured ClockSkew was never used).
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		// Verify signature algorithm
 		if token.Method != m.signingMethod {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 		return m.verifyKey, nil
-	})
+	}, jwt.WithLeeway(m.config.Security.ClockSkew))
 
 	if err != nil {
 		m.logger.WarnCtx(ctx, "token verification failed",
@@ -480,12 +483,29 @@ func (m *tokenManagerImpl) parseCustomClaims(mapClaims jwt.MapClaims) (*Claims, 
 		claims.TenantID = tenantID
 	}
 
-	// Validate Claims
-	if err := claims.Valid(); err != nil {
+	// Validate Claims with the configured clock skew, consistent with the
+	// parser leeway applied in VerifyToken (Claims.Valid() is strict and
+	// would reject tokens the parser already accepted within the skew).
+	if err := m.validateClaimsWithSkew(claims); err != nil {
 		return nil, err
 	}
 
 	return claims, nil
+}
+
+// validateClaimsWithSkew re-checks exp/nbf with the configured clock skew,
+// matching the leeway used by jwt.Parse in VerifyToken.
+func (m *tokenManagerImpl) validateClaimsWithSkew(c *Claims) error {
+	skew := m.config.Security.ClockSkew
+	now := time.Now()
+
+	if !c.ExpiresAt.IsZero() && now.After(c.ExpiresAt.Add(skew)) {
+		return ErrTokenExpired
+	}
+	if !c.NotBefore.IsZero() && now.Before(c.NotBefore.Add(-skew)) {
+		return ErrTokenNotYetValid
+	}
+	return nil
 }
 
 // parseJWTError Parse JWT error

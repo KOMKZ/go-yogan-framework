@@ -73,3 +73,25 @@ func TestConfig_Validate_AllAlgorithms(t *testing.T) {
 	}
 }
 
+
+// TestConfig_Validate_RSNotImplemented regression: RSA algorithms pass the
+// key-path check but are not implemented in setupSigningMethod; they must be
+// rejected at config time instead of failing at runtime.
+func TestConfig_Validate_RSNotImplemented(t *testing.T) {
+	for _, algo := range []string{"RS256", "RS384", "RS512"} {
+		t.Run(algo, func(t *testing.T) {
+			config := &Config{
+				Enabled:       true,
+				Algorithm:     algo,
+				PrivateKeyPath: "/path/to/private.pem",
+				PublicKeyPath:  "/path/to/public.pem",
+				AccessToken: AccessTokenConfig{
+					TTL: 2 * time.Hour,
+				},
+			}
+			err := config.Validate()
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "not yet implemented")
+		})
+	}
+}

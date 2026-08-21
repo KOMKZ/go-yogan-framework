@@ -115,6 +115,7 @@ func TestTokenManager_RefreshToken_ExpiredRefreshToken(t *testing.T) {
 	config := newTestConfig()
 	config.RefreshToken.Enabled = true
 	config.RefreshToken.TTL = 10 * time.Millisecond // Very short TTL
+	config.Security.ClockSkew = 0                  // Strict expiry (no leeway)
 	manager := newTestTokenManager(t, config)
 
 	ctx := context.Background()
