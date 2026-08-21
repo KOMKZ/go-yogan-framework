@@ -66,33 +66,62 @@ func ParseFlags(cmd *cobra.Command, target interface{}) error {
 }
 
 // set field value
+// 🎯 Reads the raw flag string and converts explicitly: lookup and parse
+// errors are returned instead of silently zeroing the field (previously a
+// missing or mistyped flag left the field at zero with no feedback).
 func setFieldValue(cmd *cobra.Command, field reflect.Value, flagName string) error {
 	switch field.Kind() {
+	case reflect.String, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+		reflect.Bool, reflect.Float32, reflect.Float64, reflect.Slice:
+		// supported
+	default:
+		return fmt.Errorf("unsupported field type: %s", field.Kind())
+	}
+
+	if field.Kind() == reflect.Slice {
+		return setSliceValue(cmd, field, flagName)
+	}
+
+	// Read the raw string via Lookup (pflag's GetString type-checks the
+	// flag kind, so it cannot read non-string flags).
+	f := cmd.Flags().Lookup(flagName)
+	if f == nil {
+		return fmt.Errorf("flag accessed but not defined: %s", flagName)
+	}
+	raw := f.Value.String()
+
+	switch field.Kind() {
 	case reflect.String:
-		val, _ := cmd.Flags().GetString(flagName)
-		field.SetString(val)
+		field.SetString(raw)
 
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		val, _ := cmd.Flags().GetInt(flagName)
-		field.SetInt(int64(val))
+		val, err := strconv.ParseInt(raw, 10, field.Type().Bits())
+		if err != nil {
+			return fmt.Errorf("invalid value %q for flag %s: %w", raw, flagName, err)
+		}
+		field.SetInt(val)
 
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		val, _ := cmd.Flags().GetUint(flagName)
-		field.SetUint(uint64(val))
+		val, err := strconv.ParseUint(raw, 10, field.Type().Bits())
+		if err != nil {
+			return fmt.Errorf("invalid value %q for flag %s: %w", raw, flagName, err)
+		}
+		field.SetUint(val)
 
 	case reflect.Bool:
-		val, _ := cmd.Flags().GetBool(flagName)
+		val, err := strconv.ParseBool(raw)
+		if err != nil {
+			return fmt.Errorf("invalid value %q for flag %s: %w", raw, flagName, err)
+		}
 		field.SetBool(val)
 
 	case reflect.Float32, reflect.Float64:
-		val, _ := cmd.Flags().GetFloat64(flagName)
+		val, err := strconv.ParseFloat(raw, field.Type().Bits())
+		if err != nil {
+			return fmt.Errorf("invalid value %q for flag %s: %w", raw, flagName, err)
+		}
 		field.SetFloat(val)
-
-	case reflect.Slice:
-		return setSliceValue(cmd, field, flagName)
-
-	default:
-		return fmt.Errorf("unsupported field type: %s", field.Kind())
 	}
 
 	return nil
@@ -102,11 +131,17 @@ func setFieldValue(cmd *cobra.Command, field reflect.Value, flagName string) err
 func setSliceValue(cmd *cobra.Command, field reflect.Value, flagName string) error {
 	switch field.Type().Elem().Kind() {
 	case reflect.String:
-		val, _ := cmd.Flags().GetStringSlice(flagName)
+		val, err := cmd.Flags().GetStringSlice(flagName)
+		if err != nil {
+			return err
+		}
 		field.Set(reflect.ValueOf(val))
 
 	case reflect.Int:
-		val, _ := cmd.Flags().GetIntSlice(flagName)
+		val, err := cmd.Flags().GetIntSlice(flagName)
+		if err != nil {
+			return err
+		}
 		field.Set(reflect.ValueOf(val))
 
 	default:
@@ -176,22 +211,55 @@ func BindFlags(cmd *cobra.Command, target interface{}) error {
 }
 
 // registerFlag Register flag
+// 🎯 The supported type matrix matches setFieldValue: int/uint/float families
+// are registered as 64-bit flags and range-checked at parse time, so the
+// same DTO behaves identically in BindFlags and ParseFlags.
 func registerFlag(cmd *cobra.Command, field reflect.StructField, name, short, usage, defaultVal string) error {
 	switch field.Type.Kind() {
 	case reflect.String:
 		cmd.Flags().StringP(name, short, defaultVal, usage)
 
-	case reflect.Int:
-		def := 0
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		def := int64(0)
 		if defaultVal != "" {
-			def, _ = strconv.Atoi(defaultVal)
+			var err error
+			def, err = strconv.ParseInt(defaultVal, 10, 64)
+			if err != nil {
+				return fmt.Errorf("invalid default %q for flag %s: %w", defaultVal, name, err)
+			}
 		}
-		cmd.Flags().IntP(name, short, def, usage)
+		cmd.Flags().Int64P(name, short, def, usage)
+
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		def := uint64(0)
+		if defaultVal != "" {
+			var err error
+			def, err = strconv.ParseUint(defaultVal, 10, 64)
+			if err != nil {
+				return fmt.Errorf("invalid default %q for flag %s: %w", defaultVal, name, err)
+			}
+		}
+		cmd.Flags().Uint64P(name, short, def, usage)
+
+	case reflect.Float32, reflect.Float64:
+		def := float64(0)
+		if defaultVal != "" {
+			var err error
+			def, err = strconv.ParseFloat(defaultVal, 64)
+			if err != nil {
+				return fmt.Errorf("invalid default %q for flag %s: %w", defaultVal, name, err)
+			}
+		}
+		cmd.Flags().Float64P(name, short, def, usage)
 
 	case reflect.Bool:
 		def := false
 		if defaultVal != "" {
-			def, _ = strconv.ParseBool(defaultVal)
+			var err error
+			def, err = strconv.ParseBool(defaultVal)
+			if err != nil {
+				return fmt.Errorf("invalid default %q for flag %s: %w", defaultVal, name, err)
+			}
 		}
 		cmd.Flags().BoolP(name, short, def, usage)
 

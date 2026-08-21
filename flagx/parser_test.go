@@ -254,3 +254,67 @@ func TestBindFlags_NoShortName(t *testing.T) {
 	flag := cmd.Flags().Lookup("name")
 	assert.NotNil(t, flag)
 }
+
+// TestParseFlags_MissingFlagReturnsError regression: a flag that was never
+// registered must produce an error instead of silently zeroing the field.
+func TestParseFlags_MissingFlagReturnsError(t *testing.T) {
+	type MissingRequest struct {
+		Name string `flag:"nope"`
+	}
+
+	cmd := &cobra.Command{}
+	var req MissingRequest
+	err := ParseFlags(cmd, &req)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not defined")
+}
+
+// TestBindFlags_Int32Field regression: int32 fields used to fail with
+// "unsupported field type" in BindFlags while ParseFlags supported them —
+// both now share one type matrix.
+func TestBindFlags_Int32Field(t *testing.T) {
+	type Int32Request struct {
+		Count int32 `flag:"count,c" usage:"count" default:"42"`
+	}
+
+	cmd := &cobra.Command{}
+	var req Int32Request
+	require.NoError(t, BindFlags(cmd, &req))
+
+	// Round trip: parse a set value into the same DTO
+	require.NoError(t, cmd.Flags().Set("count", "7"))
+	require.NoError(t, ParseFlags(cmd, &req))
+	assert.Equal(t, int32(7), req.Count)
+}
+
+// TestBindFlags_Uint64FloatFields: the same matrix applies to uint/float.
+func TestBindFlags_Uint64FloatFields(t *testing.T) {
+	type NumRequest struct {
+		Total uint64  `flag:"total,t" usage:"total" default:"100"`
+		Rate  float64 `flag:"rate,r" usage:"rate" default:"0.5"`
+	}
+
+	cmd := &cobra.Command{}
+	var req NumRequest
+	require.NoError(t, BindFlags(cmd, &req))
+
+	require.NoError(t, cmd.Flags().Set("total", "255"))
+	require.NoError(t, cmd.Flags().Set("rate", "1.25"))
+	require.NoError(t, ParseFlags(cmd, &req))
+	assert.Equal(t, uint64(255), req.Total)
+	assert.Equal(t, 1.25, req.Rate)
+}
+
+// TestBindFlags_InvalidDefaultReturnsError regression: default values were
+// silently dropped on parse failure; the error must be returned.
+func TestBindFlags_InvalidDefaultReturnsError(t *testing.T) {
+	type BadDefaultRequest struct {
+		Age int `flag:"age,a" usage:"age" default:"abc"`
+	}
+
+	cmd := &cobra.Command{}
+	var req BadDefaultRequest
+	err := BindFlags(cmd, &req)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid default")
+}
