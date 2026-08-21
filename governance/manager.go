@@ -176,6 +176,13 @@ func (m *Manager) GetServiceInfo() *ServiceInfo {
 
 // Shut down governance manager (unregister service)
 func (m *Manager) Shutdown(ctx context.Context) error {
+	// Nil-safe: the provider may resolve to a nil instance and samber/do
+	// still calls Shutdown on it during container shutdown
+	// (see kernel-shutdown.md).
+	if m == nil {
+		return nil
+	}
+
 	m.logger.DebugCtx(ctx, "🔻 Starting governance manager shutdown...")
 
 	if err := m.DeregisterService(ctx); err != nil && err != ErrNotRegistered {

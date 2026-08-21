@@ -123,6 +123,13 @@ func (m *Manager) serveSpec(c *gin.Context) {
 
 // Shutdown shutdown manager (implements do.Shutdownable)
 func (m *Manager) Shutdown() error {
+	// Nil-safe: when Swagger is disabled, ProvideManager returns (nil, nil)
+	// and samber/do may still call Shutdown on the nil instance during
+	// container shutdown (see kernel-shutdown.md).
+	if m == nil {
+		return nil
+	}
+
 	m.logger.Debug("Swagger manager shutdown")
 	return nil
 }

@@ -8,6 +8,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/KOMKZ/go-yogan-framework/database"
+	"github.com/KOMKZ/go-yogan-framework/kafka"
+	"github.com/KOMKZ/go-yogan-framework/redis"
+	"github.com/samber/do/v2"
+
 	"github.com/KOMKZ/go-yogan-framework/config"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -130,6 +135,57 @@ server:
 	assert.True(t, setupCalled, "OnSetup should be called")
 	assert.True(t, readyCalled, "OnReady should be called")
 	assert.Equal(t, StateStopped, app.GetState())
+}
+
+// TestApplication_GracefulShutdown_NoPanicWithUnconfiguredComponents is a
+// regression test: when optional components (limiter/database/redis/kafka) are
+// not configured, their core providers return (nil, nil) and samber/do v2.0.0
+// still calls Shutdown() on the resolved nil instance during container
+// shutdown. Managers must be nil-safe to avoid a panic on graceful shutdown.
+func TestApplication_GracefulShutdown_NoPanicWithUnconfiguredComponents(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := filepath.Join(tmpDir, "config.yaml")
+	configContent := `
+api_server:
+  host: "127.0.0.1"
+  port: 0
+  mode: "test"
+`
+	require.NoError(t, os.WriteFile(configFile, []byte(configContent), 0644))
+
+	app := New(tmpDir, "TEST", nil)
+	// Register a registrar so startHTTPServer invokes limiter/telemetry/health
+	// providers and resolves the nil instances before shutdown.
+	app.RegisterRoutes(&mockRouterRegistrar{})
+
+	// Resolve the other optional managers explicitly so their nil instances
+	// are also shut down by the DI container.
+	injector := app.GetInjector()
+	_, _ = do.Invoke[*database.Manager](injector)
+	_, _ = do.Invoke[*redis.Manager](injector)
+	_, _ = do.Invoke[*kafka.Manager](injector)
+
+	done := make(chan error, 1)
+	go func() { done <- app.Run() }()
+
+	// Wait until the application reaches the running state.
+	deadline := time.Now().Add(10 * time.Second)
+	for app.GetState() != StateRunning {
+		if time.Now().After(deadline) {
+			t.Fatal("application did not reach running state")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	app.Shutdown()
+
+	select {
+	case err := <-done:
+		require.NoError(t, err)
+		assert.Equal(t, StateStopped, app.GetState())
+	case <-time.After(10 * time.Second):
+		t.Fatal("Run did not return after Shutdown")
+	}
 }
 
 // TestApplication_OnReady_Error Test OnReady returns error

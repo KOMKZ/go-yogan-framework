@@ -136,6 +136,13 @@ func (m *Manager) DB(name string) *gorm.DB {
 
 // Close all database connections
 func (m *Manager) Close() error {
+	// Nil-safe: when no database is configured, ProvideDatabaseManager
+	// returns (nil, nil) and samber/do may still call Shutdown on the nil
+	// instance during container shutdown (see kernel-shutdown.md).
+	if m == nil {
+		return nil
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

@@ -410,6 +410,13 @@ func (m *Manager) Produce(ctx context.Context, msg *Message) (*ProducerResult, e
 
 // Close manager
 func (m *Manager) Close() error {
+	// Nil-safe: when Kafka is not configured, ProvideKafkaManager returns
+	// (nil, nil) and samber/do may still call Shutdown on the nil instance
+	// during container shutdown (see kernel-shutdown.md).
+	if m == nil {
+		return nil
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

@@ -89,6 +89,13 @@ func NewMetricsManager(cfg Config, res *resource.Resource) (*MetricsManager, err
 
 // Shut down metrics
 func (m *MetricsManager) Shutdown(ctx context.Context) error {
+	// Nil-safe: when telemetry is disabled, the provider may resolve to a
+	// nil instance and samber/do still calls Shutdown on it during container
+	// shutdown (see kernel-shutdown.md).
+	if m == nil {
+		return nil
+	}
+
 	if m.meterProvider != nil {
 		return m.meterProvider.Shutdown(ctx)
 	}

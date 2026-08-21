@@ -222,6 +222,13 @@ func (m *Manager) GetClusterNames() []string {
 
 // Close all connections
 func (m *Manager) Close() error {
+	// Nil-safe: when Redis is not configured, ProvideRedisManager returns
+	// (nil, nil) and samber/do may still call Shutdown on the nil instance
+	// during container shutdown (see kernel-shutdown.md).
+	if m == nil {
+		return nil
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

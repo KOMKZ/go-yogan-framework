@@ -312,6 +312,13 @@ func (m *Manager) Reset(resource string) {
 
 // Close Manager
 func (m *Manager) Close() error {
+	// Nil-safe: when the limiter is not configured, ProvideLimiterManager
+	// returns (nil, nil) and samber/do may still call Shutdown on the nil
+	// instance during container shutdown (see kernel-shutdown.md).
+	if m == nil {
+		return nil
+	}
+
 	// Close event bus
 	if m.eventBus != nil {
 		m.eventBus.Close()
