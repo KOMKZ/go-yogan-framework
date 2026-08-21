@@ -23,14 +23,11 @@ type GRPCApplication struct {
 
 // Create gRPC application instance using NewGRPC
 // configPath: Configuration directory path (e.g., ../configs/auth-service)
-// configPrefix: Configuration prefix (e.g., "APP")
+// configPrefix: Configuration prefix (e.g., "AUTH_SERVICE"); empty disables the env source
 // flags: command-line arguments (optional, nil indicates not used)
 func NewGRPC(configPath, configPrefix string, flags interface{}) *GRPCApplication {
 	if configPath == "" {
 		configPath = "../configs"
-	}
-	if configPrefix == "" {
-		configPrefix = "APP"
 	}
 
 	baseApp := NewBase(configPath, configPrefix, "grpc", flags)
@@ -42,8 +39,9 @@ func NewGRPC(configPath, configPrefix string, flags interface{}) *GRPCApplicatio
 
 // Create gRPC application instance with default configuration
 // appName: Application name (e.g., auth-service), used to construct default configuration paths
+// and the per-application environment prefix (AUTH_SERVICE)
 func NewGRPCWithDefaults(appName string) *GRPCApplication {
-	return NewGRPC("../configs/"+appName, "APP", nil)
+	return NewGRPC("../configs/"+appName, EnvPrefixFor(appName), nil)
 }
 
 // Create gRPC application instance (supporting command-line arguments)

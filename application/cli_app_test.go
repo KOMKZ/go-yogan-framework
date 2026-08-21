@@ -47,6 +47,7 @@ func TestNewCLIWithDefaults(t *testing.T) {
 	rootCmd := &cobra.Command{Use: "test"}
 	app := NewCLIWithDefaults("cli-app", rootCmd)
 	assert.NotNil(t, app)
+	assert.Equal(t, "CLI_APP", app.configPrefix)
 }
 
 // TestCLIApplication_Callbacks test callback registration

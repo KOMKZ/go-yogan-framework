@@ -15,6 +15,14 @@ type AppFlags struct {
 	Address   string // Service address (empty means use the value from the configuration file)
 }
 
+// EnvPrefixFor converts an application name into its environment variable
+// prefix (e.g., "user-api" -> "USER_API"). Used by ParseFlags and the
+// *WithDefaults constructors so every application owns an isolated prefix
+// instead of sharing the global "APP" prefix.
+func EnvPrefixFor(appName string) string {
+	return strings.ToUpper(strings.ReplaceAll(appName, "-", "_"))
+}
+
 // ParseFlags parse command line flags and environment variables
 //
 // Parameters:
@@ -40,9 +48,13 @@ type AppFlags struct {
 //	flags := application.ParseFlags("auth-app", "../configs/auth-app")
 //	// go run main.go --port 9003 --address 192.168.1.100
 // // Environment variables: AUTH_APP_PORT, AUTH_APP_ADDRESS
+//
+// The parsed Env flows through AppFlags into the config loader (env-file
+// selection). ParseFlags never writes global environment variables, so
+// multiple applications in one process stay isolated.
 func ParseFlags(appName string, defaultConfigDir string) *AppFlags {
 	// Construct environment variable prefix (convert to uppercase, replace - with _)
-	envPrefix := strings.ToUpper(strings.ReplaceAll(appName, "-", "_"))
+	envPrefix := EnvPrefixFor(appName)
 	configDirEnvKey := envPrefix + "_CONFIG_DIR"
 	envEnvKey := envPrefix + "_ENV"
 	portEnvKey := envPrefix + "_PORT"
@@ -103,11 +115,6 @@ func ParseFlags(appName string, defaultConfigDir string) *AppFlags {
 	finalAddress := address
 	if finalAddress == "" {
 		finalAddress = envAddress
-	}
-
-	// If an environment is specified, set it to APP_ENV (for use by config.Loader)
-	if finalEnv != "" {
-		os.Setenv("APP_ENV", finalEnv)
 	}
 
 	// Debug output of final result

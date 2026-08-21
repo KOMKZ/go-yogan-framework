@@ -387,6 +387,8 @@ func TestNewWithDefaults(t *testing.T) {
 
 	app := NewWithDefaults("test-app")
 	assert.NotNil(t, app)
+	// 🎯 Per-application env prefix derived from appName (no shared "APP" prefix)
+	assert.Equal(t, "TEST_APP", app.configPrefix)
 }
 
 // TestNewWithFlags test creating an application using Flags
@@ -504,6 +506,28 @@ func TestApplication_Shutdown_ReleasesResources(t *testing.T) {
 	l, err = net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
 	require.NoError(t, err, "port should be released after Shutdown")
 	require.NoError(t, l.Close())
+}
+
+// TestApplication_FlagsEnvSelectsEnvFile regression: the env parsed into
+// AppFlags must select the per-application env file (test.yaml) without
+// writing the global APP_ENV variable.
+func TestApplication_FlagsEnvSelectsEnvFile(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "config.yaml"),
+		[]byte("value: \"base\"\n"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "test.yaml"),
+		[]byte("value: \"test-file\"\n"), 0644))
+
+	os.Unsetenv("APP_ENV")
+	defer os.Unsetenv("APP_ENV")
+
+	app := New(tmpDir, "TEST", &AppFlags{Env: "test"})
+
+	// The env file (priority 20) must override the base file (priority 10)
+	got := app.GetConfigLoader().GetViper().GetString("value")
+	assert.Equal(t, "test-file", got, "env file should be selected via AppFlags.Env")
+	assert.Empty(t, os.Getenv("APP_ENV"), "loader must not depend on global APP_ENV")
 }
 
 // TestApplication_RunNonBlocking_NoRoutes_test_non-blocking_run_with_no_routes

@@ -21,15 +21,12 @@ type CLIApplication struct {
 
 // Create CLI application instance
 // configPath: Configuration directory path (e.g., ../configs/cli-app)
-// configPrefix: Configuration prefix (e.g., "APP")
+// configPrefix: Configuration prefix (e.g., "CLI_APP"); empty disables the env source
 // rootCmd: Cobra root command
 func NewCLI(configPath, configPrefix string, rootCmd *cobra.Command) *CLIApplication {
 	// Default value handling
 	if configPath == "" {
 		configPath = "../configs" // Not recommended to use, but defensive default
-	}
-	if configPrefix == "" {
-		configPrefix = "APP"
 	}
 
 	baseApp := NewBase(configPath, configPrefix, "cli", nil)
@@ -42,8 +39,9 @@ func NewCLI(configPath, configPrefix string, rootCmd *cobra.Command) *CLIApplica
 
 // Create CLI application instance with default configuration
 // appName: Application name (e.g., cli-app), used for building default configuration paths
+// (environment prefix derived from appName, e.g., "cli-app" -> "CLI_APP")
 func NewCLIWithDefaults(appName string, rootCmd *cobra.Command) *CLIApplication {
-	return NewCLI("../configs/"+appName, "APP", rootCmd)
+	return NewCLI("../configs/"+appName, EnvPrefixFor(appName), rootCmd)
 }
 
 // OnSetup registers the Setup stage callback (chained call)

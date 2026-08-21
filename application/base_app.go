@@ -102,12 +102,22 @@ func NewBase(configPath, configPrefix, appType string, flags interface{}) *BaseA
 	ctx, cancel := context.WithCancel(context.Background())
 	injector := do.New()
 
+	// 🎯 The runtime environment travels with the flags (per application) into
+	// the config loader for env-file selection, never through global APP_ENV.
+	var env string
+	if flags != nil {
+		if appFlags, ok := flags.(*AppFlags); ok {
+			env = appFlags.Env
+		}
+	}
+
 	// Register all core components Providers (centralized in di/core_registrar.go)
 	di.RegisterCoreProviders(injector, di.ConfigOptions{
 		ConfigPath:   configPath,
 		ConfigPrefix: configPrefix,
 		AppType:      appType,
 		Flags:        flags,
+		Env:          env,
 	})
 
 	// Immediatley obtain Config and Logger (basic dependencies)
@@ -142,10 +152,10 @@ func NewBase(configPath, configPrefix, appType string, flags interface{}) *BaseA
 // appName: application name (such as user-api), used to construct default configuration paths
 // appType: application type (http/grpc/cli/cron)
 // Default configuration path: ../configs/{appName}
-// Default environment prefix: APP
+// Environment prefix: derived from appName (e.g., "user-api" -> "USER_API")
 func NewBaseWithDefaults(appName, appType string) *BaseApplication {
 	defaultPath := "../configs/" + appName
-	return NewBase(defaultPath, "APP", appType, nil)
+	return NewBase(defaultPath, EnvPrefixFor(appName), appType, nil)
 }
 
 // WithVersion sets the application version number (chained call)

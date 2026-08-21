@@ -27,15 +27,12 @@ type Application struct {
 
 // Create a new HTTP application instance
 // configPath: Configuration directory path (e.g., ../configs/user-api)
-// configPrefix: Configuration prefix (e.g., "APP")
+// configPrefix: Configuration prefix (e.g., "USER_API"); empty disables the env source
 // flags: command-line arguments (optional, nil indicates not used)
 func New(configPath, configPrefix string, flags interface{}) *Application {
 	// default value handling
 	if configPath == "" {
 		configPath = "../configs" // Not recommended to use, but defensive default setting
-	}
-	if configPrefix == "" {
-		configPrefix = "APP"
 	}
 
 	baseApp := NewBase(configPath, configPrefix, "http", flags)
@@ -48,8 +45,9 @@ func New(configPath, configPrefix string, flags interface{}) *Application {
 
 // Create an HTTP application instance with default configuration
 // appName: application name (e.g., user-api), used to construct default configuration paths
+// and the per-application environment prefix (USER_API)
 func NewWithDefaults(appName string) *Application {
-	return New("../configs/"+appName, "APP", nil)
+	return New("../configs/"+appName, EnvPrefixFor(appName), nil)
 }
 
 // NewWithFlags creates an HTTP application instance (supports command-line arguments)

@@ -33,6 +33,7 @@ type ConfigOptions struct {
 	ConfigPrefix string      // Environment variable prefix
 	AppType      string      // Application type: grpc, http, mixed
 	Flags        interface{} // command line arguments
+	Env          string      // runtime environment (dev/test/prod), per application
 }
 
 // ProvideConfigLoader creates a Provider for config.Loader
@@ -51,6 +52,7 @@ func ProvideConfigLoader(opts ConfigOptions) func(do.Injector) (*config.Loader, 
 			WithEnvPrefix(opts.ConfigPrefix).
 			WithAppType(opts.AppType).
 			WithFlags(opts.Flags).
+			WithEnv(opts.Env).
 			Build()
 		if err != nil {
 			return nil, err

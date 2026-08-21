@@ -49,6 +49,7 @@ func TestNewGRPCWithDefaults(t *testing.T) {
 
 	app := NewGRPCWithDefaults("grpc-app")
 	assert.NotNil(t, app)
+	assert.Equal(t, "GRPC_APP", app.configPrefix)
 }
 
 // TestNewGRPCWithFlags test creating gRPC application using flags

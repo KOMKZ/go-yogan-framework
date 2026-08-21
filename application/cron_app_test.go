@@ -44,6 +44,7 @@ func TestNewCronWithDefaults(t *testing.T) {
 	app, err := NewCronWithDefaults("cron-app")
 	assert.NoError(t, err)
 	assert.NotNil(t, app)
+	assert.Equal(t, "CRON_APP", app.configPrefix)
 }
 
 // TestCronApplication_Callbacks test callback registration

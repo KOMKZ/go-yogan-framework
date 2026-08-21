@@ -53,3 +53,12 @@ redis:
         - "localhost:6379"
       pool_size: 10
 ```
+
+## 多应用环境隔离
+
+| 机制 | 口径 |
+|------|------|
+| 环境文件选择 | 优先取 `AppFlags.Env`（随 `di.ConfigOptions.Env` 传入 loader）；全局 `APP_ENV`/`ENV` 仅作直接使用 `config.LoaderBuilder` 时的旧式回退 |
+| 环境变量前缀 | 每应用独立前缀：`*WithDefaults` 构造器从 appName 推导（`EnvPrefixFor`：`user-api` → `USER_API`）；显式构造时由调用方传入，**空前缀表示禁用 env source**，不再兜底 `"APP"` |
+| `ParseFlags` | 只读每应用变量（`{APP}_ENV` 等），**绝不写全局 `APP_ENV`**——同一进程内多个应用互不串扰 |
+| env 扫描 | `EnvSource` 只扫描 `{prefix}_` 开头的变量；不要依赖 `APP_*` 通用前缀 |

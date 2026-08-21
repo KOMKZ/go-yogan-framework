@@ -58,6 +58,38 @@ func TestParseFlags(t *testing.T) {
 	assert.Equal(t, "10.0.0.1", flags.Address)
 }
 
+// TestParseFlags_DoesNotWriteGlobalAppEnv regression: ParseFlags must not write
+// the global APP_ENV variable — the parsed env travels with AppFlags so that
+// multiple applications in one process stay isolated.
+func TestParseFlags_DoesNotWriteGlobalAppEnv(t *testing.T) {
+	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+
+	os.Unsetenv("APP_ENV")
+	os.Unsetenv("PARSE_TEST_ENV")
+
+	flags := ParseFlags("parse-test", "/default/config")
+
+	assert.Empty(t, flags.Env, "no env input should yield empty Env")
+	assert.Empty(t, os.Getenv("APP_ENV"), "ParseFlags must not write global APP_ENV")
+
+	// Even with an env provided via the per-app variable, no global write.
+	os.Setenv("PARSE_TEST_ENV", "staging")
+	defer os.Unsetenv("PARSE_TEST_ENV")
+
+	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+	flags = ParseFlags("parse-test", "/default/config")
+
+	assert.Equal(t, "staging", flags.Env)
+	assert.Empty(t, os.Getenv("APP_ENV"), "per-app env must not leak into global APP_ENV")
+}
+
+// TestEnvPrefixFor verifies the app-name -> env prefix normalization
+func TestEnvPrefixFor(t *testing.T) {
+	assert.Equal(t, "USER_API", EnvPrefixFor("user-api"))
+	assert.Equal(t, "HRISE_ADMIN_API", EnvPrefixFor("hrise-admin-api"))
+	assert.Equal(t, "AUTH_APP", EnvPrefixFor("auth_app"))
+}
+
 // TestParseFlags_DefaultValues test default values
 func TestParseFlags_DefaultValues(t *testing.T) {
 	// Reset flag status

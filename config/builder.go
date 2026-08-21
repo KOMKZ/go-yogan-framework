@@ -11,6 +11,7 @@ type LoaderBuilder struct {
 	envPrefix  string
 	appType    string      // grpc, http, mixed
 	flags      interface{} // command line arguments
+	env        string      // runtime environment for env-file selection (per application)
 }
 
 // NewLoaderBuilder creates a loader builder
@@ -44,6 +45,13 @@ func (b *LoaderBuilder) WithFlags(flags interface{}) *LoaderBuilder {
 	return b
 }
 
+// WithEnv set the runtime environment for env-specific file selection.
+// Empty falls back to the global GetEnv() (APP_ENV/ENV, legacy behavior).
+func (b *LoaderBuilder) WithEnv(env string) *LoaderBuilder {
+	b.env = env
+	return b
+}
+
 // Build loader
 func (b *LoaderBuilder) Build() (*Loader, error) {
 	loader := NewLoader()
@@ -55,8 +63,13 @@ func (b *LoaderBuilder) Build() (*Loader, error) {
 	}
 
 	// Environment configuration file (priority 20)
+	// 🎯 Per-application env (from flags) takes precedence; global APP_ENV/ENV
+	// is only a legacy fallback so multiple apps stay isolated.
 	if b.configPath != "" {
-		env := GetEnv()
+		env := b.env
+		if env == "" {
+			env = GetEnv()
+		}
 		if env != "" {
 			envFile := filepath.Join(b.configPath, env+".yaml")
 			loader.AddSource(NewFileSource(envFile, 20))

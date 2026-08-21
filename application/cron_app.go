@@ -32,13 +32,10 @@ type TaskRegistrar interface {
 
 // Create Cron application instance
 // configPath: Configuration directory path (e.g., ../configs/cron-app)
-// configPrefix: Configuration prefix (e.g., "APP")
+// configPrefix: Configuration prefix (e.g., "CRON_APP"); empty disables the env source
 func NewCron(configPath, configPrefix string) (*CronApplication, error) {
 	if configPath == "" {
 		configPath = "../configs/cron-app"
-	}
-	if configPrefix == "" {
-		configPrefix = "APP"
 	}
 
 	baseApp := NewBase(configPath, configPrefix, "cron", nil)
@@ -56,8 +53,9 @@ func NewCron(configPath, configPrefix string) (*CronApplication, error) {
 }
 
 // Create Cron application instance with default configuration
+// (environment prefix derived from appName, e.g., "cron-app" -> "CRON_APP")
 func NewCronWithDefaults(appName string) (*CronApplication, error) {
-	return NewCron("../configs/"+appName, "APP")
+	return NewCron("../configs/"+appName, EnvPrefixFor(appName))
 }
 
 // Run the Cron application (block until shutdown signal received)
