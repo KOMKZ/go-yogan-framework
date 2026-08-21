@@ -29,36 +29,45 @@ type HTTPServer struct {
 
 // NewHTTPServer creates an HTTP server (uniform logging solution)
 func NewHTTPServer(cfg ApiServerConfig, middlewareCfg *MiddlewareConfig, httpxCfg *httpx.ErrorLoggingConfig, limiterManager *limiter.Manager) *HTTPServer {
+	return newServer(cfg, middlewareCfg, httpxCfg, limiterManager, nil)
+}
+
+// newServer builds the gin engine with the shared middleware assembly.
+// 🎯 Single source of truth for middleware order and defaults:
+// NewHTTPServer and NewHTTPServerWithTelemetry delegate here (they used to
+// duplicate ~100 lines and drifted apart). telemetryMgr nil skips the
+// OpenTelemetry span middleware.
+func newServer(
+	cfg ApiServerConfig,
+	middlewareCfg *MiddlewareConfig,
+	httpxCfg *httpx.ErrorLoggingConfig,
+	limiterManager *limiter.Manager,
+	telemetryMgr *telemetry.Manager,
+) *HTTPServer {
 	// ====================================
-	// Take over Gin core log output
+	// 1. Take over Gin core log output (avoid the built-in Logger/Recovery)
 	// ====================================
-	// Redirect Gin's routing registration logs to a custom Logger
 	gin.DefaultWriter = logger.NewGinLogWriter("yogan")
-	// Redirect Gin's error logs to a custom logger
 	gin.DefaultErrorWriter = logger.NewGinLogWriter("yogan")
 
 	// ====================================
-	// 2. Set Gin mode
+	// 2. Set Gin mode (debug: route logs; release: production)
 	// ====================================
-	// debug: output detailed route registration logs
-	// release: disable route registration log (recommended for production environment)
 	gin.SetMode(cfg.Mode)
 
 	// ====================================
 	// 3. Create Gin engine
 	// ====================================
-	// Use gin.New() instead of gin.Default()
-	// Avoid using the built-in Logger and Recovery middleware, use a custom version
 	engine := gin.New()
 
 	// Enable 405 method not allowed response (default is 404)
 	engine.HandleMethodNotAllowed = true
 
 	// ====================================
-	// 4. Register custom middleware (based on configuration, note the order)
+	// 4. Middleware chain (order matters)
 	// ====================================
 
-	// CORS middleware: Handle cross-origin requests (must be at the top to ensure pre-flight requests are correctly responded to)
+	// CORS: must be at the top so pre-flight requests are handled correctly
 	if middlewareCfg != nil && middlewareCfg.CORS != nil && middlewareCfg.CORS.Enable {
 		corsCfg := middleware.CORSConfig{
 			AllowOrigins:     middlewareCfg.CORS.AllowOrigins,
@@ -71,7 +80,20 @@ func NewHTTPServer(cfg ApiServerConfig, middlewareCfg *MiddlewareConfig, httpxCf
 		engine.Use(middleware.CORSWithConfig(corsCfg))
 	}
 
-	// TraceID middleware: Generates/extracts TraceID for each request (must be before log middleware)
+	// OpenTelemetry span middleware (must be before TraceID so the span
+	// exists when TraceID extracts the ID)
+	if telemetryMgr != nil && telemetryMgr.IsEnabled() {
+		serviceName := telemetryMgr.GetConfig().ServiceName
+		if serviceName == "" {
+			serviceName = "http-service"
+		}
+		engine.Use(otelgin.Middleware(serviceName))
+		logger.Info("yogan", "✅ OpenTelemetry Trace middleware registered",
+			zap.String("service_name", serviceName))
+	}
+
+	// TraceID: generates/extracts the TraceID for each request
+	// (must be before the logging middleware)
 	if middlewareCfg != nil && middlewareCfg.TraceID != nil && middlewareCfg.TraceID.Enable {
 		traceCfg := middleware.TraceConfig{
 			TraceIDKey:           middlewareCfg.TraceID.TraceIDKey,
@@ -81,7 +103,8 @@ func NewHTTPServer(cfg ApiServerConfig, middlewareCfg *MiddlewareConfig, httpxCf
 		engine.Use(middleware.TraceID(traceCfg))
 	}
 
-	// Rate limiting middleware: globally applied rate limiting (applied before the logging middleware so that rate-limiting events are also recorded)
+	// Rate limiting: before the logging middleware so rate-limit events
+	// are also recorded
 	if limiterManager != nil && limiterManager.IsEnabled() {
 		limiterCfg := limiterManager.GetConfig()
 		rateLimiterCfg := middleware.DefaultRateLimiterConfig(limiterManager)
@@ -113,7 +136,7 @@ func NewHTTPServer(cfg ApiServerConfig, middlewareCfg *MiddlewareConfig, httpxCf
 			zap.String("key_func", limiterCfg.KeyFunc))
 	}
 
-	// HTTP request logging middleware: log all HTTP requests to the gin-http module (automatically associate TraceID)
+	// HTTP request logging (automatically associates TraceID)
 	if middlewareCfg != nil && middlewareCfg.RequestLog != nil && middlewareCfg.RequestLog.Enable {
 		requestLogCfg := middleware.RequestLogConfig{
 			SkipPaths:   middlewareCfg.RequestLog.SkipPaths,
@@ -123,16 +146,17 @@ func NewHTTPServer(cfg ApiServerConfig, middlewareCfg *MiddlewareConfig, httpxCf
 		engine.Use(middleware.RequestLogWithConfig(requestLogCfg))
 	}
 
-	// HTTP error logging middleware: decides based on configuration whether to log business error logs (default is not to log)
+	// HTTP error logging: decides based on configuration whether to log
+	// business error logs (default is not to log)
 	if httpxCfg != nil && httpxCfg.Enable {
 		engine.Use(httpx.ErrorLoggingMiddleware(*httpxCfg))
 	}
 
-	// Panic recovery middleware: captures panics and logs to the gin-error module (always enabled)
+	// Panic recovery (always enabled)
 	engine.Use(middleware.Recovery())
 
 	// ====================================
-	// Register unified response handling for 404/405 errors
+	// Unified response handling for 404/405
 	// ====================================
 	engine.NoRoute(httpx.NoRouteHandler())
 	engine.NoMethod(httpx.NoMethodHandler())
@@ -239,6 +263,8 @@ func NewHTTPServerWithTelemetryAndHealth(
 }
 
 // Create an HTTP server with OpenTelemetry support
+// 🎯 Delegates to newServer with the telemetry manager; the shared assembly
+// lives in exactly one place (see newServer).
 func NewHTTPServerWithTelemetry(
 	cfg ApiServerConfig,
 	middlewareCfg *MiddlewareConfig,
@@ -246,131 +272,5 @@ func NewHTTPServerWithTelemetry(
 	limiterManager *limiter.Manager,
 	telemetryMgr *telemetry.Manager,
 ) *HTTPServer {
-	// ====================================
-	// Take over Gin core log output
-	// ====================================
-	gin.DefaultWriter = logger.NewGinLogWriter("yogan")
-	gin.DefaultErrorWriter = logger.NewGinLogWriter("yogan")
-
-	// ====================================
-	// 2. Set Gin mode
-	// ====================================
-	gin.SetMode(cfg.Mode)
-
-	// ====================================
-	// 3. Create Gin engine
-	// ====================================
-	engine := gin.New()
-
-	// Enable 405 method not allowed response (default is 404)
-	engine.HandleMethodNotAllowed = true
-
-	// ====================================
-	// 4. Register custom middleware (note the order)
-	// ====================================
-
-	// CORS middleware: Handle cross-domain requests (must be at the very top)
-	if middlewareCfg != nil && middlewareCfg.CORS != nil && middlewareCfg.CORS.Enable {
-		corsCfg := middleware.CORSConfig{
-			AllowOrigins:     middlewareCfg.CORS.AllowOrigins,
-			AllowMethods:     middlewareCfg.CORS.AllowMethods,
-			AllowHeaders:     middlewareCfg.CORS.AllowHeaders,
-			ExposeHeaders:    middlewareCfg.CORS.ExposeHeaders,
-			AllowCredentials: middlewareCfg.CORS.AllowCredentials,
-			MaxAge:           middlewareCfg.CORS.MaxAge,
-		}
-		engine.Use(middleware.CORSWithConfig(corsCfg))
-	}
-
-	// 🎯 OpenTelemetry Trace middleware: Create a Span (must be before TraceID)
-	if telemetryMgr != nil && telemetryMgr.IsEnabled() {
-		serviceName := telemetryMgr.GetConfig().ServiceName
-		if serviceName == "" {
-			serviceName = "http-service"
-		}
-		engine.Use(otelgin.Middleware(serviceName))
-		logger.Info("yogan", "✅ OpenTelemetry Trace middleware registered",
-			zap.String("service_name", serviceName))
-	}
-
-	// 🎯 HTTP Metrics middleware: collect HTTP request metrics (independent of Trace)
-	if telemetryMgr != nil {
-		metricsMgr := telemetryMgr.GetMetricsManager()
-		if metricsMgr != nil {
-			// Metrics have been started in the Manager
-			logger.Info("yogan", "✅ HTTP Metrics middleware available via Telemetry Manager")
-		}
-	}
-
-	// TraceID middleware: Extract TraceID from Span or Header (after otelgin)
-	if middlewareCfg != nil && middlewareCfg.TraceID != nil && middlewareCfg.TraceID.Enable {
-		traceCfg := middleware.TraceConfig{
-			TraceIDKey:           middlewareCfg.TraceID.TraceIDKey,
-			TraceIDHeader:        middlewareCfg.TraceID.TraceIDHeader,
-			EnableResponseHeader: middlewareCfg.TraceID.EnableResponseHeader,
-		}
-		engine.Use(middleware.TraceID(traceCfg))
-	}
-
-	// Rate limiting middleware: global rate limiting applied (before the logging middleware so that rate limiting events are also recorded)
-	if limiterManager != nil && limiterManager.IsEnabled() {
-		limiterCfg := limiterManager.GetConfig()
-		rateLimiterCfg := middleware.DefaultRateLimiterConfig(limiterManager)
-
-		// Bypass rate-limited paths
-		if len(limiterCfg.SkipPaths) > 0 {
-			rateLimiterCfg.SkipPaths = limiterCfg.SkipPaths
-		}
-
-		// Choose key function based on configuration
-		switch limiterCfg.KeyFunc {
-		case "ip":
-			rateLimiterCfg.KeyFunc = middleware.RateLimiterKeyByIP
-		case "user":
-			rateLimiterCfg.KeyFunc = middleware.RateLimiterKeyByUser("user_id")
-		case "path_ip":
-			rateLimiterCfg.KeyFunc = middleware.RateLimiterKeyByPathAndIP
-		case "api_key":
-			rateLimiterCfg.KeyFunc = middleware.RateLimiterKeyByAPIKey("X-API-Key")
-		case "path", "":
-			// Default: METHOD:PATH (already set in DefaultRateLimiterConfig)
-		default:
-			logger.Warn("yogan", "Unknown KeyFunc config, using default",
-				zap.String("key_func", limiterCfg.KeyFunc))
-		}
-
-		engine.Use(middleware.RateLimiterWithConfig(rateLimiterCfg))
-		logger.Debug("yogan", "✅ Rate limiter middleware globally enabled",
-			zap.String("key_func", limiterCfg.KeyFunc))
-	}
-
-	// HTTP request logging middleware
-	if middlewareCfg != nil && middlewareCfg.RequestLog != nil && middlewareCfg.RequestLog.Enable {
-		requestLogCfg := middleware.RequestLogConfig{
-			SkipPaths:   middlewareCfg.RequestLog.SkipPaths,
-			EnableBody:  middlewareCfg.RequestLog.EnableBody,
-			MaxBodySize: middlewareCfg.RequestLog.MaxBodySize,
-		}
-		engine.Use(middleware.RequestLogWithConfig(requestLogCfg))
-	}
-
-	// HTTP error logging middleware
-	if httpxCfg != nil && httpxCfg.Enable {
-		engine.Use(httpx.ErrorLoggingMiddleware(*httpxCfg))
-	}
-
-	// Enable middleware for panic recovery (always enabled)
-	engine.Use(middleware.Recovery())
-
-	// ====================================
-	// Register uniform response handling for 404/405
-	// ====================================
-	engine.NoRoute(httpx.NoRouteHandler())
-	engine.NoMethod(httpx.NoMethodHandler())
-
-	return &HTTPServer{
-		engine: engine,
-		port:   cfg.Port,
-		mode:   cfg.Mode,
-	}
+	return newServer(cfg, middlewareCfg, httpxCfg, limiterManager, telemetryMgr)
 }
