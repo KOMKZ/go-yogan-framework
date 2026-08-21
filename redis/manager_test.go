@@ -530,3 +530,35 @@ func TestManager_Close_Miniredis(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+
+// TestManager_WithDB_ClosedByManager regression: clients created via WithDB
+// must be shut down by Manager.Close() (previously each WithDB call leaked an
+// unmanaged connection pool that survived shutdown).
+func TestManager_WithDB_ClosedByManager(t *testing.T) {
+	mr, err := miniredis.Run()
+	if err != nil {
+		t.Fatalf("Unable to start miniredis: %v", err)
+	}
+	defer mr.Close()
+
+	log := logger.GetLogger("test")
+	configs := map[string]Config{
+		"main": {
+			Mode:  "standalone",
+			Addrs: []string{mr.Addr()},
+			DB:    0,
+		},
+	}
+
+	m, err := NewManager(configs, log)
+	assert.NoError(t, err)
+
+	db1Client := m.WithDB("main", 1)
+	assert.NotNil(t, db1Client)
+
+	assert.NoError(t, m.Close())
+
+	// The WithDB client must have been closed by the manager
+	err = db1Client.Ping(context.Background()).Err()
+	assert.Error(t, err, "WithDB client must be closed by Manager.Close")
+}

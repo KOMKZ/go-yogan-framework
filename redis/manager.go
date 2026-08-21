@@ -18,6 +18,10 @@ type Manager struct {
 	logger    *logger.CtxZapLogger            // Injector logger (supports TraceID)
 	mu        sync.RWMutex                    // read-write lock
 	metrics   *RedisMetrics                   // Optional: metrics provider (injected after creation)
+
+	// extraClients tracks clients created by WithDB ("name:db" -> client) so
+	// Close() can shut them down too — otherwise per-DB pools leak.
+	extraClients map[string]*redis.Client
 }
 
 // Create Redis manager
@@ -30,10 +34,11 @@ func NewManager(configs map[string]Config, log *logger.CtxZapLogger) (*Manager, 
 
 	ctx := context.Background()
 	m := &Manager{
-		instances: make(map[string]*redis.Client),
-		clusters:  make(map[string]*redis.ClusterClient),
-		configs:   make(map[string]Config),
-		logger:    log,
+		instances:    make(map[string]*redis.Client),
+		clusters:     make(map[string]*redis.ClusterClient),
+		configs:      make(map[string]Config),
+		logger:       log,
+		extraClients: make(map[string]*redis.Client),
 	}
 
 	// Initialize all instances
@@ -171,6 +176,17 @@ func (m *Manager) WithDB(name string, db int) *redis.Client {
 		return nil
 	}
 
+	// 🎯 Register the client so Close() can shut it down (previously every
+	// WithDB call leaked an unmanaged connection pool). Re-requesting the
+	// same DB replaces the previous client.
+	key := fmt.Sprintf("%s:%d", name, db)
+	m.mu.Lock()
+	if old, exists := m.extraClients[key]; exists {
+		_ = old.Close()
+	}
+	m.extraClients[key] = newClient
+	m.mu.Unlock()
+
 	return newClient
 }
 
@@ -257,6 +273,19 @@ func (m *Manager) Close() error {
 				zap.String("name", name))
 		}
 	}
+
+	// Shut down WithDB clients
+	for key, client := range m.extraClients {
+		if err := client.Close(); err != nil {
+			m.logger.ErrorCtx(ctx, "failed to close Redis WithDB connection",
+				zap.String("key", key),
+				zap.Error(err))
+		} else {
+			m.logger.DebugCtx(ctx, "Redis WithDB connection closed",
+				zap.String("key", key))
+		}
+	}
+	m.extraClients = make(map[string]*redis.Client)
 
 	return nil
 }
