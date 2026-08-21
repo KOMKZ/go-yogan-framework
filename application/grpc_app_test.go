@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/KOMKZ/go-yogan-framework/di"
+	"github.com/samber/do/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -95,20 +97,6 @@ func TestGRPCApplication_Callbacks(t *testing.T) {
 	_ = shutdownCalled
 }
 
-// TestGRPCApplication_SetGovernanceManager test setting service governance manager
-func TestGRPCApplication_SetGovernanceManager(t *testing.T) {
-	tmpDir := t.TempDir()
-	configFile := filepath.Join(tmpDir, "config.yaml")
-	os.WriteFile(configFile, []byte("server:\n  port: 8080\n"), 0644)
-
-	app := NewGRPC(tmpDir, "TEST", nil)
-
-	// SetGovernanceManager can also accept null
-	result := app.SetGovernanceManager(nil)
-	assert.Equal(t, app, result)
-	assert.Nil(t, app.governanceManager)
-}
-
 // TestGRPCApplication_Run test blocking run
 func TestGRPCApplication_Run(t *testing.T) {
 	tmpDir := t.TempDir()
@@ -130,14 +118,14 @@ func TestGRPCApplication_Run(t *testing.T) {
 	})
 
 	// Run in a goroutine to avoid blocking tests
-	done := make(chan struct{})
+	done := make(chan error, 1)
 	go func() {
-		app.Run()
-		close(done)
+		done <- app.Run()
 	}()
 
 	select {
-	case <-done:
+	case err := <-done:
+		assert.NoError(t, err)
 		assert.True(t, readyCalled)
 	case <-time.After(2 * time.Second):
 		t.Fatal("Run should complete after cancel")
@@ -161,35 +149,8 @@ func TestGRPCApplication_GracefulShutdown(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-// TestGRPCApplication_AutoDeregisterService_NilManager Test auto-deregistration service (no manager)
-func TestGRPCApplication_AutoDeregisterService_NilManager(t *testing.T) {
-	tmpDir := t.TempDir()
-	configFile := filepath.Join(tmpDir, "config.yaml")
-	os.WriteFile(configFile, []byte("server:\n  port: 8080\n"), 0644)
-
-	app := NewGRPC(tmpDir, "TEST", nil)
-
-	// When governanceManager is nil, autoDeregisterService should return nil
-	err := app.autoDeregisterService()
-	assert.NoError(t, err)
-}
-
-// TestGRPCApplication_AutoRegisterService test auto register service
-func TestGRPCApplication_AutoRegisterService(t *testing.T) {
-	tmpDir := t.TempDir()
-	configFile := filepath.Join(tmpDir, "config.yaml")
-	os.WriteFile(configFile, []byte("server:\n  port: 8080\n"), 0644)
-
-	app := NewGRPC(tmpDir, "TEST", nil)
-	err := app.Setup()
-	require.NoError(t, err)
-
-	// autoRegisterService currently only logs, does not throw errors
-	err = app.autoRegisterService()
-	assert.NoError(t, err)
-}
-
 // TestGRPCApplication_Run_SetupError Run startup failed due to setup error
+// 🎯 Run() must return the error instead of panicking (unified with HTTP/Cron)
 func TestGRPCApplication_Run_SetupError(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -201,12 +162,13 @@ func TestGRPCApplication_Run_SetupError(t *testing.T) {
 		return assert.AnError
 	})
 
-	assert.Panics(t, func() {
-		app.Run()
-	})
+	err := app.Run()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "setup failed")
 }
 
-// TestGRPCApplication_OnReady_Error test failed
+// TestGRPCApplication_Run_ReadyError OnReady failed
+// 🎯 Run() must return the error instead of panicking (unified with HTTP/Cron)
 func TestGRPCApplication_Run_ReadyError(t *testing.T) {
 	tmpDir := t.TempDir()
 	configFile := filepath.Join(tmpDir, "config.yaml")
@@ -218,7 +180,40 @@ func TestGRPCApplication_Run_ReadyError(t *testing.T) {
 		return assert.AnError
 	})
 
-	assert.Panics(t, func() {
-		app.Run()
+	err := app.Run()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "onReady failed")
+}
+
+// TestGRPCApplication_RunNonBlocking_AutoStartServer regression: with a
+// *grpc.Server provider registered in DI and grpc.server.enabled, the framework
+// must start the server automatically (instead of leaving it to handwritten
+// template code) and stop it on Shutdown.
+func TestGRPCApplication_RunNonBlocking_AutoStartServer(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := filepath.Join(tmpDir, "config.yaml")
+	err := os.WriteFile(configFile, []byte("grpc:\n  server:\n    enabled: true\n    port: 0\n"), 0644)
+	require.NoError(t, err)
+
+	app := NewGRPC(tmpDir, "TEST", nil)
+	do.Provide(app.GetInjector(), di.ProvideGRPCServer)
+
+	var readyCalled bool
+	app.OnReady(func(g *GRPCApplication) error {
+		readyCalled = true
+		return nil
 	})
+
+	err = app.RunNonBlocking()
+	require.NoError(t, err)
+	assert.True(t, readyCalled)
+
+	// Server must have been started automatically with a real port (port 0 → auto-assigned)
+	require.NotNil(t, app.GetGRPCServer())
+	assert.Greater(t, app.GetGRPCServer().Port, 0)
+
+	// Shutdown must stop the server and the container
+	err = app.Shutdown()
+	require.NoError(t, err)
+	assert.Equal(t, StateStopped, app.GetState())
 }

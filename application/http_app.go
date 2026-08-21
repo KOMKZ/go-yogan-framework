@@ -196,9 +196,12 @@ func (a *Application) GetRouterManager() *Manager {
 	return a.routerManager
 }
 
-// Shutdown manually triggered (for testing or program control)
-func (a *Application) Shutdown() {
+// Shutdown manually triggers graceful shutdown (for testing or program control)
+// Cancels the context (unblocking a blocking Run) and performs full cleanup:
+// stops the HTTP server and shuts down all DI components.
+func (a *Application) Shutdown() error {
 	a.Cancel()
+	return a.gracefulShutdown()
 }
 
 // OnSetup registers the callback for the Setup stage (chained call)

@@ -2,6 +2,8 @@ package application
 
 import (
 	"context"
+	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"sync/atomic"
@@ -469,6 +471,39 @@ func TestNew_DefaultValues(t *testing.T) {
 	// Test empty configuration path using default values
 	app := New("", "", nil)
 	assert.NotNil(t, app)
+}
+
+// TestApplication_Shutdown_ReleasesResources regression: RunNonBlocking +
+// Shutdown must fully stop the HTTP server and DI container (previously
+// Shutdown only cancelled the context, leaking the server and all components).
+func TestApplication_Shutdown_ReleasesResources(t *testing.T) {
+	// Pick a free port for a deterministic listen check after shutdown
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	port := l.Addr().(*net.TCPAddr).Port
+	require.NoError(t, l.Close())
+
+	tmpDir := t.TempDir()
+	configFile := filepath.Join(tmpDir, "config.yaml")
+	require.NoError(t, os.WriteFile(configFile, []byte(fmt.Sprintf(
+		"api_server:\n  host: \"127.0.0.1\"\n  port: %d\n  mode: test\n", port)), 0644))
+
+	app := New(tmpDir, "TEST", nil)
+	app.RegisterRoutes(&mockRouterRegistrar{})
+
+	err = app.RunNonBlocking()
+	require.NoError(t, err)
+	assert.Equal(t, StateRunning, app.GetState())
+
+	// Programmatic shutdown must perform full cleanup
+	err = app.Shutdown()
+	require.NoError(t, err)
+	assert.Equal(t, StateStopped, app.GetState())
+
+	// The port must be released (listenable again)
+	l, err = net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	require.NoError(t, err, "port should be released after Shutdown")
+	require.NoError(t, l.Close())
 }
 
 // TestApplication_RunNonBlocking_NoRoutes_test_non-blocking_run_with_no_routes

@@ -51,6 +51,10 @@ type BaseApplication struct {
 	state  AppState
 	mu     sync.RWMutex
 
+	// Idempotent shutdown (first caller performs cleanup, later calls return the same result)
+	shutdownOnce sync.Once
+	shutdownErr  error
+
 	// Apply metadata
 	version   string
 	startTime time.Time // Start time initialization
@@ -339,7 +343,17 @@ func (b *BaseApplication) registerComponentMetrics() {
 
 // Shut down gracefully (core logic)
 // 🎯 Using sambert/do's Shutdown to automatically shut down all components implementing Shutdownable
+// Idempotent: only the first call performs the actual shutdown; later calls return the same result.
+// This allows manual Shutdown() and the blocking Run() path to race safely.
 func (b *BaseApplication) Shutdown(timeout time.Duration) error {
+	b.shutdownOnce.Do(func() {
+		b.shutdownErr = b.doShutdown(timeout)
+	})
+	return b.shutdownErr
+}
+
+// doShutdown executes the actual shutdown logic (guarded by shutdownOnce)
+func (b *BaseApplication) doShutdown(timeout time.Duration) error {
 	b.setState(StateStopping)
 
 	log := b.MustGetLogger()
@@ -468,6 +482,20 @@ func (b *BaseApplication) Context() context.Context {
 // ═══════════════════════════════════════════════════════════
 // Depends on container method (BaseApplication as IoC container)
 // ═══════════════════════════════════════════════════════════
+
+// ServiceApp unified entry interface for long-running service applications
+// (HTTP/Cron/gRPC). CLI applications are synchronous one-shot executables and
+// keep their own Execute() signature.
+type ServiceApp interface {
+	Run() error
+}
+
+// Compile-time assertions: all service-type applications share one entry shape.
+var (
+	_ ServiceApp = (*Application)(nil)
+	_ ServiceApp = (*CronApplication)(nil)
+	_ ServiceApp = (*GRPCApplication)(nil)
+)
 
 // set state (thread-safe)
 func (b *BaseApplication) setState(state AppState) {

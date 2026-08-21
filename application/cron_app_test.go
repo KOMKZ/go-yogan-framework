@@ -3,6 +3,7 @@ package application
 import (
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -71,13 +72,49 @@ func TestCronApplication_Callbacks(t *testing.T) {
 		})
 
 	assert.Equal(t, app, result)
-	assert.NotNil(t, app.cronOnSetup)
-	assert.NotNil(t, app.cronOnReady)
-	assert.NotNil(t, app.cronOnShutdown)
+	// 🎯 Single-track: callbacks are registered on BaseApplication only
+	assert.NotNil(t, app.BaseApplication.onSetup)
+	assert.NotNil(t, app.BaseApplication.onReady)
+	assert.NotNil(t, app.BaseApplication.onShutdown)
 
 	_ = setupCalled
 	_ = readyCalled
 	_ = shutdownCalled
+}
+
+// TestCronApplication_Callbacks_CalledOnce regression: OnSetup/OnReady/OnShutdown
+// must each fire exactly once per startup cycle (previously OnSetup fired twice
+// and OnReady's base wrapper never fired).
+func TestCronApplication_Callbacks_CalledOnce(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := filepath.Join(tmpDir, "config.yaml")
+	os.WriteFile(configFile, []byte("server:\n  port: 8080\n"), 0644)
+
+	app, err := NewCron(tmpDir, "TEST")
+	require.NoError(t, err)
+
+	var setupCount, readyCount, shutdownCount int32
+
+	app.OnSetup(func(c *CronApplication) error {
+		atomic.AddInt32(&setupCount, 1)
+		return nil
+	})
+	app.OnReady(func(c *CronApplication) error {
+		atomic.AddInt32(&readyCount, 1)
+		return nil
+	})
+	app.OnShutdown(func(c *CronApplication) error {
+		atomic.AddInt32(&shutdownCount, 1)
+		return nil
+	})
+
+	err = app.RunNonBlocking()
+	require.NoError(t, err)
+	require.NoError(t, app.Shutdown())
+
+	assert.Equal(t, int32(1), atomic.LoadInt32(&setupCount), "OnSetup should fire exactly once")
+	assert.Equal(t, int32(1), atomic.LoadInt32(&readyCount), "OnReady should fire exactly once")
+	assert.Equal(t, int32(1), atomic.LoadInt32(&shutdownCount), "OnShutdown should fire exactly once")
 }
 
 // TestCronApplication_RunNonBlocking test non-blocking execution

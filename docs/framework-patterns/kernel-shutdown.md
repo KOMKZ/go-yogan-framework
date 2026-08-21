@@ -38,3 +38,19 @@ func (m *Manager) Close() error {
 - 已防护：`limiter`、`database`、`redis`、`kafka`、`swagger`、`telemetry.Manager`、`telemetry.MetricsManager`、`governance` 的 Shutdown/Close。
 - 回归测试：`application/http_app_test.go` 的 `TestApplication_GracefulShutdown_NoPanicWithUnconfiguredComponents`（未配置任何可选组件时优雅停机不 panic）。
 - 新增可空解析的 Shutdownable 具体类型时，必须同步加 nil 防护并在该测试中触发解析。
+
+## 应用级 Shutdown 语义
+
+| 应用类型 | `Shutdown()` 语义 | 说明 |
+|----------|-------------------|------|
+| HTTP `Application` | `Cancel()` + `gracefulShutdown()` | 停 HTTP server + 关 DI 容器，返回 error |
+| Cron `CronApplication` | `Cancel()` + `gracefulShutdown()` | 先停 scheduler，再走 Base 关闭 |
+| gRPC `GRPCApplication` | `Cancel()` + `gracefulShutdown()` | 先 `grpc.Server.Stop()`，再走 Base 关闭 |
+| CLI `CLIApplication` | 无 Shutdown()，`Execute()` 结束即关闭 | 同步一次性执行语义 |
+
+规则：
+
+- **`Shutdown()` 必须做完整清理**（关 server/worker + 关 DI 容器），不能只 Cancel context。`RunNonBlocking()` + `Shutdown()` 是测试与程序控制的合法用法，不允许泄漏资源。
+- **幂等**：`BaseApplication.Shutdown(timeout)` 用 `sync.Once` 保证只执行一次（手动 `Shutdown()` 与阻塞 `Run()` 退出路径并发时安全）；Cron 的 `gracefulShutdown` 同样用 `sync.Once` 包裹，因为 gocron 的 `Shutdown()` 不可重入（`stopErrCh` 只有一个接收者，并发调用会卡到超时）。
+- **服务型应用统一入口**：`ServiceApp interface { Run() error }`，HTTP/Cron/gRPC 均实现（编译期断言在 `base_app.go`）；CLI 保持 `Execute() error`。
+- 新增应用类型时：服务型实现 `Run() error`；持自有资源（scheduler/server）的应用，`gracefulShutdown` 需自行先关资源再调 `BaseApplication.Shutdown`，并评估幂等防护。

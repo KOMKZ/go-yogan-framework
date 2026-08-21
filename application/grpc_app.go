@@ -4,9 +4,11 @@ package application
 
 import (
 	"context"
+	"fmt"
 	"time"
 
-	"github.com/KOMKZ/go-yogan-framework/governance"
+	"github.com/KOMKZ/go-yogan-framework/grpc"
+	"github.com/samber/do/v2"
 	"go.uber.org/zap"
 )
 
@@ -14,8 +16,9 @@ import (
 type GRPCApplication struct {
 	*BaseApplication // Combines core framework (80% generic logic)
 
-	// 🎯 Service Governance Manager (optional, automatically registers/unregisters services if enabled)
-	governanceManager *governance.Manager
+	// gRPC Server (started automatically when a *grpc.Server provider is
+	// registered in DI and grpc.server.enabled is true; nil in manual mode)
+	grpcServer *grpc.Server
 }
 
 // Create gRPC application instance using NewGRPC
@@ -76,48 +79,65 @@ func (g *GRPCApplication) OnShutdown(fn func(*GRPCApplication) error) *GRPCAppli
 }
 
 // Run the gRPC application (block until shutdown signal received)
-func (g *GRPCApplication) Run() {
-	logger := g.MustGetLogger()
-
-	// 1. Setup phase (initialize all components)
-	if err := g.Setup(); err != nil {
-		logger.ErrorCtx(g.ctx, "Application start failed", zap.Error(err))
-		panic(err)
+// 🎯 Same signature and flow as HTTP/Cron: RunNonBlocking -> WaitShutdown -> gracefulShutdown
+func (g *GRPCApplication) Run() error {
+	// Execute non-blocking startup
+	if err := g.RunNonBlocking(); err != nil {
+		return err
 	}
 
-	// 2. 🎯 Automatically register services to the governance center (if enabled)
-	if g.governanceManager != nil {
-		if err := g.autoRegisterService(); err != nil {
-			logger.WarnCtx(g.ctx, "⚠️  Service registration failed (does not affect app startup)", zap.Error(err))
+	// wait for shutdown signal (blocking)
+	g.WaitShutdown()
 
-		}
+	// graceful shutdown
+	return g.gracefulShutdown()
+}
+
+// RunNonBlocking starts the gRPC application in a non-blocking manner
+// (for testing or scenarios where manual lifecycle control is needed)
+func (g *GRPCApplication) RunNonBlocking() error {
+	// 1. Setup phase (initialize all components)
+	if err := g.Setup(); err != nil {
+		return fmt.Errorf("setup failed: %w", err)
+	}
+
+	// 2. Start gRPC server (if a *grpc.Server is provided via DI and enabled)
+	if err := g.startGRPCServer(); err != nil {
+		return err
 	}
 
 	// 3. Trigger OnReady (application custom initialization)
 	g.BaseApplication.setState(StateRunning)
 	if g.BaseApplication.onReady != nil {
 		if err := g.BaseApplication.onReady(g.BaseApplication); err != nil {
-			logger.ErrorCtx(g.ctx, "OnReady OnReady failed", zap.Error(err))
-			panic(err)
+			return fmt.Errorf("onReady failed: %w", err)
 		}
 	}
 
+	logger := g.MustGetLogger()
 	logger.InfoCtx(g.ctx, "✅ gRPC application started", zap.Int64("startup_time", g.GetStartupTimeMs()))
 
-	// wait for shutdown signal (blocking)
-	g.WaitShutdown()
+	return nil
+}
 
-	// 5. 🎯 Automatically log out service (if enabled)
-	if g.governanceManager != nil {
-		if err := g.autoDeregisterService(); err != nil {
-			logger.ErrorCtx(g.ctx, "Service deregistration failed", zap.Error(err))
-		}
+// startGRPCServer obtains the *grpc.Server from DI and starts it (optional)
+// 🎯 Lazy resolution: when no *grpc.Server provider is registered (manual mode)
+// or grpc.server.enabled is false, nothing is started here.
+func (g *GRPCApplication) startGRPCServer() error {
+	server, err := do.Invoke[*grpc.Server](g.GetInjector())
+	if err != nil {
+		return nil // No provider registered: manual mode
+	}
+	if server == nil {
+		return nil // gRPC server not enabled in config
 	}
 
-	// Elegant shutdown
-	if err := g.gracefulShutdown(); err != nil {
-		logger.ErrorCtx(g.ctx, "Application close failed", zap.Error(err))
+	if err := server.Start(g.ctx); err != nil {
+		return fmt.Errorf("failed to start gRPC server: %w", err)
 	}
+
+	g.grpcServer = server
+	return nil
 }
 
 // graceful shutdown for gRPC application
@@ -125,33 +145,25 @@ func (g *GRPCApplication) gracefulShutdown() error {
 	logger := g.MustGetLogger()
 	logger.DebugCtx(g.ctx, "Starting gRPC application graceful shutdown...")
 
-	// Call Base's generic shutdown logic (30-second timeout)
+	// 1. Stop the gRPC server (stop accepting new requests)
+	if g.grpcServer != nil {
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer shutdownCancel()
+		g.grpcServer.Stop(shutdownCtx)
+	}
+
+	// 2. Call Base's generic shutdown logic (trigger OnShutdown callback + shut down components)
 	return g.BaseApplication.Shutdown(30 * time.Second)
 }
 
-// SetGovernanceManager set service governance manager (optional, for automatic service registration/unregistration)
-func (g *GRPCApplication) SetGovernanceManager(manager *governance.Manager) *GRPCApplication {
-	g.governanceManager = manager
-	return g
+// GetGRPCServer get gRPC server instance (for testing purposes)
+func (g *GRPCApplication) GetGRPCServer() *grpc.Server {
+	return g.grpcServer
 }
 
-// autoRegisterService Automatically register service (retrieve port information from gRPC components)
-func (g *GRPCApplication) autoRegisterService() error {
-	// TODO: Retrieve actual listening port from gRPC component and register service
-	logger := g.MustGetLogger()
-	logger.DebugCtx(g.ctx, "🎯 Service registration enabled (implementing...)")
-
-	return nil
-}
-
-// autoDeregisterService Automatically deregister service
-func (g *GRPCApplication) autoDeregisterService() error {
-	if g.governanceManager == nil {
-		return nil
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	return g.governanceManager.Shutdown(ctx)
+// Shutdown manually triggers graceful shutdown (for testing or program control)
+// Cancels the context (unblocking a blocking Run) and performs full cleanup.
+func (g *GRPCApplication) Shutdown() error {
+	g.Cancel()
+	return g.gracefulShutdown()
 }

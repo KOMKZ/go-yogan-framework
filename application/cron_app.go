@@ -1,7 +1,9 @@
 package application
 
 import (
+	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/go-co-op/gocron/v2"
@@ -13,11 +15,14 @@ type CronApplication struct {
 	*BaseApplication // Combine core framework
 
 	// Cron dedicated
-	scheduler      gocron.Scheduler
-	cronOnSetup    func(*CronApplication) error
-	cronOnReady    func(*CronApplication) error
-	cronOnShutdown func(*CronApplication) error
-	taskRegistrar  TaskRegistrar // Task registrar
+	scheduler     gocron.Scheduler
+	taskRegistrar TaskRegistrar // Task registrar
+
+	// Idempotent graceful shutdown: gocron's Shutdown is not safe to run
+	// twice (its stopErrCh has a single receiver), so a manual Shutdown()
+	// racing with the blocking Run() path must be serialized.
+	gracefulOnce sync.Once
+	gracefulErr  error
 }
 
 // TaskRegistrar task registration interface
@@ -67,32 +72,26 @@ func (a *CronApplication) RunNonBlocking() error {
 
 // run internal startup logic (uniform implementation)
 func (a *CronApplication) run(blocking bool) error {
-	// 1. Setup phase (configuration + logging + component initialization)
+	// 1. Setup phase (configuration + logging + component initialization,
+	// triggers the unified OnSetup callback registered on BaseApplication)
 	if err := a.Setup(); err != nil {
 		return fmt.Errorf("setup failed: %w", err)
 	}
 
-	// Trigger Cron dedicated setup callback
-	if a.cronOnSetup != nil {
-		if err := a.cronOnSetup(a); err != nil {
-			return fmt.Errorf("cron onSetup failed: %w", err)
-		}
-	}
-
-	// 3. Register task
+	// 2. Register task
 	if a.taskRegistrar != nil {
 		if err := a.taskRegistrar.RegisterTasks(a); err != nil {
 			return fmt.Errorf("register tasks failed: %w", err)
 		}
 	}
 
-	// 4. Start the scheduler
+	// 3. Start the scheduler
 	a.scheduler.Start()
 
-	// 5. Trigger OnReady callback
+	// 4. Trigger OnReady callback (unified callback of BaseApplication)
 	a.BaseApplication.setState(StateRunning)
-	if a.cronOnReady != nil {
-		if err := a.cronOnReady(a); err != nil {
+	if a.BaseApplication.onReady != nil {
+		if err := a.BaseApplication.onReady(a.BaseApplication); err != nil {
 			return fmt.Errorf("onReady failed: %w", err)
 		}
 	}
@@ -110,18 +109,21 @@ func (a *CronApplication) run(blocking bool) error {
 }
 
 // graceful shutdown for Cron application
+// Idempotent: scheduler teardown and container shutdown run exactly once,
+// even when a manual Shutdown() races with the blocking Run() path.
 func (a *CronApplication) gracefulShutdown() error {
+	a.gracefulOnce.Do(func() {
+		a.gracefulErr = a.doGracefulShutdown()
+	})
+	return a.gracefulErr
+}
+
+// doGracefulShutdown executes the actual shutdown logic (guarded by gracefulOnce)
+func (a *CronApplication) doGracefulShutdown() error {
 	logger := a.MustGetLogger()
 	logger.DebugCtx(a.ctx, "Starting Cron application graceful shutdown...")
 
-	// Trigger Cron dedicated shutdown callback (quick execution: release locks, etc.)
-	if a.cronOnShutdown != nil {
-		if err := a.cronOnShutdown(a); err != nil {
-			logger.ErrorCtx(a.ctx, "Cron OnShutdown callback failed", zap.Error(err))
-		}
-	}
-
-	// 2. Shutdown scheduler (with timeout control)
+	// 1. Shutdown scheduler (with timeout control)
 	if a.scheduler != nil {
 		if err := a.shutdownSchedulerWithTimeout(); err != nil {
 			if logger != nil {
@@ -130,7 +132,8 @@ func (a *CronApplication) gracefulShutdown() error {
 		}
 	}
 
-	// Call Base's generic shutdown logic
+	// 2. Call Base's generic shutdown logic (trigger the unified OnShutdown
+	// callback + shut down all components)
 	return a.BaseApplication.Shutdown(10 * time.Second)
 }
 
@@ -210,33 +213,36 @@ func (a *CronApplication) RegisterTasks(registrar TaskRegistrar) *CronApplicatio
 	return a
 }
 
-// OnSetup registers the callback for the Setup phase
+// OnSetup registers the callback for the Setup phase (chained call)
+// 🎯 Single-track: only registers on BaseApplication, same as HTTP/CLI/gRPC
 func (a *CronApplication) OnSetup(fn func(*CronApplication) error) *CronApplication {
-	a.cronOnSetup = fn
-	// Set the callback for Base (conversion type) simultaneously
 	a.BaseApplication.OnSetup(func(base *BaseApplication) error {
 		return fn(a)
 	})
 	return a
 }
 
-// Register startup completion callback
+// Register startup completion callback (chained call)
+// 🎯 Single-track: only registers on BaseApplication, same as HTTP/CLI/gRPC
 func (a *CronApplication) OnReady(fn func(*CronApplication) error) *CronApplication {
-	a.cronOnReady = fn
-	// Set the callback for Base (conversion type) simultaneously
 	a.BaseApplication.OnReady(func(base *BaseApplication) error {
 		return fn(a)
 	})
 	return a
 }
 
-// Register shutdown callback
+// Register shutdown callback (chained call)
+// 🎯 Single-track: only registers on BaseApplication, same as HTTP/CLI/gRPC
 func (a *CronApplication) OnShutdown(fn func(*CronApplication) error) *CronApplication {
-	a.cronOnShutdown = fn
+	a.BaseApplication.OnShutdown(func(ctx context.Context) error {
+		return fn(a)
+	})
 	return a
 }
 
-// Shutdown manually triggered
-func (a *CronApplication) Shutdown() {
+// Shutdown manually triggers graceful shutdown (for testing or program control)
+// Cancels the context (unblocking a blocking Run) and performs full cleanup.
+func (a *CronApplication) Shutdown() error {
 	a.Cancel()
+	return a.gracefulShutdown()
 }
