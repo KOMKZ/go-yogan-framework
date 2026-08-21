@@ -73,6 +73,13 @@ func TraceID(cfg TraceConfig) gin.HandlerFunc {
 		if span.SpanContext().IsValid() {
 			// Otel is enabled, using Otel Trace ID
 			traceID = span.SpanContext().TraceID().String()
+
+			// 🎯 Also inject the OTel TraceID into the request context so
+			// CtxZapLogger.extractTraceID picks it up — otherwise logs lose
+			// the trace_id field and the HTTP path is disconnected from the
+			// trace (logger only reads ctx.Value(TraceIDKey)).
+			ctx := context.WithValue(c.Request.Context(), cfg.TraceIDKey, traceID)
+			c.Request = c.Request.WithContext(ctx)
 		} else {
 			// OTel not enabled, using custom TraceID logic
 			traceID = c.GetHeader(cfg.TraceIDHeader)

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/otel/trace"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -180,6 +181,42 @@ func TestTraceID_ContextPropagation(t *testing.T) {
 
 	assert.Equal(t, 200, w.Code)
 	assert.NotEmpty(t, capturedTraceID, "Context 中应能获取到 TraceID")
+}
+
+func TestTraceID_OTelSpanContext(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	// Construct a valid OTel span context (as an instrumented HTTP client
+	// would propagate into the request).
+	spanCtx := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    [16]byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},
+		SpanID:     [8]byte{1, 2, 3, 4, 5, 6, 7, 8},
+		TraceFlags: trace.FlagsSampled,
+	})
+	wantTraceID := spanCtx.TraceID().String()
+
+	router := gin.New()
+	router.Use(TraceID(DefaultTraceConfig()))
+
+	var ginTraceID string
+	var ctxTraceID string
+	router.GET("/test", func(c *gin.Context) {
+		ginTraceID = GetTraceID(c)
+		if val := c.Request.Context().Value(TraceIDKeyDefault); val != nil {
+			ctxTraceID = val.(string)
+		}
+		c.JSON(200, gin.H{"ok": true})
+	})
+
+	req := httptest.NewRequest("GET", "/test", nil)
+	req = req.WithContext(trace.ContextWithSpanContext(req.Context(), spanCtx))
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, 200, w.Code)
+	assert.Equal(t, wantTraceID, ginTraceID, "应优先使用 OTel TraceID")
+	assert.Equal(t, wantTraceID, ctxTraceID, "OTel TraceID 必须注入 request context，否则日志链路断联")
+	assert.Equal(t, wantTraceID, w.Header().Get(TraceIDHeaderDefault), "Response Header 应为 OTel TraceID")
 }
 
 func BenchmarkTraceID(b *testing.B) {
