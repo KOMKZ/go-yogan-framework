@@ -166,3 +166,42 @@ middleware:
 	err = app.Run()
 	assert.NoError(t, err)
 }
+
+// TestAppConfig_MiddlewareDefaultsEager regression: middleware defaults must
+// be applied when the app is constructed (in NewBase), not only when the old
+// shadowing Application.LoadAppConfig was called — the startup path
+// (startHTTPServer) previously consumed the bare unmarshalled config.
+func TestAppConfig_MiddlewareDefaultsEager(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := filepath.Join(tmpDir, "config.yaml")
+
+	configContent := `
+api_server:
+  port: 8080
+  mode: debug
+
+middleware:
+  cors:
+    enable: true
+  trace_id:
+    enable: true
+  request_log:
+    enable: true
+`
+	err := os.WriteFile(configFile, []byte(configContent), 0644)
+	require.NoError(t, err)
+
+	app := New(tmpDir, "TEST", nil)
+
+	// No Run/OnSetup needed: defaults are already filled at construction.
+	cfg, err := app.LoadAppConfig()
+	require.NoError(t, err)
+	require.NotNil(t, cfg.Middleware)
+	require.NotNil(t, cfg.Middleware.CORS)
+	require.NotNil(t, cfg.Middleware.TraceID)
+	require.NotNil(t, cfg.Middleware.RequestLog)
+
+	assert.NotEmpty(t, cfg.Middleware.CORS.AllowOrigins)
+	assert.Equal(t, "X-Trace-ID", cfg.Middleware.TraceID.TraceIDHeader)
+	assert.Equal(t, 4096, cfg.Middleware.RequestLog.MaxBodySize)
+}

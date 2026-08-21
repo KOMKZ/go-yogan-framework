@@ -130,6 +130,13 @@ func NewBase(configPath, configPrefix, appType string, flags interface{}) *BaseA
 		panic(fmt.Sprintf("加载 AppConfig 失败: %v", err))
 	}
 
+	// 🎯 Apply middleware defaults right after loading so every consumer
+	// (startHTTPServer, LoadAppConfig) sees one canonical config with
+	// defaults filled instead of relying on scattered middleware fallbacks.
+	if appCfg.Middleware != nil {
+		appCfg.Middleware.ApplyDefaults()
+	}
+
 	coreLogger.DebugCtx(ctx, "✅ English: ✓ Basic application initialization complete (pure DI mode)（English: ✓ Basic application initialization complete (pure DI mode) DI English: ✓ Basic application initialization complete (pure DI mode)）",
 		zap.String("configPath", configPath),
 		zap.String("appType", appType))

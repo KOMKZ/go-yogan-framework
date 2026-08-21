@@ -1,8 +1,6 @@
 package application
 
 import (
-	"fmt"
-
 	"github.com/KOMKZ/go-yogan-framework/httpx"
 	"github.com/KOMKZ/go-yogan-framework/logger"
 )
@@ -145,23 +143,8 @@ func (c *MiddlewareConfig) ApplyDefaults() {
 	}
 }
 
-// LoadAppConfig load framework configuration
-func (a *Application) LoadAppConfig() (*AppConfig, error) {
-	// Retrieve ConfigLoader from the registry center
-	loader := a.GetConfigLoader()
-	if loader == nil {
-		return nil, fmt.Errorf("Configuration loader uninitialized")
-	}
-
-	var cfg AppConfig
-	if err := loader.Unmarshal(&cfg); err != nil {
-		return nil, err
-	}
-
-	// Apply middleware configuration default values
-	if cfg.Middleware != nil {
-		cfg.Middleware.ApplyDefaults()
-	}
-
-	return &cfg, nil
-}
+// Note: the Application type intentionally has no LoadAppConfig of its own.
+// It inherits BaseApplication.LoadAppConfig, which returns the config cached
+// in NewBase with middleware defaults already applied — a single canonical
+// source instead of two divergent implementations (fresh unmarshal + defaults
+// vs. bare cached value).
