@@ -3,6 +3,7 @@ package di
 
 import (
 	"github.com/KOMKZ/go-yogan-framework/database"
+	"github.com/KOMKZ/go-yogan-framework/queue"
 	"github.com/KOMKZ/go-yogan-framework/redis"
 	"github.com/KOMKZ/go-yogan-framework/swagger"
 	goredis "github.com/redis/go-redis/v9"
@@ -30,6 +31,10 @@ func RegisterCoreProviders(injector *do.RootScope, opts ConfigOptions) {
 	do.Provide(injector, ProvideDatabaseManager)
 	do.Provide(injector, ProvideRedisManager)
 	do.Provide(injector, ProvideKafkaManager)
+	do.Provide(injector, ProvideQueueConfig)
+	do.Provide(injector, ProvideQueueRegistry)
+	do.Provide(injector, ProvideQueueClient)
+	do.Provide(injector, ProvideQueueServer)
 
 	// Convenient access: *gorm.DB (from Manager get master)
 	do.Provide(injector, ProvideDefaultDB)
@@ -72,4 +77,9 @@ func ProvideDefaultRedisClient(i do.Injector) (goredis.UniversalClient, error) {
 		return nil, err
 	}
 	return mgr.Client("main"), nil
+}
+
+// ProvideQueueRegistry exposes the queue handler registry for worker apps.
+func ProvideQueueRegistry(i do.Injector) (*queue.Registry, error) {
+	return queue.NewRegistry(), nil
 }

@@ -7,7 +7,6 @@ type DeclaredPermission struct {
 	PermissionCode string
 	PermissionName string
 	PermissionType string
-	ResourceCode   string
 	GroupCode      string
 	Description    string
 }
@@ -25,15 +24,11 @@ func NormalizeDeclaredPermissions(items []DeclaredPermission) []DeclaredPermissi
 			PermissionCode: strings.TrimSpace(item.PermissionCode),
 			PermissionName: strings.TrimSpace(item.PermissionName),
 			PermissionType: strings.ToUpper(strings.TrimSpace(item.PermissionType)),
-			ResourceCode:   strings.TrimSpace(item.ResourceCode),
 			GroupCode:      strings.TrimSpace(item.GroupCode),
 			Description:    strings.TrimSpace(item.Description),
 		}
 		if normalized.PermissionCode == "" || normalized.PermissionName == "" || normalized.PermissionType == "" {
 			continue
-		}
-		if normalized.ResourceCode == "" {
-			normalized.ResourceCode = normalized.PermissionCode
 		}
 		if normalized.GroupCode == "" {
 			normalized.GroupCode = "SYSTEM"

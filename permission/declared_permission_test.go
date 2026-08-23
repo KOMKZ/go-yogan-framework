@@ -4,10 +4,10 @@ import "testing"
 
 func TestNormalizeDeclaredPermissions(t *testing.T) {
 	input := []DeclaredPermission{
-		{PermissionCode: " role:read ", PermissionName: "查看角色", PermissionType: "read", ResourceCode: "role", GroupCode: "system"},
+		{PermissionCode: " role:read ", PermissionName: "查看角色", PermissionType: "read", GroupCode: "system"},
 		{PermissionCode: "", PermissionName: "无效", PermissionType: "READ"},
-		{PermissionCode: "role:read", PermissionName: "查看角色-v2", PermissionType: "READ", ResourceCode: "role", GroupCode: "SYSTEM"},
-		{PermissionCode: "role:write", PermissionName: "管理角色", PermissionType: "write", ResourceCode: "role"},
+		{PermissionCode: "role:read", PermissionName: "查看角色-v2", PermissionType: "READ", GroupCode: "SYSTEM"},
+		{PermissionCode: "role:write", PermissionName: "管理角色", PermissionType: "write"},
 	}
 
 	result := NormalizeDeclaredPermissions(input)

@@ -15,6 +15,7 @@ import (
 	"github.com/KOMKZ/go-yogan-framework/kafka"
 	"github.com/KOMKZ/go-yogan-framework/limiter"
 	"github.com/KOMKZ/go-yogan-framework/logger"
+	"github.com/KOMKZ/go-yogan-framework/queue"
 	"github.com/KOMKZ/go-yogan-framework/redis"
 	"github.com/KOMKZ/go-yogan-framework/telemetry"
 	goredis "github.com/redis/go-redis/v9"
@@ -170,6 +171,49 @@ func ProvideRedisManager(i do.Injector) (*redis.Manager, error) {
 	}
 
 	return redis.NewManager(redisConfigs, log)
+}
+
+// ProvideQueueConfig reads the queue component configuration.
+func ProvideQueueConfig(i do.Injector) (*queue.Config, error) {
+	loader, err := do.Invoke[*config.Loader](i)
+	if err != nil {
+		return nil, err
+	}
+
+	cfg := queue.DefaultConfig()
+	if v := loader.GetViper(); v != nil && v.IsSet("queue") {
+		if err := v.UnmarshalKey("queue", &cfg); err != nil {
+			return nil, err
+		}
+	}
+	cfg.ApplyDefaults()
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+	return &cfg, nil
+}
+
+// ProvideQueueClient provides the queue producer client.
+func ProvideQueueClient(i do.Injector) (queue.Client, error) {
+	cfg, err := do.Invoke[*queue.Config](i)
+	if err != nil || cfg == nil {
+		return nil, err
+	}
+	return queue.NewAsynqClient(*cfg)
+}
+
+// ProvideQueueServer provides the queue worker server.
+func ProvideQueueServer(i do.Injector) (*queue.Server, error) {
+	cfg, err := do.Invoke[*queue.Config](i)
+	if err != nil || cfg == nil {
+		return nil, err
+	}
+	registry, err := do.Invoke[*queue.Registry](i)
+	if err != nil {
+		return nil, err
+	}
+	log, _ := do.Invoke[*logger.CtxZapLogger](i)
+	return queue.NewServer(*cfg, registry, log)
 }
 
 // ============================================

@@ -16,6 +16,7 @@
 | jwt | `jwt/` | Token 生成/验证 |
 | auth | `auth/` | 认证服务（登录/密码） |
 | event | `event/` | 事件分发器 |
+| queue | `queue/` | 队列任务抽象、Asynq adapter、worker handler registry |
 
 ## 基础设施组件
 

@@ -13,6 +13,7 @@
 | [kernel-healthcheck.md](kernel-healthcheck.md) | HealthChecker 接口 |
 | [kernel-shutdown.md](kernel-shutdown.md) | do.Shutdownable 接口 |
 | [kernel-cache.md](kernel-cache.md) | 缓存事件驱动失效 |
+| [kernel-queue.md](kernel-queue.md) | Queue/Asynq worker 抽象、配置、注册方式 |
 | [kernel-apputil.md](kernel-apputil.md) | apputil 快捷访问内核组件 |
 | [kernel-components-list.md](kernel-components-list.md) | 内核组件清单 |
 
