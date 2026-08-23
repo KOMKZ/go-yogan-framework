@@ -194,4 +194,7 @@ record, err := jobruntime.Publish(ctx, publisher, exportjob.DemoTask, exportjob.
 ```
 
 Trace IDs are propagated through task headers using `x-trace-id`, then restored
-to `context.Context` as `trace_id` before calling the handler.
+to `context.Context` as `trace_id` before calling the handler. HTTP handlers
+must pass `c.Request.Context()` unchanged to the publisher; the queue client
+reads the same context key and application handlers should not manually copy
+TraceID from `gin.Context` into a second queue context.

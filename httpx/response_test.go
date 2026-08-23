@@ -2,6 +2,7 @@ package httpx
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -38,6 +39,45 @@ func TestOkJson(t *testing.T) {
 	assert.Equal(t, 0, resp.Code)
 	assert.Equal(t, "success", resp.Msg)
 	assert.NotNil(t, resp.Data)
+}
+
+func TestResponseIncludesTraceIDFromRequestContext(t *testing.T) {
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/test", nil)
+	c.Request = c.Request.WithContext(context.WithValue(c.Request.Context(), "trace_id", "http-trace-1"))
+
+	OkJson(c, nil)
+
+	var resp Response
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.Equal(t, "http-trace-1", resp.TraceID)
+}
+
+func TestErrorResponsesIncludeTraceID(t *testing.T) {
+	cases := []struct {
+		name string
+		call func(*gin.Context)
+	}{
+		{name: "error", call: func(c *gin.Context) { ErrorJson(c, "bad") }},
+		{name: "bad request", call: func(c *gin.Context) { BadRequestJson(c, errors.New("bad")) }},
+		{name: "not found", call: func(c *gin.Context) { NotFoundJson(c, "missing") }},
+		{name: "internal", call: func(c *gin.Context) { InternalErrorJson(c, "failed") }},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(w)
+			c.Request = httptest.NewRequest(http.MethodGet, "/test", nil)
+			c.Set("trace_id", "error-trace-1")
+			tc.call(c)
+
+			var resp Response
+			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+			assert.Equal(t, "error-trace-1", resp.TraceID)
+		})
+	}
 }
 
 // TestErrorJson test error response
@@ -162,6 +202,7 @@ func TestHandleError_LayeredError(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request, _ = http.NewRequest("GET", "/test", nil)
+	c.Request = c.Request.WithContext(context.WithValue(c.Request.Context(), "trace_id", "layered-trace-1"))
 
 	// Use errcode.New: moduleCode=10, businessCode=1, module="test", msgKey="test.error", msg="parameter error", httpStatus=400
 	layeredErr := errcode.New(10, 1, "test", "test.error", "参数错误", http.StatusBadRequest)
@@ -174,6 +215,7 @@ func TestHandleError_LayeredError(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 100001, resp.Code) // 10*10000 + 1 = 100001
 	assert.Equal(t, "参数错误", resp.Msg)
+	assert.Equal(t, "layered-trace-1", resp.TraceID)
 }
 
 // TestHandleError_LayeredError_WithLogging test LayeredError with logging configuration

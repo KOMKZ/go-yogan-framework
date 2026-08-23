@@ -14,49 +14,72 @@ import (
 
 // Unified response format
 type Response struct {
-	Code int         `json:"code"`
-	Msg  string      `json:"msg,omitempty"`
-	Data interface{} `json:"data,omitempty"`
+	Code    int         `json:"code"`
+	Msg     string      `json:"msg,omitempty"`
+	Data    interface{} `json:"data,omitempty"`
+	TraceID string      `json:"trace_id,omitempty"`
+}
+
+func traceIDFromContext(c *gin.Context) string {
+	if c == nil {
+		return ""
+	}
+	if c.Request != nil {
+		if traceID, ok := c.Request.Context().Value("trace_id").(string); ok && traceID != "" {
+			return traceID
+		}
+	}
+	if traceID, ok := c.Get("trace_id"); ok {
+		if value, ok := traceID.(string); ok {
+			return value
+		}
+	}
+	return ""
 }
 
 // OkJson successful response
 func OkJson(c *gin.Context, data interface{}) {
 	c.JSON(http.StatusOK, Response{
-		Code: 0,
-		Msg:  "success",
-		Data: data,
+		Code:    0,
+		Msg:     "success",
+		Data:    data,
+		TraceID: traceIDFromContext(c),
 	})
 }
 
 // ErrorJson error response (400 Bad Request)
 func ErrorJson(c *gin.Context, msg string) {
 	c.JSON(http.StatusBadRequest, Response{
-		Code: 400,
-		Msg:  msg,
+		Code:    400,
+		Msg:     msg,
+		TraceID: traceIDFromContext(c),
 	})
 }
 
 // BadRequestJson 400 error response
 func BadRequestJson(c *gin.Context, err error) {
 	c.JSON(http.StatusBadRequest, Response{
-		Code: 400,
-		Msg:  err.Error(),
+		Code:    400,
+		Msg:     err.Error(),
+		TraceID: traceIDFromContext(c),
 	})
 }
 
 // NotFoundJson 404 error response
 func NotFoundJson(c *gin.Context, msg string) {
 	c.JSON(http.StatusNotFound, Response{
-		Code: 404,
-		Msg:  msg,
+		Code:    404,
+		Msg:     msg,
+		TraceID: traceIDFromContext(c),
 	})
 }
 
 // InternalErrorJson 500 error response
 func InternalErrorJson(c *gin.Context, msg string) {
 	c.JSON(http.StatusInternalServerError, Response{
-		Code: 500,
-		Msg:  msg,
+		Code:    500,
+		Msg:     msg,
+		TraceID: traceIDFromContext(c),
 	})
 }
 
@@ -65,8 +88,9 @@ func InternalErrorJson(c *gin.Context, msg string) {
 func NoRouteHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.JSON(http.StatusNotFound, Response{
-			Code: 404,
-			Msg:  "路由不存在: " + c.Request.Method + " " + c.Request.URL.Path,
+			Code:    404,
+			Msg:     "路由不存在: " + c.Request.Method + " " + c.Request.URL.Path,
+			TraceID: traceIDFromContext(c),
 		})
 	}
 }
@@ -76,8 +100,9 @@ func NoRouteHandler() gin.HandlerFunc {
 func NoMethodHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.JSON(http.StatusMethodNotAllowed, Response{
-			Code: 405,
-			Msg:  "方法不允许: " + c.Request.Method + " " + c.Request.URL.Path,
+			Code:    405,
+			Msg:     "方法不允许: " + c.Request.Method + " " + c.Request.URL.Path,
+			TraceID: traceIDFromContext(c),
 		})
 	}
 }
@@ -127,9 +152,10 @@ func HandleError(c *gin.Context, err error) {
 
 		// 1.2 Returns the HTTP status code, error code, and message of a LayeredError
 		c.JSON(layeredErr.HTTPStatus(), Response{
-			Code: layeredErr.Code(),
-			Msg:  layeredErr.Message(), // Use dynamically modified message (WithMsgf)
-			Data: layeredErr.Data(),    // Optional: return additional data
+			Code:    layeredErr.Code(),
+			Msg:     layeredErr.Message(), // Use dynamically modified message (WithMsgf)
+			Data:    layeredErr.Data(),    // Optional: return additional data
+			TraceID: traceIDFromContext(c),
 		})
 		return
 	}
