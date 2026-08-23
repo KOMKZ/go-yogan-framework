@@ -66,16 +66,23 @@ func ProvideConfigLoader(opts ConfigOptions) func(do.Injector) (*config.Loader, 
 // Dependencies: config.Loader (reads logger configuration from config)
 func ProvideLoggerManager(i do.Injector) (*logger.Manager, error) {
 	var loggerCfg logger.ManagerConfig
+	traceIDConfigured := false
 
 	// Try to load logger configuration from config
 	loader, err := do.Invoke[*config.Loader](i)
 	if err == nil && loader != nil {
 		if v := loader.GetViper(); v != nil {
 			_ = v.UnmarshalKey("logger", &loggerCfg)
+			traceIDConfigured = v.IsSet("logger.enable_trace_id")
 		}
 	}
 
 	loggerCfg.ApplyDefaults()
+	// TraceID is a cross-component observability invariant. Keep an explicit
+	// false opt-out, but do not let an omitted boolean silently disable it.
+	if !traceIDConfigured {
+		loggerCfg.EnableTraceID = true
+	}
 
 	// 🎯 Single manager: initialize (or reuse) the global manager and hand
 	// out the same instance. Creating a second manager with the same config

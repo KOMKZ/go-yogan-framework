@@ -11,7 +11,8 @@ import (
 // SSEWriter wraps a gin.ResponseWriter for Server-Sent Events streaming.
 // It handles SSE header setup, event formatting, flushing, and the [DONE] protocol.
 type SSEWriter struct {
-	rw gin.ResponseWriter
+	rw      gin.ResponseWriter
+	traceID string
 }
 
 // NewSSEWriter creates an SSEWriter and immediately sets the standard SSE headers
@@ -22,7 +23,7 @@ func NewSSEWriter(c *gin.Context) *SSEWriter {
 	c.Header("Connection", "keep-alive")
 	c.Header("X-Accel-Buffering", "no")
 
-	return &SSEWriter{rw: c.Writer}
+	return &SSEWriter{rw: c.Writer, traceID: traceIDFromContext(c)}
 }
 
 // WriteEvent writes a named SSE event with JSON-encoded data and flushes.
@@ -59,7 +60,7 @@ func (w *SSEWriter) WriteDone() {
 // WriteError writes an error event with a JSON envelope and flushes.
 // Format: "event: error\ndata: {\"code\":500,\"msg\":\"...\"}\n\n"
 func (w *SSEWriter) WriteError(err error) {
-	payload := Response{Code: 500, Msg: err.Error()}
+	payload := Response{Code: 500, Msg: err.Error(), TraceID: w.traceID}
 	b, _ := json.Marshal(payload)
 	_, _ = fmt.Fprintf(w.rw, "event: error\ndata: %s\n\n", b)
 	w.Flush()

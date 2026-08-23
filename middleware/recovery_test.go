@@ -3,6 +3,7 @@ package middleware
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -97,4 +98,44 @@ func TestRecovery_WithPanicError(t *testing.T) {
 	matches, err := filepath.Glob(filepath.Join(logDir, "*.log"))
 	assert.NoError(t, err)
 	assert.NotEmpty(t, matches)
+}
+
+func TestRecoveryPreservesTraceIDInLogAndResponse(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	logDir := t.TempDir()
+	logger.MustResetManager(logger.ManagerConfig{
+		BaseLogDir:            logDir,
+		LogDirMode:            logger.LogDirModeModule,
+		Level:                 "debug",
+		Encoding:              "json",
+		EnableConsole:         false,
+		EnableTraceID:         true,
+		TraceIDKey:            "trace_id",
+		TraceIDFieldName:      "trace_id",
+		EnableLevelInFilename: true,
+		EnableDateInFilename:  false,
+		MaxSize:               10,
+	})
+
+	router := gin.New()
+	router.Use(TraceID(DefaultTraceConfig()), Recovery())
+	router.GET("/panic-trace", func(c *gin.Context) {
+		panic("trace panic")
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/panic-trace", nil)
+	req.Header.Set(TraceIDHeaderDefault, "panic-trace-1")
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusInternalServerError, resp.Code)
+	assert.Contains(t, resp.Body.String(), `"trace_id":"panic-trace-1"`)
+
+	logger.CloseAll()
+	matches, err := filepath.Glob(filepath.Join(logDir, "gin-error", "*.log"))
+	assert.NoError(t, err)
+	assert.NotEmpty(t, matches)
+	content, err := os.ReadFile(matches[0])
+	assert.NoError(t, err)
+	assert.Contains(t, string(content), `"trace_id":"panic-trace-1"`)
 }

@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"runtime/debug"
 
-	"github.com/gin-gonic/gin"
 	"github.com/KOMKZ/go-yogan-framework/httpx"
 	"github.com/KOMKZ/go-yogan-framework/logger"
+	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
 
@@ -25,7 +25,7 @@ func Recovery() gin.HandlerFunc {
 				stack := string(debug.Stack())
 
 				// Record Panic log (Error level)
-				logger.Error("gin-error", "Panic recovered",
+				logger.ErrorCtx(c.Request.Context(), "gin-error", "Panic recovered",
 					zap.Any("error", err),
 					zap.String("method", c.Request.Method),
 					zap.String("path", c.Request.URL.Path),
@@ -37,8 +37,9 @@ func Recovery() gin.HandlerFunc {
 				// message; panic details (err) stay in the log only to avoid
 				// leaking internals (SQL, paths, variables) to clients.
 				c.AbortWithStatusJSON(http.StatusInternalServerError, httpx.Response{
-					Code: 500,
-					Msg:  "内部服务器错误",
+					Code:    500,
+					Msg:     "内部服务器错误",
+					TraceID: middlewareTraceID(c),
 				})
 			}
 		}()
@@ -48,3 +49,12 @@ func Recovery() gin.HandlerFunc {
 	}
 }
 
+func middlewareTraceID(c *gin.Context) string {
+	if c == nil || c.Request == nil {
+		return ""
+	}
+	if traceID, ok := c.Request.Context().Value("trace_id").(string); ok {
+		return traceID
+	}
+	return ""
+}

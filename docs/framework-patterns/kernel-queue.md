@@ -198,3 +198,8 @@ to `context.Context` as `trace_id` before calling the handler. HTTP handlers
 must pass `c.Request.Context()` unchanged to the publisher; the queue client
 reads the same context key and application handlers should not manually copy
 TraceID from `gin.Context` into a second queue context.
+
+The logger provider enables `trace_id` by default when
+`logger.enable_trace_id` is omitted. Set it to `false` only for an explicit
+opt-out. Application templates should still declare `enable_trace_id: true` so
+the operational contract is visible in deployed configuration.

@@ -86,6 +86,7 @@ func TestSSEWriter_WriteDone(t *testing.T) {
 func TestSSEWriter_WriteError(t *testing.T) {
 	engine := gin.New()
 	engine.GET("/sse", func(c *gin.Context) {
+		c.Set("trace_id", "sse-trace-1")
 		sw := NewSSEWriter(c)
 		sw.WriteError(assert.AnError)
 	})
@@ -97,6 +98,7 @@ func TestSSEWriter_WriteError(t *testing.T) {
 	body := w.Body.String()
 	assert.Contains(t, body, "event: error\n")
 	assert.Contains(t, body, `"code":500`)
+	assert.Contains(t, body, `"trace_id":"sse-trace-1"`)
 	assert.Contains(t, body, assert.AnError.Error())
 }
 
