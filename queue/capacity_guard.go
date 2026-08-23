@@ -1,6 +1,9 @@
 package queue
 
-import "context"
+import (
+	"context"
+	"strings"
+)
 
 type CapacityGuard struct {
 	cfg       Config
@@ -28,6 +31,9 @@ func (g *CapacityGuard) Check(ctx context.Context, queueName string) error {
 	}
 	stats, err := g.inspector.QueueStats(ctx, queueName)
 	if err != nil {
+		if isQueueNotFoundError(err) {
+			return nil
+		}
 		return err
 	}
 	if stats.Pending >= route.MaxPending {
@@ -38,4 +44,15 @@ func (g *CapacityGuard) Check(ctx context.Context, queueName string) error {
 		}
 	}
 	return nil
+}
+
+func isQueueNotFoundError(err error) bool {
+	if err == nil {
+		return false
+	}
+	text := strings.ToLower(err.Error())
+	return strings.Contains(text, "queue") &&
+		(strings.Contains(text, "does not exist") ||
+			strings.Contains(text, "not found") ||
+			strings.Contains(text, "not_found"))
 }

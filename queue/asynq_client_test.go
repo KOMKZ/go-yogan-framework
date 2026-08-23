@@ -79,6 +79,16 @@ func TestCapacityGuardAllowsWhenBelowLimit(t *testing.T) {
 	}
 }
 
+func TestCapacityGuardAllowsEmptyAsynqQueue(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.Queues[DefaultQueue] = QueueConfig{Broker: DefaultBroker, Name: DefaultQueue, MaxPending: 10}
+	guard := NewCapacityGuard(cfg, &fakeInspector{err: errors.New(`NOT_FOUND: queue "default" does not exist`)})
+
+	if err := guard.Check(context.Background(), "default"); err != nil {
+		t.Fatalf("check failed for empty asynq queue: %v", err)
+	}
+}
+
 func TestCapacityGuardRequiresInspector(t *testing.T) {
 	cfg := DefaultConfig()
 	cfg.Queues[DefaultQueue] = QueueConfig{Broker: DefaultBroker, Name: DefaultQueue, MaxPending: 10}

@@ -2,6 +2,8 @@
 package di
 
 import (
+	"fmt"
+
 	"github.com/KOMKZ/go-yogan-framework/database"
 	"github.com/KOMKZ/go-yogan-framework/queue"
 	"github.com/KOMKZ/go-yogan-framework/redis"
@@ -64,10 +66,17 @@ func RegisterCoreProviders(injector *do.RootScope, opts ConfigOptions) {
 // ProvideDefaultDB provides default database connection (master)
 func ProvideDefaultDB(i do.Injector) (*gorm.DB, error) {
 	mgr, err := do.Invoke[*database.Manager](i)
-	if err != nil || mgr == nil {
+	if err != nil {
 		return nil, err
 	}
-	return mgr.DB("master"), nil
+	if mgr == nil {
+		return nil, fmt.Errorf("database manager is not configured")
+	}
+	db := mgr.DB("master")
+	if db == nil {
+		return nil, fmt.Errorf("database connection %q is not configured", "master")
+	}
+	return db, nil
 }
 
 // ProvideDefaultRedisClient Provides the default Redis client (main)

@@ -104,6 +104,9 @@ zero, the Asynq client checks the target queue's pending count before enqueueing
 The returned `BacklogExceededError` includes the queue name, current pending
 count, and configured limit.
 
+An empty Asynq queue can report not found before the first task is created; the
+guard treats that case as `pending=0` and allows the enqueue.
+
 `max_pending <= 0` disables the limit:
 
 ```yaml

@@ -17,6 +17,7 @@ import (
 	"github.com/samber/do/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 )
 
 // TestProvideConfigLoader test configuration loader provider
@@ -294,6 +295,20 @@ func TestProvideDatabaseManagerWithRealConfig(t *testing.T) {
 			assert.Nil(t, mgr)
 		}
 	})
+}
+
+func TestProvideDefaultDBRequiresMasterConnection(t *testing.T) {
+	injector := do.New()
+	defer injector.Shutdown()
+
+	do.ProvideValue[*database.Manager](injector, nil)
+	do.Provide(injector, ProvideDefaultDB)
+
+	db, err := do.Invoke[*gorm.DB](injector)
+	if err == nil {
+		t.Fatalf("expected default db error, got db=%v", db)
+	}
+	assert.Contains(t, err.Error(), "database manager is not configured")
 }
 
 // TestProvideRedisManagerWithRealConfig test Redis provider with real configuration
