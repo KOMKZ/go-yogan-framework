@@ -3,6 +3,7 @@ package httpx
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/KOMKZ/go-yogan-framework/database"
@@ -122,12 +123,25 @@ func HandleError(c *gin.Context, err error) {
 
 	// Try to extract LayeredError
 	var layeredErr *errcode.LayeredError
-	if errors.As(err, &layeredErr) {
+	if errors.As(err, &layeredErr) && layeredErr.Code() > 0 {
 		// 1.1 Decide whether to log based on configuration
 		if shouldLogError(cfg, layeredErr) {
 			fields := []zap.Field{
 				zap.Int("error_code", layeredErr.Code()),
 				zap.String("error_msg", layeredErr.Message()),
+			}
+			if originStack := layeredErr.OriginStack(); originStack != "" {
+				fields = append(fields, zap.String("error_origin_stack", originStack))
+			}
+			if operation := layeredErr.Operation(); operation != "" {
+				fields = append(fields, zap.String("error_operation", operation))
+			}
+			rootCause := layeredErr.RootCause()
+			if rootCause != nil {
+				fields = append(fields,
+					zap.String("error_root_type", fmt.Sprintf("%T", rootCause)),
+					zap.String("error_root_message", rootCause.Error()),
+				)
 			}
 
 			// If the full error chain recording is configured, add details

@@ -10,13 +10,15 @@ import (
 // LayeredError hierarchical error code
 // Supports: error chaining, dynamic messages, context data, HTTP status code mapping, internationalization (message keys)
 type LayeredError struct {
-	module     string                 // Module name (user, order, payment)
-	code       int                    // Complete error code (MMBBBB, e.g., 100001)
-	msgKey     string                 // Message key (for internationalization, e.g., "error.user.not_found")
-	msg        string                 // Default message (Chinese)
-	httpStatus int                    // HTTP status code
-	data       map[string]interface{} // context data
-	cause      error                  // Original error (error chain)
+	module      string                 // Module name (user, order, payment)
+	code        int                    // Complete error code (MMBBBB, e.g., 100001)
+	msgKey      string                 // Message key (for internationalization, e.g., "error.user.not_found")
+	msg         string                 // Default message (Chinese)
+	httpStatus  int                    // HTTP status code
+	data        map[string]interface{} // context data
+	cause       error                  // Original error (error chain)
+	originStack string                 // Location where this error was wrapped
+	operation   string                 // Operation where the error was captured
 }
 
 // New Create hierarchical error codes
@@ -129,6 +131,7 @@ func (e *LayeredError) Wrap(cause error) *LayeredError {
 	}
 	clone := *e
 	clone.cause = cause
+	cloneOrigin(cause, &clone)
 	return &clone
 }
 
@@ -140,7 +143,63 @@ func (e *LayeredError) Wrapf(cause error, format string, args ...interface{}) *L
 	clone := *e
 	clone.cause = cause
 	clone.msg = fmt.Sprintf(format, args...)
+	cloneOrigin(cause, &clone)
 	return &clone
+}
+
+func cloneOrigin(cause error, target *LayeredError) {
+	if existing, ok := cause.(*LayeredError); ok && existing.OriginStack() != "" {
+		target.originStack = existing.OriginStack()
+		target.operation = existing.Operation()
+		return
+	}
+	if target.originStack == "" {
+		target.originStack = errorOriginStack(cause)
+	}
+}
+
+// OriginStack reports the application location where this layered error was
+// wrapped around its cause. It is intentionally separate from the logger
+// stack, which only describes where the error was eventually reported.
+func (e *LayeredError) OriginStack() string {
+	return e.originStack
+}
+
+// Operation identifies the first application operation that captured the
+// underlying technical error.
+func (e *LayeredError) Operation() string {
+	return e.operation
+}
+
+// RootCause returns the deepest error in the chain without changing the
+// chain's errors.Is/errors.As behavior.
+func (e *LayeredError) RootCause() error {
+	current := error(e)
+	for {
+		unwrapper, ok := current.(interface{ Unwrap() error })
+		if !ok || unwrapper.Unwrap() == nil {
+			return current
+		}
+		current = unwrapper.Unwrap()
+	}
+}
+
+// Capture turns a technical error into the framework error model at the
+// boundary where it occurred. A later business Wrap preserves this origin.
+func Capture(cause error, operation string) error {
+	if cause == nil {
+		return nil
+	}
+	if existing, ok := cause.(*LayeredError); ok {
+		return existing
+	}
+	return &LayeredError{
+		msg:         cause.Error(),
+		cause:       cause,
+		operation:   operation,
+		originStack: errorOriginStack(cause),
+		data:        make(map[string]interface{}),
+	}
 }
 
 // Implements support for errors.Is() (by checking equality through code)
@@ -177,4 +236,3 @@ func (e *LayeredError) String() string {
 	return fmt.Sprintf("LayeredError{code:%d, module:%s, msg:%s}",
 		e.code, e.module, e.msg)
 }
-
