@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/KOMKZ/go-yogan-framework/jwt"
@@ -11,15 +12,19 @@ import (
 type JWTConfig struct {
 	// Skip function for middleware
 	Skipper func(*gin.Context) bool
-	
+
 	// Token lookup position (format: header:Authorization)
 	TokenLookup string
-	
+
 	// TokenHeadName Token prefix (such as "Bearer")
 	TokenHeadName string
-	
+
 	// Error handler function
 	ErrorHandler func(*gin.Context, error)
+
+	// AllowedTokenTypes limits which token_type values can pass this middleware.
+	// Empty uses the framework default: access tokens only.
+	AllowedTokenTypes []string
 }
 
 // Default JWT Configuration
@@ -28,6 +33,9 @@ var DefaultJWTConfig = JWTConfig{
 	TokenLookup:   "header:Authorization",
 	TokenHeadName: "Bearer",
 	ErrorHandler:  defaultJWTErrorHandler,
+	AllowedTokenTypes: []string{
+		"access",
+	},
 }
 
 // Create JWT middleware (using default configuration)
@@ -46,6 +54,9 @@ func JWTWithConfig(tokenManager jwt.TokenManager, config JWTConfig) gin.HandlerF
 	}
 	if config.ErrorHandler == nil {
 		config.ErrorHandler = DefaultJWTConfig.ErrorHandler
+	}
+	if len(config.AllowedTokenTypes) == 0 {
+		config.AllowedTokenTypes = DefaultJWTConfig.AllowedTokenTypes
 	}
 
 	return func(c *gin.Context) {
@@ -69,6 +80,10 @@ func JWTWithConfig(tokenManager jwt.TokenManager, config JWTConfig) gin.HandlerF
 			config.ErrorHandler(c, err)
 			return
 		}
+		if !isAllowedTokenType(claims.TokenType, config.AllowedTokenTypes) {
+			config.ErrorHandler(c, fmt.Errorf("jwt: token type %q is not allowed", claims.TokenType))
+			return
+		}
 
 		// Inject Claims into Context
 		c.Set("jwt_claims", claims)
@@ -78,6 +93,15 @@ func JWTWithConfig(tokenManager jwt.TokenManager, config JWTConfig) gin.HandlerF
 
 		c.Next()
 	}
+}
+
+func isAllowedTokenType(tokenType string, allowed []string) bool {
+	for _, item := range allowed {
+		if strings.EqualFold(strings.TrimSpace(item), tokenType) {
+			return true
+		}
+	}
+	return false
 }
 
 // extractToken: Extract the Token from the request
@@ -176,4 +200,3 @@ func HasRole(c *gin.Context, role string) bool {
 	}
 	return false
 }
-

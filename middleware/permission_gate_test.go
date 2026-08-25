@@ -105,7 +105,7 @@ func TestPermissionGateResolveUserFromToken(t *testing.T) {
 	engine := gin.New()
 	engine.Use(PermissionGate(PermissionGateConfig{
 		PolicyEngine: stubPolicyEngine{decision: permission.Allow},
-		TokenManager: stubTokenManager{claims: &jwt.Claims{UserID: 42}},
+		TokenManager: stubTokenManager{claims: &jwt.Claims{UserID: 42, TokenType: "access"}},
 	}))
 	engine.GET("/api/admin/admins/page", func(c *gin.Context) {
 		c.Status(http.StatusOK)
@@ -118,6 +118,28 @@ func TestPermissionGateResolveUserFromToken(t *testing.T) {
 
 	if resp.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", resp.Code)
+	}
+}
+
+func TestPermissionGateIgnoresRefreshToken(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	engine := gin.New()
+	engine.Use(PermissionGate(PermissionGateConfig{
+		PolicyEngine:  stubPolicyEngine{decision: permission.Deny},
+		DefaultPolicy: permission.Deny,
+		TokenManager:  stubTokenManager{claims: &jwt.Claims{UserID: 42, TokenType: "refresh"}},
+	}))
+	engine.GET("/api/admin/admins/page", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/admin/admins/page", nil)
+	req.Header.Set("Authorization", "Bearer refresh-token")
+	resp := httptest.NewRecorder()
+	engine.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusOK {
+		t.Fatalf("expected permission gate to defer auth to JWT middleware, got %d", resp.Code)
 	}
 }
 

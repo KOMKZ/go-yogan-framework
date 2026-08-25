@@ -25,6 +25,7 @@
 | 组件生命周期 | `framework-patterns/kernel-healthcheck.md`、`framework-patterns/kernel-shutdown.md` |
 | 缓存失效 | `framework-patterns/kernel-cache.md` |
 | HTTP 限速 | `framework-patterns/kernel-limiter.md` |
+| JWT 鉴权 | `framework-patterns/kernel-jwt.md` |
 | 队列任务 | `framework-patterns/kernel-queue.md` |
 | 应用侧访问内核 | `framework-patterns/kernel-apputil.md` |
 | 查已有能力 | `framework-patterns/kernel-components-list.md` |

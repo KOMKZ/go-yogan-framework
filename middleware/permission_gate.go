@@ -82,7 +82,7 @@ func resolveUserID(c *gin.Context, tokenManager jwt.TokenManager) (int64, bool) 
 	}
 
 	claims, err := tokenManager.VerifyToken(c.Request.Context(), token)
-	if err != nil || claims == nil || claims.UserID <= 0 {
+	if err != nil || claims == nil || claims.UserID <= 0 || !isAllowedTokenType(claims.TokenType, DefaultJWTConfig.AllowedTokenTypes) {
 		return 0, false
 	}
 

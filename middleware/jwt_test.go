@@ -51,9 +51,10 @@ func TestJWT_Success(t *testing.T) {
 
 	mockManager := &MockTokenManager{
 		claims: &jwt.Claims{
-			UserID:   123,
-			Username: "testuser",
-			Roles:    []string{"admin", "user"},
+			UserID:    123,
+			Username:  "testuser",
+			Roles:     []string{"admin", "user"},
+			TokenType: "access",
 		},
 	}
 
@@ -109,6 +110,57 @@ func TestJWT_InvalidToken(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, resp.Code)
 }
 
+func TestJWT_RejectsRefreshTokenByDefault(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	mockManager := &MockTokenManager{
+		claims: &jwt.Claims{
+			UserID:    123,
+			Username:  "testuser",
+			TokenType: "refresh",
+		},
+	}
+
+	router.Use(JWT(mockManager))
+	router.GET("/protected", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"message": "success"})
+	})
+
+	req := httptest.NewRequest("GET", "/protected", nil)
+	req.Header.Set("Authorization", "Bearer refresh-token")
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusUnauthorized, resp.Code)
+	assert.Contains(t, resp.Body.String(), "token type")
+}
+
+func TestJWTWithConfig_AllowsConfiguredRefreshToken(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	mockManager := &MockTokenManager{
+		claims: &jwt.Claims{
+			UserID:    123,
+			Username:  "testuser",
+			TokenType: "refresh",
+		},
+	}
+
+	router.Use(JWTWithConfig(mockManager, JWTConfig{AllowedTokenTypes: []string{"refresh"}}))
+	router.GET("/refresh-only", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"message": "success"})
+	})
+
+	req := httptest.NewRequest("GET", "/refresh-only", nil)
+	req.Header.Set("Authorization", "Bearer refresh-token")
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+}
+
 func TestJWTWithConfig_Skipper(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
@@ -139,8 +191,9 @@ func TestJWTWithConfig_QueryToken(t *testing.T) {
 
 	mockManager := &MockTokenManager{
 		claims: &jwt.Claims{
-			UserID:   456,
-			Username: "queryuser",
+			UserID:    456,
+			Username:  "queryuser",
+			TokenType: "access",
 		},
 	}
 
@@ -167,8 +220,9 @@ func TestJWTWithConfig_CookieToken(t *testing.T) {
 
 	mockManager := &MockTokenManager{
 		claims: &jwt.Claims{
-			UserID:   789,
-			Username: "cookieuser",
+			UserID:    789,
+			Username:  "cookieuser",
+			TokenType: "access",
 		},
 	}
 

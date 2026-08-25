@@ -14,6 +14,7 @@
 | [kernel-shutdown.md](kernel-shutdown.md) | do.Shutdownable 接口 |
 | [kernel-cache.md](kernel-cache.md) | 缓存事件驱动失效 |
 | [kernel-limiter.md](kernel-limiter.md) | HTTP 限速配置、规则限速和治理原则 |
+| [kernel-jwt.md](kernel-jwt.md) | JWT 中间件 access-only 默认边界和 refresh token 使用约束 |
 | [kernel-queue.md](kernel-queue.md) | Queue/Asynq worker 抽象、配置、注册方式 |
 | [kernel-apputil.md](kernel-apputil.md) | apputil 快捷访问内核组件 |
 | [kernel-components-list.md](kernel-components-list.md) | 内核组件清单 |
