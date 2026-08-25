@@ -30,6 +30,36 @@ type Config struct {
 
 	// Resources configuration level (overrides Default)
 	Resources map[string]ResourceConfig `mapstructure:"resources"`
+
+	// Rules route matching rules for HTTP middleware.
+	// Rules let applications attach a dedicated limit and key strategy to
+	// selected method+path pairs without pre-declaring every generated resource.
+	Rules map[string]RuleConfig `mapstructure:"rules"`
+}
+
+// RuleConfig describes a route-level rate-limit rule used by the HTTP middleware.
+type RuleConfig struct {
+	// KeyFunc resource key generation method: path_ip or user_path.
+	KeyFunc string `mapstructure:"key_func"`
+
+	// UserIDKey Gin context key used by user_path rules (default: user_id).
+	UserIDKey string `mapstructure:"user_id_key"`
+
+	// IdentitySource controls how user_path obtains identity.
+	// context: only read Gin context; jwt_context_or_token: context first, then Bearer token.
+	IdentitySource string `mapstructure:"identity_source"`
+
+	// Match exact method+path pairs covered by this rule.
+	Match []RuleMatcher `mapstructure:"match"`
+
+	// Limit resource configuration for this rule.
+	Limit ResourceConfig `mapstructure:"limit"`
+}
+
+// RuleMatcher matches one exact HTTP method and path.
+type RuleMatcher struct {
+	Method string `mapstructure:"method"`
+	Path   string `mapstructure:"path"`
 }
 
 // ResourceConfig resource-level configuration
@@ -76,6 +106,7 @@ func DefaultConfig() Config {
 		SkipPaths:      []string{},
 		Default:        DefaultResourceConfig(),
 		Resources:      make(map[string]ResourceConfig),
+		Rules:          make(map[string]RuleConfig),
 	}
 }
 
@@ -142,6 +173,52 @@ func (c *Config) Validate() error {
 				Err:      err,
 			}
 		}
+	}
+
+	// Merge and validate route-level rule configurations.
+	for name, rule := range c.Rules {
+		if rule.KeyFunc == "" {
+			rule.KeyFunc = "path_ip"
+		}
+		if rule.UserIDKey == "" {
+			rule.UserIDKey = "user_id"
+		}
+		if rule.IdentitySource == "" {
+			rule.IdentitySource = "context"
+		}
+
+		if rule.KeyFunc != "path_ip" && rule.KeyFunc != "user_path" {
+			return &ValidationError{Resource: name, Field: "rules.key_func", Message: "must be 'path_ip' or 'user_path'"}
+		}
+		if rule.IdentitySource != "context" && rule.IdentitySource != "jwt_context_or_token" {
+			return &ValidationError{Resource: name, Field: "rules.identity_source", Message: "must be 'context' or 'jwt_context_or_token'"}
+		}
+		if len(rule.Match) == 0 {
+			return &ValidationError{Resource: name, Field: "rules.match", Message: "must not be empty"}
+		}
+		for _, match := range rule.Match {
+			if match.Method == "" {
+				return &ValidationError{Resource: name, Field: "rules.match.method", Message: "method is required"}
+			}
+			if match.Path == "" {
+				return &ValidationError{Resource: name, Field: "rules.match.path", Message: "path is required"}
+			}
+		}
+
+		var merged ResourceConfig
+		if !c.Default.isEmpty() {
+			merged = c.Default.Merge(rule.Limit)
+		} else {
+			merged = rule.Limit
+		}
+		rule.Limit = merged
+		if err := merged.Validate(); err != nil {
+			return &ValidationError{
+				Resource: name,
+				Err:      err,
+			}
+		}
+		c.Rules[name] = rule
 	}
 
 	return nil

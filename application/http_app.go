@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/KOMKZ/go-yogan-framework/health"
+	"github.com/KOMKZ/go-yogan-framework/jwt"
 	"github.com/KOMKZ/go-yogan-framework/limiter"
 	"github.com/KOMKZ/go-yogan-framework/swagger"
 	"github.com/KOMKZ/go-yogan-framework/telemetry"
@@ -130,6 +131,12 @@ func (a *Application) startHTTPServer() error {
 		limiterMgr = mgr
 	}
 
+	// 🎯 Obtain JWT Token Manager via DI (optional)
+	var tokenManager jwt.TokenManager
+	if mgr, err := do.Invoke[jwt.TokenManager](a.GetInjector()); err == nil && mgr != nil {
+		tokenManager = mgr
+	}
+
 	// 🎯 Obtain Health Aggregator via DI (optional)
 	var healthAgg *health.Aggregator
 	if agg, err := do.Invoke[*health.Aggregator](a.GetInjector()); err == nil && agg != nil {
@@ -137,13 +144,14 @@ func (a *Application) startHTTPServer() error {
 	}
 
 	// Create HTTP Server (pass middleware configuration, httpx configuration, rate limiter, telemetry, and health)
-	a.httpServer = NewHTTPServerWithTelemetryAndHealth(
+	a.httpServer = NewHTTPServerWithTelemetryAndHealthWithJWT(
 		a.appConfig.ApiServer,
 		a.appConfig.Middleware,
 		a.appConfig.Httpx,
 		limiterMgr,
 		telemetryMgr,
 		healthAgg,
+		tokenManager,
 	)
 
 	// Register route for business application (passing Application dependencies container)

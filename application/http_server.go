@@ -9,6 +9,7 @@ import (
 
 	"github.com/KOMKZ/go-yogan-framework/health"
 	"github.com/KOMKZ/go-yogan-framework/httpx"
+	"github.com/KOMKZ/go-yogan-framework/jwt"
 	"github.com/KOMKZ/go-yogan-framework/limiter"
 	"github.com/KOMKZ/go-yogan-framework/logger"
 	"github.com/KOMKZ/go-yogan-framework/middleware"
@@ -29,7 +30,7 @@ type HTTPServer struct {
 
 // NewHTTPServer creates an HTTP server (uniform logging solution)
 func NewHTTPServer(cfg ApiServerConfig, middlewareCfg *MiddlewareConfig, httpxCfg *httpx.ErrorLoggingConfig, limiterManager *limiter.Manager) *HTTPServer {
-	return newServer(cfg, middlewareCfg, httpxCfg, limiterManager, nil)
+	return newServer(cfg, middlewareCfg, httpxCfg, limiterManager, nil, nil)
 }
 
 // newServer builds the gin engine with the shared middleware assembly.
@@ -43,6 +44,7 @@ func newServer(
 	httpxCfg *httpx.ErrorLoggingConfig,
 	limiterManager *limiter.Manager,
 	telemetryMgr *telemetry.Manager,
+	tokenManager jwt.TokenManager,
 ) *HTTPServer {
 	// ====================================
 	// 1. Take over Gin core log output (avoid the built-in Logger/Recovery)
@@ -108,6 +110,8 @@ func newServer(
 	if limiterManager != nil && limiterManager.IsEnabled() {
 		limiterCfg := limiterManager.GetConfig()
 		rateLimiterCfg := middleware.DefaultRateLimiterConfig(limiterManager)
+		rateLimiterCfg.Rules = limiterCfg.Rules
+		rateLimiterCfg.TokenManager = tokenManager
 
 		// skip rate-limited paths
 		if len(limiterCfg.SkipPaths) > 0 {
@@ -120,6 +124,8 @@ func newServer(
 			rateLimiterCfg.KeyFunc = middleware.RateLimiterKeyByIP
 		case "user":
 			rateLimiterCfg.KeyFunc = middleware.RateLimiterKeyByUser("user_id")
+		case "user_path":
+			rateLimiterCfg.KeyFunc = middleware.RateLimiterKeyByUserAndPath("user_id")
 		case "path_ip":
 			rateLimiterCfg.KeyFunc = middleware.RateLimiterKeyByPathAndIP
 		case "api_key":
@@ -254,7 +260,20 @@ func NewHTTPServerWithTelemetryAndHealth(
 	telemetryMgr *telemetry.Manager,
 	healthAgg *health.Aggregator, // Use specific types, avoid interface{}
 ) *HTTPServer {
-	server := NewHTTPServerWithTelemetry(cfg, middlewareCfg, httpxCfg, limiterManager, telemetryMgr)
+	return NewHTTPServerWithTelemetryAndHealthWithJWT(cfg, middlewareCfg, httpxCfg, limiterManager, telemetryMgr, healthAgg, nil)
+}
+
+// Create an HTTP server with OpenTelemetry, health check, and JWT-aware middleware support.
+func NewHTTPServerWithTelemetryAndHealthWithJWT(
+	cfg ApiServerConfig,
+	middlewareCfg *MiddlewareConfig,
+	httpxCfg *httpx.ErrorLoggingConfig,
+	limiterManager *limiter.Manager,
+	telemetryMgr *telemetry.Manager,
+	healthAgg *health.Aggregator, // Use specific types, avoid interface{}
+	tokenManager jwt.TokenManager,
+) *HTTPServer {
+	server := NewHTTPServerWithTelemetryWithJWT(cfg, middlewareCfg, httpxCfg, limiterManager, telemetryMgr, tokenManager)
 
 	// Register health check route
 	middleware.RegisterHealthRoutes(server.engine, healthAgg)
@@ -272,5 +291,17 @@ func NewHTTPServerWithTelemetry(
 	limiterManager *limiter.Manager,
 	telemetryMgr *telemetry.Manager,
 ) *HTTPServer {
-	return newServer(cfg, middlewareCfg, httpxCfg, limiterManager, telemetryMgr)
+	return NewHTTPServerWithTelemetryWithJWT(cfg, middlewareCfg, httpxCfg, limiterManager, telemetryMgr, nil)
+}
+
+// Create an HTTP server with OpenTelemetry and JWT-aware middleware support.
+func NewHTTPServerWithTelemetryWithJWT(
+	cfg ApiServerConfig,
+	middlewareCfg *MiddlewareConfig,
+	httpxCfg *httpx.ErrorLoggingConfig,
+	limiterManager *limiter.Manager,
+	telemetryMgr *telemetry.Manager,
+	tokenManager jwt.TokenManager,
+) *HTTPServer {
+	return newServer(cfg, middlewareCfg, httpxCfg, limiterManager, telemetryMgr, tokenManager)
 }

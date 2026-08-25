@@ -1,17 +1,47 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
+	frameworkjwt "github.com/KOMKZ/go-yogan-framework/jwt"
 	"github.com/KOMKZ/go-yogan-framework/limiter"
 	"github.com/KOMKZ/go-yogan-framework/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+type fakeRateLimiterTokenManager struct {
+	userID int64
+}
+
+func (m fakeRateLimiterTokenManager) GenerateAccessToken(context.Context, string, map[string]interface{}) (string, error) {
+	return "", nil
+}
+
+func (m fakeRateLimiterTokenManager) GenerateRefreshToken(context.Context, string) (string, error) {
+	return "", nil
+}
+
+func (m fakeRateLimiterTokenManager) VerifyToken(context.Context, string) (*frameworkjwt.Claims, error) {
+	return &frameworkjwt.Claims{UserID: m.userID}, nil
+}
+
+func (m fakeRateLimiterTokenManager) RefreshToken(context.Context, string) (string, error) {
+	return "", nil
+}
+
+func (m fakeRateLimiterTokenManager) RevokeToken(context.Context, string) error {
+	return nil
+}
+
+func (m fakeRateLimiterTokenManager) RevokeUserTokens(context.Context, string) error {
+	return nil
+}
 
 func setupRateLimiterTest() (*gin.Engine, *limiter.Manager) {
 	gin.SetMode(gin.TestMode)
@@ -96,6 +126,104 @@ func TestRateLimiter_RateLimited(t *testing.T) {
 	router.ServeHTTP(resp, req)
 	assert.Equal(t, http.StatusTooManyRequests, resp.Code)
 	assert.Contains(t, resp.Body.String(), "Rate limit exceeded")
+}
+
+func TestRateLimiter_RulePathIP(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	cfg := limiter.Config{
+		Enabled:   true,
+		StoreType: "memory",
+		Rules: map[string]limiter.RuleConfig{
+			"login": {
+				KeyFunc: "path_ip",
+				Match: []limiter.RuleMatcher{
+					{Method: "POST", Path: "/api/auth/login"},
+				},
+				Limit: limiter.ResourceConfig{
+					Algorithm:  "token_bucket",
+					Rate:       1,
+					Capacity:   1,
+					InitTokens: 1,
+				},
+			},
+		},
+	}
+	manager, err := limiter.NewManager(cfg)
+	require.NoError(t, err)
+	defer manager.Close()
+
+	rateLimiterCfg := DefaultRateLimiterConfig(manager)
+	rateLimiterCfg.Rules = manager.GetConfig().Rules
+	router.Use(RateLimiterWithConfig(rateLimiterCfg))
+	router.POST("/api/auth/login", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"message": "success"})
+	})
+	router.POST("/api/auth/refresh", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"message": "success"})
+	})
+
+	req := httptest.NewRequest("POST", "/api/auth/login", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+	require.Equal(t, http.StatusOK, resp.Code)
+
+	req = httptest.NewRequest("POST", "/api/auth/login", nil)
+	resp = httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+	assert.Equal(t, http.StatusTooManyRequests, resp.Code)
+
+	req = httptest.NewRequest("POST", "/api/auth/refresh", nil)
+	resp = httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+	assert.Equal(t, http.StatusOK, resp.Code)
+}
+
+func TestRateLimiter_RuleUserPathWithToken(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	cfg := limiter.Config{
+		Enabled:   true,
+		StoreType: "memory",
+		Rules: map[string]limiter.RuleConfig{
+			"profile": {
+				KeyFunc:        "user_path",
+				IdentitySource: "jwt_context_or_token",
+				Match: []limiter.RuleMatcher{
+					{Method: "GET", Path: "/api/profile"},
+				},
+				Limit: limiter.ResourceConfig{
+					Algorithm:  "token_bucket",
+					Rate:       1,
+					Capacity:   1,
+					InitTokens: 1,
+				},
+			},
+		},
+	}
+	manager, err := limiter.NewManager(cfg)
+	require.NoError(t, err)
+	defer manager.Close()
+
+	rateLimiterCfg := DefaultRateLimiterConfig(manager)
+	rateLimiterCfg.Rules = manager.GetConfig().Rules
+	rateLimiterCfg.TokenManager = fakeRateLimiterTokenManager{userID: 123}
+	router.Use(RateLimiterWithConfig(rateLimiterCfg))
+	router.GET("/api/profile", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"message": "success"})
+	})
+
+	req := httptest.NewRequest("GET", "/api/profile", nil)
+	req.Header.Set("Authorization", "Bearer access-token")
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+	require.Equal(t, http.StatusOK, resp.Code)
+
+	req = httptest.NewRequest("GET", "/api/profile", nil)
+	req.Header.Set("Authorization", "Bearer access-token")
+	resp = httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+	assert.Equal(t, http.StatusTooManyRequests, resp.Code)
 }
 
 func TestRateLimiter_Disabled(t *testing.T) {
@@ -358,7 +486,6 @@ func TestRateLimiter_PanicOnNilManager(t *testing.T) {
 		RateLimiterWithConfig(cfg)
 	})
 }
-
 
 // TestRateLimiter_DefaultKeyFuncConsistency regression: the default config
 // and the fallback path must build the same canonical key (previously one

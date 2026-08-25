@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/KOMKZ/go-yogan-framework/jwt"
 	"github.com/KOMKZ/go-yogan-framework/limiter"
 	"github.com/gin-gonic/gin"
 )
@@ -28,6 +29,13 @@ type RateLimiterConfig struct {
 
 	// SkipPaths list of paths to bypass rate limiting (optional)
 	SkipPaths []string
+
+	// Rules route-level rate limiting rules (optional)
+	Rules map[string]limiter.RuleConfig
+
+	// TokenManager lets user_path rules resolve a user from Bearer token before
+	// route-level JWT middleware has populated the Gin context.
+	TokenManager jwt.TokenManager
 }
 
 // defaultRateLimiterKeyFunc is the single canonical default key function
@@ -56,6 +64,7 @@ func DefaultRateLimiterConfig(manager *limiter.Manager) RateLimiterConfig {
 		},
 		SkipFunc:  nil,
 		SkipPaths: []string{},
+		Rules:     map[string]limiter.RuleConfig{},
 	}
 }
 
@@ -71,9 +80,11 @@ func DefaultRateLimiterConfig(manager *limiter.Manager) RateLimiterConfig {
 // Usage:
 //
 // // Basic usage
+//
 //	engine.Use(middleware.RateLimiter(limiterManager))
 //
 // // Custom configuration
+//
 //	cfg := middleware.DefaultRateLimiterConfig(limiterManager)
 //	cfg.KeyFunc = middleware.RateLimiterKeyByIP
 //	cfg.SkipPaths = []string{"/health", "/metrics"}
@@ -164,6 +175,27 @@ func RateLimiterWithConfig(cfg RateLimiterConfig) gin.HandlerFunc {
 			return
 		}
 
+		for ruleName, rule := range cfg.Rules {
+			if !rateLimiterRuleMatches(c, rule) {
+				continue
+			}
+
+			ruleResource, ok := rateLimiterRuleResource(c, rule, cfg.TokenManager)
+			if !ok {
+				continue
+			}
+
+			allowed, err := cfg.Manager.AllowWithConfig(ctx, ruleResource, rule.Limit)
+			if err != nil {
+				cfg.ErrorHandler(c, fmt.Errorf("rate limiter rule %s failed: %w", ruleName, err))
+				return
+			}
+			if !allowed {
+				cfg.RateLimitHandler(c)
+				return
+			}
+		}
+
 		// ===========================
 		// 6. Allow passage
 		// ===========================
@@ -193,10 +225,21 @@ func RateLimiterKeyByUser(userIDKey string) func(*gin.Context) string {
 	}
 }
 
+// RateLimiterKeyByUserAndPath generates a resource key based on user ID and path.
+func RateLimiterKeyByUserAndPath(userIDKey string) func(*gin.Context) string {
+	return func(c *gin.Context) string {
+		userID, exists := c.Get(userIDKey)
+		if !exists {
+			return ""
+		}
+		return fmt.Sprintf("user:%v:%s:%s", userID, strings.ToLower(c.Request.Method), c.Request.URL.Path)
+	}
+}
+
 // RateLimiterKeyByPathAndIP generates a resource key based on path and IP
 // For rate limiting by path+IP combination
 func RateLimiterKeyByPathAndIP(c *gin.Context) string {
-	return fmt.Sprintf("%s:%s:%s", c.Request.Method, c.Request.URL.Path, c.ClientIP())
+	return fmt.Sprintf("%s:%s:%s", strings.ToLower(c.Request.Method), c.Request.URL.Path, c.ClientIP())
 }
 
 // RateLimiterKeyByAPIKey generates resource keys based on API key
@@ -216,4 +259,56 @@ func RateLimiterKeyByAPIKey(headerName string) func(*gin.Context) string {
 		}
 		return fmt.Sprintf("apikey:%s", apiKey)
 	}
+}
+
+func rateLimiterRuleMatches(c *gin.Context, rule limiter.RuleConfig) bool {
+	method := strings.ToUpper(c.Request.Method)
+	path := c.Request.URL.Path
+	for _, match := range rule.Match {
+		if strings.ToUpper(match.Method) == method && match.Path == path {
+			return true
+		}
+	}
+	return false
+}
+
+func rateLimiterRuleResource(c *gin.Context, rule limiter.RuleConfig, tokenManager jwt.TokenManager) (string, bool) {
+	switch rule.KeyFunc {
+	case "path_ip":
+		return RateLimiterKeyByPathAndIP(c), true
+	case "user_path":
+		userID, ok := rateLimiterResolveUserID(c, rule, tokenManager)
+		if !ok {
+			return "", false
+		}
+		return fmt.Sprintf("user:%s:%s:%s", userID, strings.ToLower(c.Request.Method), c.Request.URL.Path), true
+	default:
+		return defaultRateLimiterKeyFunc(c), true
+	}
+}
+
+func rateLimiterResolveUserID(c *gin.Context, rule limiter.RuleConfig, tokenManager jwt.TokenManager) (string, bool) {
+	userIDKey := rule.UserIDKey
+	if userIDKey == "" {
+		userIDKey = "user_id"
+	}
+	if userID, exists := c.Get(userIDKey); exists {
+		return fmt.Sprintf("%v", userID), true
+	}
+
+	if rule.IdentitySource != "jwt_context_or_token" || tokenManager == nil {
+		return "", false
+	}
+
+	token := extractBearerToken(c.GetHeader("Authorization"))
+	if token == "" {
+		return "", false
+	}
+	claims, err := tokenManager.VerifyToken(c.Request.Context(), token)
+	if err != nil || claims == nil || claims.UserID <= 0 {
+		return "", false
+	}
+	c.Set(userIDKey, claims.UserID)
+	c.Set("jwt_claims", claims)
+	return fmt.Sprintf("%d", claims.UserID), true
 }

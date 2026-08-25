@@ -24,7 +24,7 @@
 |------|--------|------|
 | grpc | `grpc/` | gRPC 服务端/客户端 |
 | kafka | `kafka/` | Kafka 生产者/消费者 |
-| limiter | `limiter/` | 限流（令牌桶/滑动窗口/自适应） |
+| limiter | `limiter/` | 限流（令牌桶/滑动窗口/自适应、path_ip/user_path HTTP 规则） |
 | breaker | `breaker/` | 熔断器 |
 | health | `health/` | 健康检查 |
 | telemetry | `telemetry/` | OpenTelemetry 追踪/指标 |

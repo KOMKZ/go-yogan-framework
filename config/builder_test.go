@@ -89,6 +89,24 @@ func TestLoaderBuilder_Build_WithEnvConfig(t *testing.T) {
 	assert.Equal(t, 9090, loader.GetInt("app.port")) // dev.yaml override
 }
 
+func TestLoaderBuilder_Build_WithRateLimiterConfig(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	configFile := filepath.Join(tmpDir, "config.yaml")
+	require.NoError(t, os.WriteFile(configFile, []byte("app:\n  name: test\n"), 0644))
+	rateLimiterFile := filepath.Join(tmpDir, "rate_limiter.yaml")
+	require.NoError(t, os.WriteFile(rateLimiterFile, []byte("limiter:\n  enabled: true\n  store_type: memory\n  key_func: path_ip\n"), 0644))
+
+	loader, err := NewLoaderBuilder().
+		WithConfigPath(tmpDir).
+		Build()
+
+	require.NoError(t, err)
+	assert.True(t, loader.GetBool("limiter.enabled"))
+	assert.Equal(t, "memory", loader.GetString("limiter.store_type"))
+	assert.Equal(t, "path_ip", loader.GetString("limiter.key_func"))
+}
+
 // TestLoaderBuilder_Build_WithEnvSource test environment variable data source
 func TestLoaderBuilder_Build_WithEnvSource(t *testing.T) {
 	tmpDir := t.TempDir()

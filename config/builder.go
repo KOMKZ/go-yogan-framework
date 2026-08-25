@@ -60,6 +60,8 @@ func (b *LoaderBuilder) Build() (*Loader, error) {
 	if b.configPath != "" {
 		configFile := filepath.Join(b.configPath, "config.yaml")
 		loader.AddSource(NewFileSource(configFile, 10))
+		rateLimiterFile := filepath.Join(b.configPath, "rate_limiter.yaml")
+		loader.AddSource(NewFileSource(rateLimiterFile, 15))
 	}
 
 	// Environment configuration file (priority 20)
@@ -122,4 +124,3 @@ func GetEnv() string {
 	}
 	return "dev" // Default development environment
 }
-

@@ -122,6 +122,37 @@ func TestManager_AllowN(t *testing.T) {
 	assert.False(t, allowed)
 }
 
+func TestManager_AllowWithConfig(t *testing.T) {
+	cfg := Config{
+		Enabled:   true,
+		StoreType: "memory",
+	}
+
+	mgr, err := NewManager(cfg)
+	require.NoError(t, err)
+	defer mgr.Close()
+
+	ruleLimit := ResourceConfig{
+		Algorithm:  "token_bucket",
+		Rate:       1,
+		Capacity:   1,
+		InitTokens: 1,
+	}
+
+	ctx := context.Background()
+	allowed, err := mgr.AllowWithConfig(ctx, "user:123:get:/api/profile", ruleLimit)
+	require.NoError(t, err)
+	assert.True(t, allowed)
+
+	allowed, err = mgr.AllowWithConfig(ctx, "user:123:get:/api/profile", ruleLimit)
+	require.NoError(t, err)
+	assert.False(t, allowed)
+
+	allowed, err = mgr.AllowWithConfig(ctx, "user:456:get:/api/profile", ruleLimit)
+	require.NoError(t, err)
+	assert.True(t, allowed)
+}
+
 func TestManager_Wait(t *testing.T) {
 	cfg := Config{
 		Enabled:   true,
@@ -408,4 +439,3 @@ func TestManager_InvalidConfig(t *testing.T) {
 	_, err := NewManager(cfg)
 	assert.Error(t, err)
 }
-

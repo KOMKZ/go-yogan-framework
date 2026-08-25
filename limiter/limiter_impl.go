@@ -105,8 +105,27 @@ func (m *Manager) Allow(ctx context.Context, resource string) (bool, error) {
 	return m.AllowN(ctx, resource, 1)
 }
 
+// AllowWithConfig checks permission using an explicit resource configuration.
+// It is intended for middleware rules where resources are generated dynamically
+// (for example user+path) but all resources share the same rule limit.
+func (m *Manager) AllowWithConfig(ctx context.Context, resource string, cfg ResourceConfig) (bool, error) {
+	return m.AllowNWithConfig(ctx, resource, 1, cfg)
+}
+
 // AllowN checks if N requests are permitted
 func (m *Manager) AllowN(ctx context.Context, resource string, n int64) (bool, error) {
+	return m.allowN(ctx, resource, n, nil)
+}
+
+// AllowNWithConfig checks if N requests are permitted using an explicit config.
+func (m *Manager) AllowNWithConfig(ctx context.Context, resource string, n int64, cfg ResourceConfig) (bool, error) {
+	if err := cfg.Validate(); err != nil {
+		return false, fmt.Errorf("invalid resource config: %w", err)
+	}
+	return m.allowN(ctx, resource, n, &cfg)
+}
+
+func (m *Manager) allowN(ctx context.Context, resource string, n int64, explicitConfig *ResourceConfig) (bool, error) {
 	if m.logger != nil {
 		m.logger.DebugCtx(ctx, "🔍 [LimiterManager] AllowN called",
 			zap.Bool("enabled", m.config.Enabled),
@@ -123,11 +142,43 @@ func (m *Manager) AllowN(ctx context.Context, resource string, n int64) (bool, e
 		return true, nil
 	}
 
-	// 🎯 Check if the resource is defined in the configuration
-	_, exists := m.config.Resources[resource]
+	var resourceConfig ResourceConfig
+	if explicitConfig != nil {
+		resourceConfig = *explicitConfig
+	} else {
+		// 🎯 Check if the resource is defined in the configuration
+		_, exists := m.config.Resources[resource]
 
-	// If the resource is not configured
-	if !exists {
+		// If the resource is not configured
+		if !exists {
+			// Try using default configuration
+			if err := m.config.Default.Validate(); err != nil {
+				// default configuration is invalid or not set, allow directly
+				if m.logger != nil {
+					m.logger.DebugCtx(ctx, "🔓 [LimiterManager] Resource not configured and default config is invalid, auto-allowing",
+						zap.String("resource", resource))
+				}
+				// Record OTel metrics for auto-allowed requests
+				if m.otelMetrics != nil {
+					m.otelMetrics.RecordAllowed(ctx, resource, "none")
+				}
+				return true, nil
+			}
+
+			// default configuration is effective, rate limiting using default configuration
+			if m.logger != nil {
+				m.logger.DebugCtx(ctx, "🎯 [LimiterManager] Applying default config to unknown resource",
+					zap.String("resource", resource),
+					zap.String("algorithm", m.config.Default.Algorithm),
+					zap.Int64("rate", m.config.Default.Rate))
+			}
+			resourceConfig = m.config.Default
+		} else {
+			resourceConfig = m.config.GetResourceConfig(resource)
+		}
+	}
+
+	if explicitConfig == nil && resourceConfig.isEmpty() {
 		// Try using default configuration
 		if err := m.config.Default.Validate(); err != nil {
 			// default configuration is invalid or not set, allow directly
@@ -141,19 +192,11 @@ func (m *Manager) AllowN(ctx context.Context, resource string, n int64) (bool, e
 			}
 			return true, nil
 		}
-
-		// default configuration is effective, rate limiting using default configuration
-		if m.logger != nil {
-			m.logger.DebugCtx(ctx, "🎯 [LimiterManager] Applying default config to unknown resource",
-				zap.String("resource", resource),
-				zap.String("algorithm", m.config.Default.Algorithm),
-				zap.Int64("rate", m.config.Default.Rate))
-		}
-		// Continue with rate limiting logic (using default configuration)
+		resourceConfig = m.config.Default
 	}
 
 	// Get or create the rate limiter
-	limiter := m.getOrCreateLimiter(resource)
+	limiter := m.getOrCreateLimiterWithConfig(resource, resourceConfig)
 
 	// Call the algorithm to check
 	resp, err := limiter.algorithm.Allow(ctx, m.store, resource, n, limiter.config)
@@ -349,6 +392,10 @@ func (m *Manager) GetConfig() Config {
 
 // Get or create limiter (thread-safe)
 func (m *Manager) getOrCreateLimiter(resource string) *rateLimiter {
+	return m.getOrCreateLimiterWithConfig(resource, m.config.GetResourceConfig(resource))
+}
+
+func (m *Manager) getOrCreateLimiterWithConfig(resource string, resourceConfig ResourceConfig) *rateLimiter {
 	// Try to read first
 	m.mu.RLock()
 	if limiter, exists := m.limiters[resource]; exists {
@@ -365,9 +412,6 @@ func (m *Manager) getOrCreateLimiter(resource string) *rateLimiter {
 	if limiter, exists := m.limiters[resource]; exists {
 		return limiter
 	}
-
-	// Get resource configuration
-	resourceConfig := m.config.GetResourceConfig(resource)
 
 	// Create algorithm instance
 	algorithm := GetAlgorithm(resourceConfig, m.provider)

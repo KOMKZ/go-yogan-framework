@@ -75,6 +75,49 @@ func TestConfig_Validate(t *testing.T) {
 	}
 }
 
+func TestConfig_Validate_Rules(t *testing.T) {
+	cfg := Config{
+		Enabled:   true,
+		StoreType: "memory",
+		Default: ResourceConfig{
+			Algorithm:  "token_bucket",
+			Rate:       100,
+			Capacity:   100,
+			InitTokens: 100,
+		},
+		Rules: map[string]RuleConfig{
+			"login": {
+				KeyFunc: "path_ip",
+				Match: []RuleMatcher{
+					{Method: "POST", Path: "/api/auth/login"},
+				},
+				Limit: ResourceConfig{
+					Rate:       1,
+					Capacity:   2,
+					InitTokens: 2,
+				},
+			},
+			"profile": {
+				KeyFunc:        "user_path",
+				IdentitySource: "jwt_context_or_token",
+				Match: []RuleMatcher{
+					{Method: "GET", Path: "/api/profile"},
+				},
+				Limit: ResourceConfig{
+					Rate:       5,
+					Capacity:   5,
+					InitTokens: 5,
+				},
+			},
+		},
+	}
+
+	require.NoError(t, cfg.Validate())
+	assert.Equal(t, "user_id", cfg.Rules["profile"].UserIDKey)
+	assert.Equal(t, "token_bucket", cfg.Rules["login"].Limit.Algorithm)
+	assert.Equal(t, int64(1), cfg.Rules["login"].Limit.Rate)
+}
+
 func TestResourceConfig_Validate(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -346,7 +389,7 @@ func TestConfig_Validate_Merge(t *testing.T) {
 		},
 		Resources: map[string]ResourceConfig{
 			"api1": {
-				Rate:     50, // Only cover Rate
+				Rate:     50,  // Only cover Rate
 				Capacity: 100, // Only cover Capacity
 			},
 		},
@@ -361,4 +404,3 @@ func TestConfig_Validate_Merge(t *testing.T) {
 	assert.Equal(t, int64(50), api1Cfg.Rate)           // coverage value
 	assert.Equal(t, int64(100), api1Cfg.Capacity)      // coverage value
 }
-

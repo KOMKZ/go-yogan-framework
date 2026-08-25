@@ -10,6 +10,13 @@
 - ✅ **default 自动生效**：配置了有效的 `default` 则自动应用到未配置资源
 - ✅ **未配置自动放行**：如果 `default` 无效或未配置，未配置资源直接放行
 - ✅ **按需启用**：通过配置精确控制哪些接口需要限流
+- ✅ **规则级限流**：通过 `rules` 精确匹配 method+path，并支持 `path_ip`、`user_path`
+
+### 独立配置文件
+
+框架会自动加载 `rate_limiter.yaml`。优先级为：
+
+`config.yaml` < `rate_limiter.yaml` < `{env}.yaml` < 环境变量 < flags。
 
 ### 工作流程
 
@@ -46,21 +53,45 @@ limiter:
     capacity: 200                  # 容量
     init_tokens: 100               # 初始令牌数
   
-  # 资源级配置（覆盖默认配置）
-  resources:
-    "POST:/api/users":
-      algorithm: "token_bucket"
-      rate: 10
-      capacity: 20
+	  # 资源级配置（覆盖默认配置）
+	  resources:
+	    "POST:/api/users":
+	      algorithm: "token_bucket"
+	      rate: 10
+	      capacity: 20
 
-# 中间件配置
-middleware:
-  rate_limit:
-    enable: true                   # 是否启用中间件
-    key_func: "path"               # 键函数：path、ip、user、path_ip、api_key
-    skip_paths:                    # 跳过限流的路径
-      - "/health"
-      - "/"
+	  # 规则级配置：按 method+path 匹配，适合登录、注册、用户高成本接口
+	  rules:
+	    login:
+	      key_func: "path_ip"
+	      match:
+	        - method: "POST"
+	          path: "/api/auth/login"
+	      limit:
+	        algorithm: "token_bucket"
+	        rate: 1
+	        capacity: 5
+	        init_tokens: 5
+	    user_profile:
+	      key_func: "user_path"
+	      identity_source: "jwt_context_or_token"
+	      user_id_key: "user_id"
+	      match:
+	        - method: "GET"
+	          path: "/api/user/profile"
+	      limit:
+	        algorithm: "token_bucket"
+	        rate: 10
+	        capacity: 20
+	        init_tokens: 20
+
+# Redis 实例配置：store_type=redis 时 limiter.redis.instance 必须指向这里
+redis:
+  instances:
+    limiter:
+      mode: "standalone"
+      addrs: ["127.0.0.1:6379"]
+      db: 7
 ```
 
 ## 配置项说明
@@ -135,11 +166,24 @@ middleware:
 
 | 值 | 说明 | 资源键格式 | 使用场景 |
 |---|------|-----------|---------|
-| `path` | 按路径限流 | `GET:/api/users` | 全局接口限流 |
+| `path` | 按路径限流 | `get:/api/users` | 全局接口限流 |
 | `ip` | 按IP限流 | `ip:192.168.1.1` | 防止单个IP滥用 |
 | `user` | 按用户限流 | `user:12345` | 用户级别限流 |
-| `path_ip` | 按路径+IP限流 | `GET:/api/users:192.168.1.1` | 接口+IP双维度 |
+| `path_ip` | 按路径+IP限流 | `get:/api/users:192.168.1.1` | 接口+IP双维度 |
+| `user_path` | 按用户+路径限流 | `user:123:get:/api/users` | 登录态高成本接口 |
 | `api_key` | 按API Key限流 | `apikey:xxx-xxx` | API服务限流 |
+
+#### rules 说明
+
+`rules` 用于精确保护部分接口。每个 rule 必须声明 `match` 和 `limit`。
+
+| 配置项 | 类型 | 说明 |
+|-------|------|------|
+| `key_func` | string | 规则维度，支持 `path_ip`、`user_path` |
+| `identity_source` | string | `user_path` 获取用户身份的来源，支持 `context`、`jwt_context_or_token` |
+| `user_id_key` | string | Gin context 中的用户 ID key，默认 `user_id` |
+| `match` | []object | 精确匹配的 HTTP method 和 path |
+| `limit` | object | 当前规则使用的资源限流配置，可继承 `default` 未覆盖字段 |
 
 ## 限流算法说明
 
@@ -433,4 +477,3 @@ redis:
       pool_size: 20
       min_idle_conns: 10
 ```
-
