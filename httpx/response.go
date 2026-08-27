@@ -130,6 +130,9 @@ func HandleError(c *gin.Context, err error) {
 				zap.Int("error_code", layeredErr.Code()),
 				zap.String("error_msg", layeredErr.Message()),
 			}
+			if data := layeredErr.Data(); len(data) > 0 {
+				fields = append(fields, zap.Any("error_data", data))
+			}
 			if originStack := layeredErr.OriginStack(); originStack != "" {
 				fields = append(fields, zap.String("error_origin_stack", originStack))
 			}
@@ -187,10 +190,22 @@ func HandleError(c *gin.Context, err error) {
 
 	// 3. Unknown error (default) -> 500 (to avoid leaking internal information)
 	if cfg.Enable {
-		logger.ErrorCtx(ctx, "httpx", "general error",
+		fields := []zap.Field{
 			zap.Error(err),
 			zap.String("error_chain", err.Error()),
-		)
+		}
+		if errors.As(err, &layeredErr) {
+			if originStack := layeredErr.OriginStack(); originStack != "" {
+				fields = append(fields, zap.String("error_origin_stack", originStack))
+			}
+			if operation := layeredErr.Operation(); operation != "" {
+				fields = append(fields, zap.String("error_operation", operation))
+			}
+			if data := layeredErr.Data(); len(data) > 0 {
+				fields = append(fields, zap.Any("error_data", data))
+			}
+		}
+		logger.ErrorCtx(ctx, "httpx", "general error", fields...)
 	}
 	// Return a fixed default message instead of err.Error() to avoid leaking
 	// internal error details to clients (regression from f9a954c).
