@@ -453,11 +453,10 @@ func TestProvideEventDispatcherIndependent(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("with config but event disabled", func(t *testing.T) {
+	t.Run("with config and no event config uses defaults", func(t *testing.T) {
 		injector := do.New()
 		defer injector.Shutdown()
 
-		// Using test configuration (Event not enabled)
 		opts := ConfigOptions{
 			ConfigPath: "./testdata",
 			AppType:    "http",
@@ -467,12 +466,9 @@ func TestProvideEventDispatcherIndependent(t *testing.T) {
 		do.Provide(injector, ProvideCtxLogger("yogan"))
 		do.Provide(injector, ProvideEventDispatcherIndependent)
 
-		// Event not enabled, return nil
 		dispatcher, err := do.Invoke[event.Dispatcher](injector)
-		// May return nil, nil (disabled)
-		if err == nil {
-			assert.Nil(t, dispatcher)
-		}
+		require.NoError(t, err)
+		assert.NotNil(t, dispatcher)
 	})
 }
 

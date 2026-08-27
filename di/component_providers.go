@@ -313,9 +313,11 @@ func ProvideEventDispatcherIndependent(i do.Injector) (event.Dispatcher, error) 
 	}
 
 	// Read Event configuration
-	var cfg event.Config
-	if err := loader.GetViper().UnmarshalKey("event", &cfg); err != nil {
-		cfg = event.DefaultConfig()
+	cfg := event.DefaultConfig()
+	if v := loader.GetViper(); v != nil && v.IsSet("event") {
+		if err := v.UnmarshalKey("event", &cfg); err != nil {
+			return nil, err
+		}
 	}
 
 	if !cfg.Enabled {
