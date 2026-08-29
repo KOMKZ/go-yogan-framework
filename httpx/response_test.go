@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -323,6 +324,44 @@ func TestHandleError_LayeredError_InfoLevel_LogsAtInfo(t *testing.T) {
 		}
 	}
 	assert.True(t, found, "info-level business error must be written to the log files")
+}
+
+func TestHandleError_LayeredError_LogsDiagnosticCauseWithoutFullChain(t *testing.T) {
+	logDir := t.TempDir()
+	logger.MustResetManager(logger.ManagerConfig{
+		BaseLogDir:            logDir,
+		Level:                 "info",
+		Encoding:              "json",
+		EnableConsole:         false,
+		EnableLevelInFilename: true,
+		EnableDateInFilename:  false,
+		MaxSize:               10,
+	})
+	defer logger.CloseAll()
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request, _ = http.NewRequest("GET", "/test", nil)
+	c.Set(errorLoggingConfigKey, errorLoggingConfigInternal{
+		Enable:          true,
+		IgnoreStatusMap: make(map[int]bool),
+		FullErrorChain:  false,
+		LogLevel:        "error",
+	})
+
+	sentinel := errors.New("provider rejected")
+	captured := errcode.Capture(fmt.Errorf("%w: verify_code=F008", sentinel), "provider.verify")
+	layeredErr := errcode.New(10, 1, "test", "test.error", "验证失败", http.StatusForbidden).Wrap(captured)
+	HandleError(c, layeredErr)
+
+	matches, err := filepath.Glob(filepath.Join(logDir, "*.log"))
+	require.NoError(t, err)
+	require.NotEmpty(t, matches, "expected log files to be written")
+	data, err := os.ReadFile(matches[0])
+	require.NoError(t, err)
+	require.Contains(t, string(data), "error_cause_message")
+	require.Contains(t, string(data), "verify_code=F008")
+	require.Contains(t, string(data), "error_chain")
 }
 
 // TestHandleError_DatabaseNotFound test database record not found error

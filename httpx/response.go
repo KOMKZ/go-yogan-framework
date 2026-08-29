@@ -139,6 +139,13 @@ func HandleError(c *gin.Context, err error) {
 			if operation := layeredErr.Operation(); operation != "" {
 				fields = append(fields, zap.String("error_operation", operation))
 			}
+			diagnosticCause := layeredErr.DiagnosticCause()
+			if diagnosticCause != nil {
+				fields = append(fields,
+					zap.String("error_cause_type", fmt.Sprintf("%T", diagnosticCause)),
+					zap.String("error_cause_message", diagnosticCause.Error()),
+				)
+			}
 			rootCause := layeredErr.RootCause()
 			if rootCause != nil {
 				fields = append(fields,
@@ -146,11 +153,13 @@ func HandleError(c *gin.Context, err error) {
 					zap.String("error_root_message", rootCause.Error()),
 				)
 			}
+			if diagnosticCause != nil || rootCause != nil {
+				fields = append(fields, zap.String("error_chain", layeredErr.String()))
+			}
 
 			// If the full error chain recording is configured, add details
 			if cfg.FullErrorChain {
 				fields = append(fields,
-					zap.String("error_chain", layeredErr.String()), // complete error chain
 					zap.Error(err), // 原始错误（支持 errors.Unwrap）
 				)
 			}

@@ -23,6 +23,7 @@
 | 新增内核组件 | `framework-patterns/kernel-provider-template.md`、`framework-patterns/kernel-provider-register.md`、`framework-patterns/kernel-config.md` |
 | 接入依赖注入 | `framework-patterns/kernel-do.md`、`framework-patterns/kernel-do-provide.md`、`framework-patterns/kernel-do-invoke.md` |
 | 组件生命周期 | `framework-patterns/kernel-healthcheck.md`、`framework-patterns/kernel-shutdown.md` |
+| HTTP 错误日志 | `framework-patterns/kernel-httpx-error.md` |
 | 缓存失效 | `framework-patterns/kernel-cache.md` |
 | HTTP 限速 | `framework-patterns/kernel-limiter.md` |
 | JWT 鉴权 | `framework-patterns/kernel-jwt.md` |

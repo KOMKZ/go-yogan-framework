@@ -2,6 +2,7 @@ package errcode
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"testing"
 )
@@ -53,6 +54,23 @@ func TestLayeredError_Error_WithCause(t *testing.T) {
 	expected := "User not found: database connection failed"
 	if err.Error() != expected {
 		t.Errorf("expected error message '%s', got %s", expected, err.Error())
+	}
+}
+
+func TestLayeredErrorDiagnosticCauseKeepsContextualCause(t *testing.T) {
+	sentinel := errors.New("provider rejected")
+	contextual := fmt.Errorf("%w: verify_code=F008", sentinel)
+	captured := Capture(contextual, "provider.verify")
+	err := New(10, 1, "auth", "error.auth.verify", "验证失败").Wrap(captured)
+
+	if !errors.Is(err, sentinel) {
+		t.Fatalf("expected sentinel in error chain")
+	}
+	if got := err.RootCause(); got != sentinel {
+		t.Fatalf("RootCause() = %v, want sentinel", got)
+	}
+	if got := err.DiagnosticCause(); got == nil || got.Error() != "provider rejected: verify_code=F008" {
+		t.Fatalf("DiagnosticCause() = %v", got)
 	}
 }
 
@@ -293,4 +311,3 @@ func TestLayeredError_ImmutableOriginal(t *testing.T) {
 		t.Errorf("original cause changed")
 	}
 }
-

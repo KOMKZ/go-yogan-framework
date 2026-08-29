@@ -10,6 +10,7 @@
 | [kernel-do-provide.md](kernel-do-provide.md) | do.Provide 注册应用层 Provider |
 | [kernel-do-invoke.md](kernel-do-invoke.md) | do.Invoke / do.MustInvoke 获取组件 |
 | [kernel-config.md](kernel-config.md) | 配置结构、默认值、校验和配置文件模式 |
+| [kernel-httpx-error.md](kernel-httpx-error.md) | HTTPX 统一错误出口、错误链和日志排障字段 |
 | [kernel-healthcheck.md](kernel-healthcheck.md) | HealthChecker 接口 |
 | [kernel-shutdown.md](kernel-shutdown.md) | do.Shutdownable 接口 |
 | [kernel-cache.md](kernel-cache.md) | 缓存事件驱动失效 |

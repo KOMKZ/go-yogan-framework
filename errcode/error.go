@@ -184,6 +184,24 @@ func (e *LayeredError) RootCause() error {
 	}
 }
 
+// DiagnosticCause returns the first non-LayeredError cause in the chain.
+// It keeps contextual typed errors (for example provider errors with codes)
+// visible in logs while RootCause remains the deepest sentinel/technical error
+// for programmatic checks.
+func (e *LayeredError) DiagnosticCause() error {
+	if e == nil {
+		return nil
+	}
+	current := e.cause
+	for {
+		layered, ok := current.(*LayeredError)
+		if !ok || layered.cause == nil {
+			return current
+		}
+		current = layered.cause
+	}
+}
+
 // Capture turns a technical error into the framework error model at the
 // boundary where it occurred. A later business Wrap preserves this origin.
 func Capture(cause error, operation string) error {
