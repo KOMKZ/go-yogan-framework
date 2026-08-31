@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/KOMKZ/go-yogan-framework/errcode"
 	"github.com/KOMKZ/go-yogan-framework/logger"
 	"github.com/hibiken/asynq"
 	"go.uber.org/zap"
@@ -135,13 +136,58 @@ func (s *Server) asynqConfig(ctx context.Context, worker BrokerWorker) asynq.Con
 		ErrorHandler: asynq.ErrorHandlerFunc(func(ctx context.Context, task *asynq.Task, err error) {
 			taskID, _ := asynq.GetTaskID(ctx)
 			queueName, _ := asynq.GetQueueName(ctx)
-			s.log.ErrorCtx(traceContext(ctx, task), "queue task failed",
+			fields := []zap.Field{
 				zap.String("task_id", taskID),
 				zap.String("task_type", task.Type()),
 				zap.String("queue", queueName),
-				zap.Error(err))
+			}
+			fields = append(fields, queueErrorFields(err)...)
+			s.log.ErrorCtx(traceContext(ctx, task), "queue task failed", fields...)
 		}),
 	}
+}
+
+func queueErrorFields(err error) []zap.Field {
+	fields := []zap.Field{zap.Error(err)}
+	if err == nil {
+		return fields
+	}
+	fields = append(fields, zap.String("error_chain", err.Error()))
+
+	var layeredErr *errcode.LayeredError
+	if !errors.As(err, &layeredErr) || layeredErr == nil {
+		return fields
+	}
+	if layeredErr.Code() > 0 {
+		fields = append(fields,
+			zap.Int("error_code", layeredErr.Code()),
+			zap.String("error_msg", layeredErr.Message()),
+		)
+	}
+	if data := layeredErr.Data(); len(data) > 0 {
+		fields = append(fields, zap.Any("error_data", data))
+	}
+	if originStack := layeredErr.OriginStack(); originStack != "" {
+		fields = append(fields, zap.String("error_origin_stack", originStack))
+	}
+	if operation := layeredErr.Operation(); operation != "" {
+		fields = append(fields, zap.String("error_operation", operation))
+	}
+	diagnosticCause := layeredErr.DiagnosticCause()
+	if diagnosticCause != nil {
+		fields = append(fields,
+			zap.String("error_cause_type", fmt.Sprintf("%T", diagnosticCause)),
+			zap.String("error_cause_message", diagnosticCause.Error()),
+		)
+	}
+	rootCause := layeredErr.RootCause()
+	if rootCause != nil {
+		fields = append(fields,
+			zap.String("error_root_type", fmt.Sprintf("%T", rootCause)),
+			zap.String("error_root_message", rootCause.Error()),
+		)
+	}
+	return fields
 }
 
 func (s *Server) physicalQueues(logicalQueues map[string]int) map[string]int {

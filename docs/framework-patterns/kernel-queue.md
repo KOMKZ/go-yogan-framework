@@ -203,3 +203,24 @@ The logger provider enables `trace_id` by default when
 `logger.enable_trace_id` is omitted. Set it to `false` only for an explicit
 opt-out. Application templates should still declare `enable_trace_id: true` so
 the operational contract is visible in deployed configuration.
+
+## Error Logs
+
+Asynq worker failures are logged by the queue framework ErrorHandler. The log
+always includes task id, task type, logical queue, `error`, and `error_chain`.
+
+When the returned error chain contains `errcode.LayeredError`, queue logs also
+include the same diagnostic fields as the HTTP error exit:
+
+| Field | Meaning |
+|-------|---------|
+| `error_code` / `error_msg` | Public framework error code and message when present |
+| `error_data` | Extra LayeredError data |
+| `error_origin_stack` | First captured business or I/O boundary stack |
+| `error_operation` | Stable operation name from `errcode.Capture` |
+| `error_cause_type` / `error_cause_message` | First non-LayeredError contextual cause |
+| `error_root_type` / `error_root_message` | Deepest unwrapped root cause |
+
+Business handlers should capture I/O, SDK, filesystem, queue, and database
+boundaries with `errcode.Capture(err, "stable.operation")` and return the error.
+They should not add per-handler logging just to expose stack fields.
