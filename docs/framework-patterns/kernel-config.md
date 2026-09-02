@@ -30,11 +30,12 @@ func (c *Config) Validate() error {
 src/apps/user-api/config/
 ├── config.yaml          # manifest/bootstrap
 ├── runtime.yaml         # 启动、日志、中间件等运行时基础配置
-├── runtime.test.yaml    # runtime 的 test profile 覆盖
 ├── database.yaml        # 数据库配置
-├── database.test.yaml   # database 的 test profile 覆盖
 ├── job.yaml             # 队列和任务配置
 ├── media.yaml           # 媒体和外部 provider 配置
+├── test/                # test profile 覆盖目录
+│   ├── runtime.yaml     # runtime 的 test 覆盖
+│   └── database.yaml    # database 的 test 覆盖
 └── rate_limiter.yaml    # 限速配置，manifest mode 下必须显式导入
 ```
 
@@ -57,11 +58,11 @@ yogan:
 | 模式 | 规则 |
 |------|------|
 | legacy | `config.yaml`、`rate_limiter.yaml`、`{env}.yaml`、env vars、flags |
-| manifest | `config.yaml`、`imports`、`imports` 的 profile 覆盖、env vars、flags |
+| manifest | `config.yaml`、`imports`、`config/<profile>/<import>` 覆盖、env vars、flags |
 
-manifest mode 下不自动加载全局 `{env}.yaml`。环境差异跟随被导入文件命名，例如 `database.yaml` 的 test 覆盖文件是 `database.test.yaml`。多个 profile 用逗号分隔，后面的 profile 覆盖前面的 profile。
+manifest mode 下不自动加载全局 `{env}.yaml`。环境差异进入 profile 目录，例如 import `database.yaml` 且 profile 为 `test` 时，覆盖文件是 `config/test/database.yaml`；import `payment/channels.yaml` 时，覆盖文件是 `config/test/payment/channels.yaml`。多个 profile 用逗号分隔，后面的 profile 覆盖前面的 profile。
 
-基础 import 之间不得重复配置 key。profile 覆盖文件只能覆盖对应基础文件拥有的顶层 section，不能把其他模块配置塞进当前文件。
+基础 import 之间不得重复配置 key。profile 覆盖文件只能覆盖对应基础文件拥有的顶层 section，不能把其他模块配置塞进当前文件。profile 名必须是简单目录名，不能是绝对路径，不能包含 `/`、`\` 或 `..`。
 
 ## 配置示例
 

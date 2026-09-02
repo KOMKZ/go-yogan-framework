@@ -127,7 +127,8 @@ logger:
 database:
   driver: mysql
 `)
-	writeConfigFile(t, filepath.Join(tmpDir, "database.test.yaml"), `
+	require.NoError(t, os.Mkdir(filepath.Join(tmpDir, "test"), 0755))
+	writeConfigFile(t, filepath.Join(tmpDir, "test", "database.yaml"), `
 database:
   driver: sqlite
 `)
@@ -146,7 +147,7 @@ database:
 	assert.Equal(t, "sqlite", loader.GetString("database.driver"))
 	assert.Equal(t, "manifest", loader.GetString("yogan.config.mode"))
 	assert.Contains(t, loader.GetLoadedFiles(), filepath.Join(tmpDir, "runtime.yaml"))
-	assert.Contains(t, loader.GetLoadedFiles(), filepath.Join(tmpDir, "database.test.yaml"))
+	assert.Contains(t, loader.GetLoadedFiles(), filepath.Join(tmpDir, "test", "database.yaml"))
 }
 
 func TestLoaderBuilder_Build_ManifestEnvAndFlagsOverrideFiles(t *testing.T) {
@@ -163,7 +164,8 @@ api_server:
   port: 8080
   host: 127.0.0.1
 `)
-	writeConfigFile(t, filepath.Join(tmpDir, "runtime.test.yaml"), `
+	require.NoError(t, os.Mkdir(filepath.Join(tmpDir, "test"), 0755))
+	writeConfigFile(t, filepath.Join(tmpDir, "test", "runtime.yaml"), `
 api_server:
   port: 8081
 `)

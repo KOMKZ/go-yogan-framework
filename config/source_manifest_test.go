@@ -36,7 +36,8 @@ api_server:
 logger:
   level: info
 `)
-	writeConfigFile(t, filepath.Join(dir, "runtime.test.yaml"), `
+	require.NoError(t, os.Mkdir(filepath.Join(dir, "test"), 0755))
+	writeConfigFile(t, filepath.Join(dir, "test", "runtime.yaml"), `
 api_server:
   port: 18080
 `)
@@ -46,7 +47,7 @@ database:
     master:
       driver: mysql
 `)
-	writeConfigFile(t, filepath.Join(dir, "database.test.yaml"), `
+	writeConfigFile(t, filepath.Join(dir, "test", "database.yaml"), `
 database:
   connections:
     master:
@@ -62,9 +63,9 @@ database:
 	assert.Equal(t, "sqlite", data["database.connections.master.driver"])
 	assert.Equal(t, []string{
 		filepath.Join(dir, "runtime.yaml"),
-		filepath.Join(dir, "runtime.test.yaml"),
+		filepath.Join(dir, "test", "runtime.yaml"),
 		filepath.Join(dir, "database.yaml"),
-		filepath.Join(dir, "database.test.yaml"),
+		filepath.Join(dir, "test", "database.yaml"),
 	}, source.LoadedFiles())
 }
 
@@ -138,7 +139,8 @@ func TestManifestSourceRejectsProfileSectionsOutsideBase(t *testing.T) {
 database:
   connections: {}
 `)
-	writeConfigFile(t, filepath.Join(dir, "database.test.yaml"), `
+	require.NoError(t, os.Mkdir(filepath.Join(dir, "test"), 0755))
+	writeConfigFile(t, filepath.Join(dir, "test", "database.yaml"), `
 logger:
   level: debug
 `)
@@ -173,6 +175,16 @@ func TestManifestSourceRejectsEscapingImports(t *testing.T) {
 func TestSplitProfiles(t *testing.T) {
 	assert.Equal(t, []string{"test", "local"}, splitProfiles("test, local,,"))
 	assert.Empty(t, splitProfiles(""))
+}
+
+func TestProfileVariantPathRejectsUnsafeProfiles(t *testing.T) {
+	dir := t.TempDir()
+	for _, profile := range []string{"../test", "/test", "test/local", `test\local`, "."} {
+		t.Run(profile, func(t *testing.T) {
+			_, err := profileVariantPath(dir, filepath.Join(dir, "runtime.yaml"), profile)
+			require.Error(t, err)
+		})
+	}
 }
 
 func TestLoaderReloadResetsLoadedFiles(t *testing.T) {

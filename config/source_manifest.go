@@ -101,7 +101,10 @@ func (s *ManifestSource) Load() (map[string]interface{}, error) {
 		}
 
 		for _, profile := range s.profiles {
-			profilePath := profileVariantPath(importPath, profile)
+			profilePath, err := profileVariantPath(s.configPath, importPath, profile)
+			if err != nil {
+				return nil, err
+			}
 			profileData, exists, err := s.loadExistingFile(profilePath, true)
 			if err != nil {
 				return nil, err
@@ -166,14 +169,22 @@ func (s *ManifestSource) loadExistingFile(path string, optional bool) (map[strin
 	return data, true, nil
 }
 
-func profileVariantPath(basePath, profile string) string {
+func profileVariantPath(configPath, basePath, profile string) (string, error) {
 	profile = strings.TrimSpace(profile)
 	if profile == "" {
-		return basePath
+		return basePath, nil
 	}
-	ext := filepath.Ext(basePath)
-	stem := strings.TrimSuffix(basePath, ext)
-	return stem + "." + profile + ext
+	if filepath.IsAbs(profile) || profile == "." || profile == ".." || strings.Contains(profile, "/") || strings.Contains(profile, "\\") {
+		return "", fmt.Errorf("profile %q must be a simple directory name", profile)
+	}
+	rel, err := filepath.Rel(configPath, basePath)
+	if err != nil {
+		return "", err
+	}
+	if rel == "." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) || rel == ".." {
+		return "", fmt.Errorf("profile base path %s cannot escape config directory", basePath)
+	}
+	return filepath.Join(configPath, profile, rel), nil
 }
 
 func splitProfiles(env string) []string {
