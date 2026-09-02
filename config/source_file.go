@@ -31,6 +31,11 @@ func (s *FileSource) Priority() int {
 	return s.priority
 }
 
+// LoadedFiles returns the file owned by this source.
+func (s *FileSource) LoadedFiles() []string {
+	return []string{s.path}
+}
+
 // Load file configuration
 func (s *FileSource) Load() (map[string]interface{}, error) {
 	// Check if the file exists
@@ -79,4 +84,3 @@ func flattenMap(prefix string, data map[string]interface{}) map[string]interface
 
 	return result
 }
-

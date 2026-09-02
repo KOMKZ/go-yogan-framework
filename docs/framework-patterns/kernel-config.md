@@ -28,11 +28,40 @@ func (c *Config) Validate() error {
 
 ```
 src/apps/user-api/config/
-├── config.yaml      # 主配置
-├── dev.yaml         # 开发环境覆盖
-├── test.yaml        # 测试环境覆盖
-└── prod.yaml        # 生产环境覆盖
+├── config.yaml          # manifest/bootstrap
+├── runtime.yaml         # 启动、日志、中间件等运行时基础配置
+├── runtime.test.yaml    # runtime 的 test profile 覆盖
+├── database.yaml        # 数据库配置
+├── database.test.yaml   # database 的 test profile 覆盖
+├── job.yaml             # 队列和任务配置
+├── media.yaml           # 媒体和外部 provider 配置
+└── rate_limiter.yaml    # 限速配置，manifest mode 下必须显式导入
 ```
+
+`config.yaml` 可以使用 manifest mode 显式声明要导入的配置文件：
+
+```yaml
+yogan:
+  config:
+    mode: "manifest"
+    imports:
+      - runtime.yaml
+      - database.yaml
+      - job.yaml
+      - media.yaml
+      - rate_limiter.yaml
+```
+
+加载规则：
+
+| 模式 | 规则 |
+|------|------|
+| legacy | `config.yaml`、`rate_limiter.yaml`、`{env}.yaml`、env vars、flags |
+| manifest | `config.yaml`、`imports`、`imports` 的 profile 覆盖、env vars、flags |
+
+manifest mode 下不自动加载全局 `{env}.yaml`。环境差异跟随被导入文件命名，例如 `database.yaml` 的 test 覆盖文件是 `database.test.yaml`。多个 profile 用逗号分隔，后面的 profile 覆盖前面的 profile。
+
+基础 import 之间不得重复配置 key。profile 覆盖文件只能覆盖对应基础文件拥有的顶层 section，不能把其他模块配置塞进当前文件。
 
 ## 配置示例
 

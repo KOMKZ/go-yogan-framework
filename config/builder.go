@@ -55,26 +55,28 @@ func (b *LoaderBuilder) WithEnv(env string) *LoaderBuilder {
 // Build loader
 func (b *LoaderBuilder) Build() (*Loader, error) {
 	loader := NewLoader()
+	env := b.env
+	if env == "" {
+		env = GetEnv()
+	}
 
 	// 1. Basic configuration file (priority 10)
 	if b.configPath != "" {
 		configFile := filepath.Join(b.configPath, "config.yaml")
 		loader.AddSource(NewFileSource(configFile, 10))
-		rateLimiterFile := filepath.Join(b.configPath, "rate_limiter.yaml")
-		loader.AddSource(NewFileSource(rateLimiterFile, 15))
-	}
-
-	// Environment configuration file (priority 20)
-	// 🎯 Per-application env (from flags) takes precedence; global APP_ENV/ENV
-	// is only a legacy fallback so multiple apps stay isolated.
-	if b.configPath != "" {
-		env := b.env
-		if env == "" {
-			env = GetEnv()
+		manifest, err := LoadManifest(configFile)
+		if err != nil {
+			return nil, err
 		}
-		if env != "" {
-			envFile := filepath.Join(b.configPath, env+".yaml")
-			loader.AddSource(NewFileSource(envFile, 20))
+		if manifest.Enabled() {
+			loader.AddSource(NewManifestSource(b.configPath, manifest.Imports, splitProfiles(env), 20))
+		} else {
+			rateLimiterFile := filepath.Join(b.configPath, "rate_limiter.yaml")
+			loader.AddSource(NewFileSource(rateLimiterFile, 15))
+			if env != "" {
+				envFile := filepath.Join(b.configPath, env+".yaml")
+				loader.AddSource(NewFileSource(envFile, 20))
+			}
 		}
 	}
 

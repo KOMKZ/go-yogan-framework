@@ -107,6 +107,113 @@ func TestLoaderBuilder_Build_WithRateLimiterConfig(t *testing.T) {
 	assert.Equal(t, "path_ip", loader.GetString("limiter.key_func"))
 }
 
+func TestLoaderBuilder_Build_WithManifestImports(t *testing.T) {
+	tmpDir := t.TempDir()
+	writeConfigFile(t, filepath.Join(tmpDir, "config.yaml"), `
+yogan:
+  config:
+    mode: manifest
+    imports:
+      - runtime.yaml
+      - database.yaml
+`)
+	writeConfigFile(t, filepath.Join(tmpDir, "runtime.yaml"), `
+api_server:
+  port: 8080
+logger:
+  level: info
+`)
+	writeConfigFile(t, filepath.Join(tmpDir, "database.yaml"), `
+database:
+  driver: mysql
+`)
+	writeConfigFile(t, filepath.Join(tmpDir, "database.test.yaml"), `
+database:
+  driver: sqlite
+`)
+	writeConfigFile(t, filepath.Join(tmpDir, "test.yaml"), `
+database:
+  driver: should-not-load
+`)
+
+	loader, err := NewLoaderBuilder().
+		WithConfigPath(tmpDir).
+		WithEnv("test").
+		Build()
+
+	require.NoError(t, err)
+	assert.Equal(t, 8080, loader.GetInt("api_server.port"))
+	assert.Equal(t, "sqlite", loader.GetString("database.driver"))
+	assert.Equal(t, "manifest", loader.GetString("yogan.config.mode"))
+	assert.Contains(t, loader.GetLoadedFiles(), filepath.Join(tmpDir, "runtime.yaml"))
+	assert.Contains(t, loader.GetLoadedFiles(), filepath.Join(tmpDir, "database.test.yaml"))
+}
+
+func TestLoaderBuilder_Build_ManifestEnvAndFlagsOverrideFiles(t *testing.T) {
+	tmpDir := t.TempDir()
+	writeConfigFile(t, filepath.Join(tmpDir, "config.yaml"), `
+yogan:
+  config:
+    mode: manifest
+    imports:
+      - runtime.yaml
+`)
+	writeConfigFile(t, filepath.Join(tmpDir, "runtime.yaml"), `
+api_server:
+  port: 8080
+  host: 127.0.0.1
+`)
+	writeConfigFile(t, filepath.Join(tmpDir, "runtime.test.yaml"), `
+api_server:
+  port: 8081
+`)
+
+	os.Setenv("TEST_ADDRESS", "127.0.0.9")
+	defer os.Unsetenv("TEST_ADDRESS")
+
+	type TestFlags struct {
+		Port int
+	}
+
+	loader, err := NewLoaderBuilder().
+		WithConfigPath(tmpDir).
+		WithEnv("test").
+		WithEnvPrefix("TEST").
+		WithAppType("http").
+		WithFlags(&TestFlags{Port: 8082}).
+		Build()
+
+	require.NoError(t, err)
+	assert.Equal(t, 8082, loader.GetInt("api_server.port"))
+	assert.Equal(t, "127.0.0.9", loader.GetString("api_server.host"))
+}
+
+func TestLoaderBuilder_Build_ManifestDoesNotAutoLoadRateLimiter(t *testing.T) {
+	tmpDir := t.TempDir()
+	writeConfigFile(t, filepath.Join(tmpDir, "config.yaml"), `
+yogan:
+  config:
+    mode: manifest
+    imports:
+      - runtime.yaml
+`)
+	writeConfigFile(t, filepath.Join(tmpDir, "runtime.yaml"), `
+logger:
+  level: info
+`)
+	writeConfigFile(t, filepath.Join(tmpDir, "rate_limiter.yaml"), `
+limiter:
+  enabled: true
+`)
+
+	loader, err := NewLoaderBuilder().
+		WithConfigPath(tmpDir).
+		Build()
+
+	require.NoError(t, err)
+	assert.False(t, loader.IsSet("limiter"))
+}
+
 // TestLoaderBuilder_Build_WithEnvSource test environment variable data source
 func TestLoaderBuilder_Build_WithEnvSource(t *testing.T) {
 	tmpDir := t.TempDir()

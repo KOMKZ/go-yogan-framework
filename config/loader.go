@@ -9,10 +9,10 @@ import (
 
 // Loader configuration loader (supporting multiple data sources)
 type Loader struct {
-	sources      []ConfigSource           // data source list
-	mergedConfig map[string]interface{}   // merged configuration
-	v            *viper.Viper             // Viper instance (for compatibility)
-	loadedFiles  []string                 // List of loaded files (for logging)
+	sources      []ConfigSource         // data source list
+	mergedConfig map[string]interface{} // merged configuration
+	v            *viper.Viper           // Viper instance (for compatibility)
+	loadedFiles  []string               // List of loaded files (for logging)
 }
 
 // Create configuration loader
@@ -39,15 +39,15 @@ func (l *Loader) Load() error {
 
 	// 2. Load and merge in sequence
 	l.mergedConfig = make(map[string]interface{})
+	l.loadedFiles = make([]string, 0)
 	for _, source := range l.sources {
 		data, err := source.Load()
 		if err != nil {
 			return fmt.Errorf("failed to load data source %s: %w", source.Name(), err)
 		}
 
-		// Log file data source
-		if fileSource, ok := source.(*FileSource); ok {
-			l.loadedFiles = append(l.loadedFiles, fileSource.path)
+		if loadedFiles, ok := source.(LoadedFilesProvider); ok {
+			l.loadedFiles = append(l.loadedFiles, loadedFiles.LoadedFiles()...)
 		}
 
 		// Merge data (higher priority overrides lower priority)
@@ -203,4 +203,3 @@ func (l *Loader) GetViper() *viper.Viper {
 func (l *Loader) Reload() error {
 	return l.Load()
 }
-

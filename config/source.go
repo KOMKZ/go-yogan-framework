@@ -20,3 +20,7 @@ type ConfigSource interface {
 	Load() (map[string]interface{}, error)
 }
 
+// LoadedFilesProvider reports configuration files read by a source.
+type LoadedFilesProvider interface {
+	LoadedFiles() []string
+}
