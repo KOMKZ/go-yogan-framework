@@ -1,0 +1,33 @@
+{
+  "version": "1",
+  "issues": {
+    "func:application/base_app.go:*BaseApplication.registerComponentMetrics": 150,
+    "func:application/http_server.go:newServer": 135,
+    "func:retry/retry.go:DoWithData": 113,
+    "naming:application/config.go": 1,
+    "naming:application/router.go": 1,
+    "naming:auth/config.go": 1,
+    "naming:auth/provider.go": 1,
+    "naming:auth/service.go": 1,
+    "naming:breaker/config.go": 1,
+    "naming:cache/config.go": 1,
+    "naming:config/builder.go": 1,
+    "naming:config/validator.go": 1,
+    "naming:database/config.go": 1,
+    "naming:database/repository.go": 1,
+    "naming:event/config.go": 1,
+    "naming:grpc/config.go": 1,
+    "naming:health/config.go": 1,
+    "naming:httpx/config.go": 1,
+    "naming:httpx/handler.go": 1,
+    "naming:jwt/config.go": 1,
+    "naming:kafka/config.go": 1,
+    "naming:limiter/config.go": 1,
+    "naming:logger/config.go": 1,
+    "naming:queue/config.go": 1,
+    "naming:redis/config.go": 1,
+    "naming:swagger/config.go": 1,
+    "naming:swagger/provider.go": 1,
+    "naming:telemetry/config.go": 1
+  }
+}

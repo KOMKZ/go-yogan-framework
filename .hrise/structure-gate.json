@@ -1,0 +1,93 @@
+{
+  "file": {
+    "warn_lines": 650,
+    "max_lines": 1000,
+    "test_warn_lines": 1000,
+    "test_max_lines": 1800
+  },
+  "function": {
+    "warn_lines": 110,
+    "max_lines": 180,
+    "test_warn_lines": 220,
+    "test_max_lines": 360
+  },
+  "package": {
+    "warn_files": 20,
+    "max_files": 32
+  },
+  "naming": {
+    "require_business_role_for_new_files": true,
+    "weak_names": [
+      "service.go",
+      "handler.go",
+      "dto.go",
+      "provider.go",
+      "repository.go",
+      "router.go",
+      "config.go",
+      "types.go",
+      "model.go",
+      "callbacks.go",
+      "catalog.go",
+      "query.go",
+      "builder.go",
+      "validator.go"
+    ]
+  },
+  "baseline": {
+    "path": ".hrise/structure-gate-baseline.json"
+  },
+  "exclude": {
+    "generated": true,
+    "paths": [
+      "vendor/**",
+      ".codegraph/**",
+      "build/**",
+      "dist/**",
+      "logs/**",
+      "**/logs/**",
+      ".tmp/**",
+      "tools/go-structure-gate/**"
+    ]
+  },
+  "overrides": [
+    {
+      "paths": ["config/**/*.go", "di/**/*.go", "application/**/*.go"],
+      "file": {
+        "warn_lines": 750,
+        "max_lines": 1200,
+        "test_warn_lines": 1100,
+        "test_max_lines": 1900
+      },
+      "function": {
+        "warn_lines": 130,
+        "max_lines": 220,
+        "test_warn_lines": 240,
+        "test_max_lines": 400
+      },
+      "package": {
+        "warn_files": 24,
+        "max_files": 38
+      }
+    },
+    {
+      "paths": ["logger/**/*.go", "kafka/**/*.go", "limiter/**/*.go", "httpclient/**/*.go", "governance/**/*.go"],
+      "file": {
+        "warn_lines": 850,
+        "max_lines": 1400,
+        "test_warn_lines": 1200,
+        "test_max_lines": 2200
+      },
+      "function": {
+        "warn_lines": 150,
+        "max_lines": 260,
+        "test_warn_lines": 260,
+        "test_max_lines": 460
+      },
+      "package": {
+        "warn_files": 26,
+        "max_files": 42
+      }
+    }
+  ]
+}

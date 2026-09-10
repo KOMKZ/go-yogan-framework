@@ -1,4 +1,4 @@
-.PHONY: test lint fmt tidy clean
+.PHONY: test lint fmt tidy clean structure-gate structure-gate-baseline
 
 # 运行所有测试
 test:
@@ -21,6 +21,12 @@ vet:
 # 代码检查（需要安装 golangci-lint）
 lint:
 	golangci-lint run
+
+structure-gate:
+	cd ../servertools/structure-gate/go-structure-gate && go run . --root ../../../go-yogan-framework --mode changed
+
+structure-gate-baseline:
+	cd ../servertools/structure-gate/go-structure-gate && go run . --root ../../../go-yogan-framework --mode baseline
 
 # 整理依赖
 tidy:
