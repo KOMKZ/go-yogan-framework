@@ -43,8 +43,41 @@ func JWT(tokenManager jwt.TokenManager) gin.HandlerFunc {
 	return JWTWithConfig(tokenManager, DefaultJWTConfig)
 }
 
+// CookieTokenLookup builds a JWT token lookup expression for a cookie name.
+func CookieTokenLookup(cookieName string) string {
+	return "cookie:" + strings.TrimSpace(cookieName)
+}
+
+// CookieJWTConfig creates a JWT config that reads access tokens from an HttpOnly cookie.
+func CookieJWTConfig(cookieName string) JWTConfig {
+	return JWTConfig{
+		TokenLookup:   CookieTokenLookup(cookieName),
+		TokenHeadName: "",
+	}
+}
+
+// CookieJWT requires a valid access token from the named cookie.
+func CookieJWT(tokenManager jwt.TokenManager, cookieName string) gin.HandlerFunc {
+	return JWTWithConfig(tokenManager, CookieJWTConfig(cookieName))
+}
+
+// OptionalCookieJWT injects claims from the named cookie when present.
+func OptionalCookieJWT(tokenManager jwt.TokenManager, cookieName string) gin.HandlerFunc {
+	return OptionalJWT(tokenManager, CookieJWTConfig(cookieName))
+}
+
+// OptionalJWT validates a token when present and injects claims into context.
+// Missing or invalid tokens are ignored so downstream auth middleware can decide.
+func OptionalJWT(tokenManager jwt.TokenManager, config JWTConfig) gin.HandlerFunc {
+	return jwtMiddleware(tokenManager, config, true)
+}
+
 // Create JWT middleware with custom configuration
 func JWTWithConfig(tokenManager jwt.TokenManager, config JWTConfig) gin.HandlerFunc {
+	return jwtMiddleware(tokenManager, config, false)
+}
+
+func jwtMiddleware(tokenManager jwt.TokenManager, config JWTConfig, optional bool) gin.HandlerFunc {
 	// Set default values
 	if config.TokenLookup == "" {
 		config.TokenLookup = DefaultJWTConfig.TokenLookup
@@ -69,6 +102,10 @@ func JWTWithConfig(tokenManager jwt.TokenManager, config JWTConfig) gin.HandlerF
 		// Extract Token
 		token, err := extractToken(c, config.TokenLookup, config.TokenHeadName)
 		if err != nil {
+			if optional {
+				c.Next()
+				return
+			}
 			config.ErrorHandler(c, err)
 			return
 		}
@@ -77,22 +114,37 @@ func JWTWithConfig(tokenManager jwt.TokenManager, config JWTConfig) gin.HandlerF
 		ctx := c.Request.Context()
 		claims, err := tokenManager.VerifyToken(ctx, token)
 		if err != nil {
+			if optional {
+				c.Next()
+				return
+			}
 			config.ErrorHandler(c, err)
 			return
 		}
 		if !isAllowedTokenType(claims.TokenType, config.AllowedTokenTypes) {
+			if optional {
+				c.Next()
+				return
+			}
 			config.ErrorHandler(c, fmt.Errorf("jwt: token type %q is not allowed", claims.TokenType))
 			return
 		}
 
-		// Inject Claims into Context
-		c.Set("jwt_claims", claims)
-		c.Set("user_id", claims.UserID)
-		c.Set("username", claims.Username)
-		c.Set("roles", claims.Roles)
+		InjectJWTClaims(c, claims)
 
 		c.Next()
 	}
+}
+
+// InjectJWTClaims stores verified JWT claims in gin.Context using framework keys.
+func InjectJWTClaims(c *gin.Context, claims *jwt.Claims) {
+	if claims == nil {
+		return
+	}
+	c.Set("jwt_claims", claims)
+	c.Set("user_id", claims.UserID)
+	c.Set("username", claims.Username)
+	c.Set("roles", claims.Roles)
 }
 
 func isAllowedTokenType(tokenType string, allowed []string) bool {
@@ -140,6 +192,24 @@ func extractToken(c *gin.Context, tokenLookup, tokenHeadName string) (string, er
 	}
 
 	return token, nil
+}
+
+func extractBearerToken(header string) string {
+	value := strings.TrimSpace(header)
+	if value == "" {
+		return ""
+	}
+
+	parts := strings.SplitN(value, " ", 2)
+	if len(parts) != 2 {
+		return value
+	}
+
+	if strings.EqualFold(parts[0], "Bearer") {
+		return strings.TrimSpace(parts[1])
+	}
+
+	return value
 }
 
 // defaultJWTErrorHandler default error handling

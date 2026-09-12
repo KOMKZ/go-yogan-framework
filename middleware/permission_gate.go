@@ -13,6 +13,8 @@ import (
 type PermissionGateConfig struct {
 	PolicyEngine  permission.PolicyEngine
 	TokenManager  jwt.TokenManager
+	TokenLookup   string
+	TokenHeadName string
 	SkipPaths     []string
 	DefaultPolicy permission.Decision
 }
@@ -33,7 +35,7 @@ func PermissionGate(config PermissionGateConfig) gin.HandlerFunc {
 			return
 		}
 
-		userID, ok := resolveUserID(c, config.TokenManager)
+		userID, ok := resolveUserID(c, config)
 		if !ok || userID <= 0 {
 			// Authentication is still handled by JWT middleware.
 			c.Next()
@@ -67,21 +69,30 @@ func PermissionGate(config PermissionGateConfig) gin.HandlerFunc {
 	}
 }
 
-func resolveUserID(c *gin.Context, tokenManager jwt.TokenManager) (int64, bool) {
+func resolveUserID(c *gin.Context, config PermissionGateConfig) (int64, bool) {
 	if userID, ok := parseUserID(c.Get("user_id")); ok {
 		return userID, true
 	}
 
-	if tokenManager == nil {
+	if config.TokenManager == nil {
 		return 0, false
 	}
 
-	token := extractBearerToken(c.GetHeader("Authorization"))
-	if token == "" {
+	tokenLookup := config.TokenLookup
+	if tokenLookup == "" {
+		tokenLookup = DefaultJWTConfig.TokenLookup
+	}
+	tokenHeadName := config.TokenHeadName
+	if tokenHeadName == "" {
+		tokenHeadName = DefaultJWTConfig.TokenHeadName
+	}
+
+	token, err := extractToken(c, tokenLookup, tokenHeadName)
+	if err != nil || token == "" {
 		return 0, false
 	}
 
-	claims, err := tokenManager.VerifyToken(c.Request.Context(), token)
+	claims, err := config.TokenManager.VerifyToken(c.Request.Context(), token)
 	if err != nil || claims == nil || claims.UserID <= 0 || !isAllowedTokenType(claims.TokenType, DefaultJWTConfig.AllowedTokenTypes) {
 		return 0, false
 	}
@@ -113,24 +124,6 @@ func shouldSkipPermission(path string, prefixes []string) bool {
 		}
 	}
 	return false
-}
-
-func extractBearerToken(header string) string {
-	value := strings.TrimSpace(header)
-	if value == "" {
-		return ""
-	}
-
-	parts := strings.SplitN(value, " ", 2)
-	if len(parts) != 2 {
-		return value
-	}
-
-	if strings.EqualFold(parts[0], "Bearer") {
-		return strings.TrimSpace(parts[1])
-	}
-
-	return value
 }
 
 func parseUserID(value interface{}, exists bool) (int64, bool) {

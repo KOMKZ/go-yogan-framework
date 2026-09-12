@@ -244,6 +244,109 @@ func TestJWTWithConfig_CookieToken(t *testing.T) {
 	assert.Equal(t, http.StatusOK, resp.Code)
 }
 
+func TestCookieJWT_UsesCookieToken(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	mockManager := &MockTokenManager{
+		claims: &jwt.Claims{
+			UserID:    789,
+			Username:  "cookieuser",
+			TokenType: "access",
+		},
+	}
+
+	router.Use(CookieJWT(mockManager, "auth_token"))
+	router.GET("/protected", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"message": "success"})
+	})
+
+	req := httptest.NewRequest("GET", "/protected", nil)
+	req.AddCookie(&http.Cookie{Name: "auth_token", Value: "valid-token"})
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+}
+
+func TestOptionalJWT_InjectsClaimsFromCookie(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	mockManager := &MockTokenManager{
+		claims: &jwt.Claims{
+			UserID:    789,
+			Username:  "cookieuser",
+			TokenType: "access",
+		},
+	}
+
+	router.Use(OptionalJWT(mockManager, JWTConfig{
+		TokenLookup:   "cookie:auth_token",
+		TokenHeadName: "",
+	}))
+	router.GET("/protected", func(c *gin.Context) {
+		userID, _ := GetUserID(c)
+		c.JSON(http.StatusOK, gin.H{"user_id": userID})
+	})
+
+	req := httptest.NewRequest("GET", "/protected", nil)
+	req.AddCookie(&http.Cookie{Name: "auth_token", Value: "valid-token"})
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.Contains(t, resp.Body.String(), "789")
+}
+
+func TestOptionalCookieJWT_InjectsClaimsFromCookie(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	mockManager := &MockTokenManager{
+		claims: &jwt.Claims{
+			UserID:    789,
+			Username:  "cookieuser",
+			TokenType: "access",
+		},
+	}
+
+	router.Use(OptionalCookieJWT(mockManager, "auth_token"))
+	router.GET("/protected", func(c *gin.Context) {
+		userID, _ := GetUserID(c)
+		c.JSON(http.StatusOK, gin.H{"user_id": userID})
+	})
+
+	req := httptest.NewRequest("GET", "/protected", nil)
+	req.AddCookie(&http.Cookie{Name: "auth_token", Value: "valid-token"})
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.Contains(t, resp.Body.String(), "789")
+}
+
+func TestOptionalJWT_IgnoresMissingToken(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	router.Use(OptionalJWT(&MockTokenManager{}, JWTConfig{
+		TokenLookup:   "cookie:auth_token",
+		TokenHeadName: "",
+	}))
+	router.GET("/public", func(c *gin.Context) {
+		_, exists := GetUserID(c)
+		c.JSON(http.StatusOK, gin.H{"has_user": exists})
+	})
+
+	req := httptest.NewRequest("GET", "/public", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.Contains(t, resp.Body.String(), "false")
+}
+
 func TestJWTWithConfig_InvalidLookup(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()

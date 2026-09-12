@@ -2,7 +2,7 @@
 
 - mode: `changed`
 - files scanned: `395`
-- functions scanned: `3240`
+- functions scanned: `3252`
 - issues: `28`
 - blocking: `0`
 
@@ -31,8 +31,8 @@
 | block | naming | `swagger/provider.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
 | block | naming | `httpx/handler.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
 | block | naming | `httpx/config.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
-| block | naming | `config/validator.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
 | block | naming | `health/config.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
+| block | naming | `config/validator.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
 | block | naming | `event/config.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
 | block | naming | `application/router.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
 | warn | func | `application/base_app.go` | `*BaseApplication.registerComponentMetrics` | 150 | 130 | false | function line count exceeds threshold |

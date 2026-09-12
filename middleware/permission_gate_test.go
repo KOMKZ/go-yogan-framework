@@ -121,6 +121,30 @@ func TestPermissionGateResolveUserFromToken(t *testing.T) {
 	}
 }
 
+func TestPermissionGateResolveUserFromCookieToken(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	engine := gin.New()
+	engine.Use(PermissionGate(PermissionGateConfig{
+		PolicyEngine:  stubPolicyEngine{decision: permission.Deny},
+		TokenManager:  stubTokenManager{claims: &jwt.Claims{UserID: 42, TokenType: "access"}},
+		TokenLookup:   "cookie:admin_access_token",
+		TokenHeadName: "",
+		DefaultPolicy: permission.Allow,
+	}))
+	engine.GET("/api/admin/admins/page", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/admin/admins/page", nil)
+	req.AddCookie(&http.Cookie{Name: "admin_access_token", Value: "token"})
+	resp := httptest.NewRecorder()
+	engine.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusForbidden {
+		t.Fatalf("expected cookie user to be permission checked and denied, got %d", resp.Code)
+	}
+}
+
 func TestPermissionGateIgnoresRefreshToken(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	engine := gin.New()
