@@ -4,10 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/KOMKZ/go-yogan-framework/logger"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // TestTokenManager_ParseJWTError_AllCases_Test all JWT error parsing scenarios
@@ -119,40 +117,3 @@ func TestTokenManager_VerifyToken_ErrorCases(t *testing.T) {
 		})
 	}
 }
-
-// TestTokenManager_RevokeToken_NilTokenStore test revoke when TokenStore is nil
-func TestTokenManager_RevokeToken_NilTokenStore(t *testing.T) {
-	config := newTestConfig()
-	config.Blacklist.Enabled = true
-
-	log := logger.NewCtxZapLogger("yogan")
-	manager, err := NewTokenManager(config, nil, log)
-	require.NoError(t, err)
-
-	ctx := context.Background()
-	token, err := manager.GenerateAccessToken(ctx, "user123", nil)
-	require.NoError(t, err)
-
-	// Revoke token (TokenStore is nil)
-	err = manager.RevokeToken(ctx, token)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "blacklist not enabled")
-}
-
-// TestTokenManager_RevokeUserTokens_NilTokenStore Test user token revocation when TokenStore is nil
-func TestTokenManager_RevokeUserTokens_NilTokenStore(t *testing.T) {
-	config := newTestConfig()
-	config.Blacklist.Enabled = true
-
-	log := logger.NewCtxZapLogger("yogan")
-	manager, err := NewTokenManager(config, nil, log)
-	require.NoError(t, err)
-
-	ctx := context.Background()
-
-	// Revoke user token (TokenStore is nil)
-	err = manager.RevokeUserTokens(ctx, "user123")
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "blacklist not enabled")
-}
-

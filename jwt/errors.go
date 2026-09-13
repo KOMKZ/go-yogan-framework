@@ -18,8 +18,17 @@ var (
 	// ErrInvalidSignature Invalid signature
 	ErrInvalidSignature = errors.New("jwt: invalid signature")
 
-	// ErrTokenBlacklisted token has been revoked
-	ErrTokenBlacklisted = errors.New("jwt: token blacklisted")
+	// ErrSessionNotFound session missing or expired
+	ErrSessionNotFound = errors.New("jwt: session not found")
+
+	// ErrSessionRevoked session has been revoked
+	ErrSessionRevoked = errors.New("jwt: session revoked")
+
+	// ErrRefreshTokenReused refresh token was rotated or reused
+	ErrRefreshTokenReused = errors.New("jwt: refresh token reused")
+
+	// ErrSessionRequired session store is required
+	ErrSessionRequired = errors.New("jwt: session store required")
 
 	// ErrInvalidClaims claims invalid
 	ErrInvalidClaims = errors.New("jwt: invalid claims")

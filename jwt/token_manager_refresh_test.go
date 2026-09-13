@@ -85,37 +85,12 @@ func TestTokenManager_RefreshToken_WithCustomClaims(t *testing.T) {
 	assert.Equal(t, "access", newAccessClaims.TokenType)
 }
 
-// TestTokenManager_RefreshToken_BlacklistedRefreshToken Test Revoked Refresh Token
-func TestTokenManager_RefreshToken_BlacklistedRefreshToken(t *testing.T) {
-	config := newTestConfig()
-	config.RefreshToken.Enabled = true
-	config.Blacklist.Enabled = true
-	manager := newTestTokenManager(t, config)
-
-	ctx := context.Background()
-	subject := "user123"
-
-	// Generate Refresh Token
-	refreshToken, err := manager.GenerateRefreshToken(ctx, subject)
-	require.NoError(t, err)
-
-	// Revoke Refresh Token
-	err = manager.RevokeToken(ctx, refreshToken)
-	require.NoError(t, err)
-
-	// Try to use revoked Refresh Token
-	newAccessToken, err := manager.RefreshToken(ctx, refreshToken)
-	assert.Error(t, err)
-	assert.Empty(t, newAccessToken)
-	assert.Contains(t, err.Error(), "invalid refresh token")
-}
-
 // TestTokenManager_RefreshToken_ExpiredRefreshToken test expired Refresh Token
 func TestTokenManager_RefreshToken_ExpiredRefreshToken(t *testing.T) {
 	config := newTestConfig()
 	config.RefreshToken.Enabled = true
 	config.RefreshToken.TTL = 10 * time.Millisecond // Very short TTL
-	config.Security.ClockSkew = 0                  // Strict expiry (no leeway)
+	config.Security.ClockSkew = 0                   // Strict expiry (no leeway)
 	manager := newTestTokenManager(t, config)
 
 	ctx := context.Background()
@@ -133,4 +108,3 @@ func TestTokenManager_RefreshToken_ExpiredRefreshToken(t *testing.T) {
 	assert.Error(t, err)
 	assert.Empty(t, newAccessToken)
 }
-

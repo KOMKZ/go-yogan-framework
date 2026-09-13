@@ -1,8 +1,8 @@
 {
   "mode": "changed",
   "root": "/home/kitral/pro/happy-rise-cpy/happy-rise-devpro/go-yogan-framework",
-  "files_scanned": 395,
-  "funcs_scanned": 3252,
+  "files_scanned": 396,
+  "funcs_scanned": 3267,
   "issues": [
     {
       "key": "naming:limiter/config.go",
@@ -93,6 +93,17 @@
       "reason": "weak file name; split/new business files should use business_role.go"
     },
     {
+      "key": "naming:jwt/config.go",
+      "kind": "naming",
+      "severity": "block",
+      "path": "jwt/config.go",
+      "value": 1,
+      "threshold": 0,
+      "blocking": false,
+      "changed": true,
+      "reason": "weak file name; split/new business files should use business_role.go"
+    },
+    {
       "key": "naming:cache/config.go",
       "kind": "naming",
       "severity": "block",
@@ -130,17 +141,6 @@
       "kind": "naming",
       "severity": "block",
       "path": "config/builder.go",
-      "value": 1,
-      "threshold": 0,
-      "blocking": false,
-      "changed": false,
-      "reason": "weak file name; split/new business files should use business_role.go"
-    },
-    {
-      "key": "naming:jwt/config.go",
-      "kind": "naming",
-      "severity": "block",
-      "path": "jwt/config.go",
       "value": 1,
       "threshold": 0,
       "blocking": false,

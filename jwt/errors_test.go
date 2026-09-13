@@ -16,7 +16,6 @@ func TestErrors(t *testing.T) {
 		{"ErrTokenExpired", ErrTokenExpired, "jwt: token expired"},
 		{"ErrTokenNotYetValid", ErrTokenNotYetValid, "jwt: token not yet valid"},
 		{"ErrInvalidSignature", ErrInvalidSignature, "jwt: invalid signature"},
-		{"ErrTokenBlacklisted", ErrTokenBlacklisted, "jwt: token blacklisted"},
 		{"ErrInvalidClaims", ErrInvalidClaims, "jwt: invalid claims"},
 		{"ErrSecretEmpty", ErrSecretEmpty, "jwt: secret is empty"},
 		{"ErrAlgorithmNotSupported", ErrAlgorithmNotSupported, "jwt: algorithm not supported"},
@@ -28,4 +27,3 @@ func TestErrors(t *testing.T) {
 		})
 	}
 }
-

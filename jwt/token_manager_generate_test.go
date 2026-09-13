@@ -11,11 +11,11 @@ import (
 // TestTokenManager_GenerateAccessToken_AllCombinations_TestAllCombinations
 func TestTokenManager_GenerateAccessToken_AllCombinations(t *testing.T) {
 	tests := []struct {
-		name          string
-		enableJTI     bool
-		enableNBF     bool
-		audience      string
-		customClaims  map[string]interface{}
+		name         string
+		enableJTI    bool
+		enableNBF    bool
+		audience     string
+		customClaims map[string]interface{}
 	}{
 		{
 			name:      "with JTI and NBF",
@@ -140,4 +140,3 @@ func TestTokenManager_ParseCustomClaims_EmptyRoles(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Empty(t, claims.Roles)
 }
-

@@ -85,7 +85,7 @@ func TestConfig_Validate(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "invalid blacklist storage",
+			name: "invalid session storage",
 			config: &Config{
 				Enabled:   true,
 				Algorithm: "HS256",
@@ -93,9 +93,9 @@ func TestConfig_Validate(t *testing.T) {
 				AccessToken: AccessTokenConfig{
 					TTL: 2 * time.Hour,
 				},
-				Blacklist: BlacklistConfig{
+				Session: SessionConfig{
 					Enabled: true,
-					Storage: "mysql",
+					Store:   "mysql",
 				},
 			},
 			wantErr: true,
@@ -122,7 +122,9 @@ func TestConfig_ApplyDefaults(t *testing.T) {
 	assert.Equal(t, 2*time.Hour, config.AccessToken.TTL)
 	assert.Equal(t, "yogan-api", config.AccessToken.Issuer)
 	assert.Equal(t, 168*time.Hour, config.RefreshToken.TTL)
-	assert.Equal(t, "jwt:blacklist:", config.Blacklist.RedisKeyPrefix)
-	assert.Equal(t, 1*time.Hour, config.Blacklist.CleanupInterval)
+	assert.Equal(t, "jwt:session:", config.Session.KeyPrefix)
+	assert.Equal(t, "memory", config.Session.Store)
+	assert.Equal(t, "main", config.Session.RedisClient)
+	assert.Equal(t, 1*time.Hour, config.Session.CleanupInterval)
 	assert.Equal(t, 60*time.Second, config.Security.ClockSkew)
 }

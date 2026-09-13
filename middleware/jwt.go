@@ -145,6 +145,7 @@ func InjectJWTClaims(c *gin.Context, claims *jwt.Claims) {
 	c.Set("user_id", claims.UserID)
 	c.Set("username", claims.Username)
 	c.Set("roles", claims.Roles)
+	c.Set("sid", claims.SID)
 }
 
 func isAllowedTokenType(tokenType string, allowed []string) bool {

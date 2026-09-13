@@ -21,8 +21,8 @@ type Config struct {
 	AccessToken  AccessTokenConfig  `yaml:"access_token" mapstructure:"access_token"`
 	RefreshToken RefreshTokenConfig `yaml:"refresh_token" mapstructure:"refresh_token"`
 
-	// Blacklist configuration
-	Blacklist BlacklistConfig `yaml:"blacklist" mapstructure:"blacklist"`
+	// Session configuration
+	Session SessionConfig `yaml:"session" mapstructure:"session"`
 
 	// Security configuration
 	Security SecurityConfig `yaml:"security" mapstructure:"security"`
@@ -41,12 +41,16 @@ type RefreshTokenConfig struct {
 	TTL     time.Duration `yaml:"ttl" mapstructure:"ttl"`         // valid period
 }
 
-// BlacklistConfig blacklist configuration
-type BlacklistConfig struct {
-	Enabled         bool          `yaml:"enabled" mapstructure:"enabled"`                   // Is enabled
-	Storage         string        `yaml:"storage" mapstructure:"storage"`                   // redis / memory
-	RedisKeyPrefix  string        `yaml:"redis_key_prefix" mapstructure:"redis_key_prefix"` // Redis key prefix
-	CleanupInterval time.Duration `yaml:"cleanup_interval" mapstructure:"cleanup_interval"` // Memory mode cleanup interval
+// SessionConfig configures server-side JWT session state.
+type SessionConfig struct {
+	Enabled                bool          `yaml:"enabled" mapstructure:"enabled"`                                     // Is enabled
+	Store                  string        `yaml:"store" mapstructure:"store"`                                         // redis / memory
+	RedisClient            string        `yaml:"redis_client" mapstructure:"redis_client"`                           // Named redis client
+	KeyPrefix              string        `yaml:"key_prefix" mapstructure:"key_prefix"`                               // Redis key prefix
+	MaxSessionsPerSubject  int           `yaml:"max_sessions_per_subject" mapstructure:"max_sessions_per_subject"`   // Max active sessions per subject
+	LastSeenUpdateInterval time.Duration `yaml:"last_seen_update_interval" mapstructure:"last_seen_update_interval"` // Throttle last_seen writes
+	RefreshReusePolicy     string        `yaml:"refresh_reuse_policy" mapstructure:"refresh_reuse_policy"`           // revoke_session / reject
+	CleanupInterval        time.Duration `yaml:"cleanup_interval" mapstructure:"cleanup_interval"`                   // Memory cleanup interval
 }
 
 // SecurityConfig security configuration
@@ -85,10 +89,16 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("jwt: refresh token ttl must be positive")
 	}
 
-	// Validate blacklist storage
-	if c.Blacklist.Enabled {
-		if c.Blacklist.Storage != "redis" && c.Blacklist.Storage != "memory" {
-			return fmt.Errorf("jwt: blacklist storage must be redis or memory")
+	// Validate session store
+	if c.Session.Enabled {
+		if c.Session.Store != "redis" && c.Session.Store != "memory" {
+			return fmt.Errorf("jwt: session store must be redis or memory")
+		}
+		if c.Session.Store == "redis" && c.Session.RedisClient == "" {
+			return fmt.Errorf("jwt: session redis_client is required")
+		}
+		if c.Session.RefreshReusePolicy != "revoke_session" && c.Session.RefreshReusePolicy != "reject" {
+			return fmt.Errorf("jwt: session refresh_reuse_policy must be revoke_session or reject")
 		}
 	}
 
@@ -113,12 +123,23 @@ func (c *Config) ApplyDefaults() {
 		c.RefreshToken.TTL = 168 * time.Hour // 7 days
 	}
 
-	if c.Blacklist.RedisKeyPrefix == "" {
-		c.Blacklist.RedisKeyPrefix = "jwt:blacklist:"
+	if c.Session.Store == "" {
+		c.Session.Store = "memory"
 	}
-
-	if c.Blacklist.CleanupInterval == 0 {
-		c.Blacklist.CleanupInterval = 1 * time.Hour
+	if c.Session.RedisClient == "" {
+		c.Session.RedisClient = "main"
+	}
+	if c.Session.KeyPrefix == "" {
+		c.Session.KeyPrefix = "jwt:session:"
+	}
+	if c.Session.RefreshReusePolicy == "" {
+		c.Session.RefreshReusePolicy = "revoke_session"
+	}
+	if c.Session.LastSeenUpdateInterval == 0 {
+		c.Session.LastSeenUpdateInterval = 1 * time.Minute
+	}
+	if c.Session.CleanupInterval == 0 {
+		c.Session.CleanupInterval = 1 * time.Hour
 	}
 
 	if c.Security.ClockSkew == 0 {

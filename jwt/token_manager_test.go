@@ -25,11 +25,6 @@ func newTestConfig() *Config {
 			Enabled: true,
 			TTL:     168 * time.Hour,
 		},
-		Blacklist: BlacklistConfig{
-			Enabled:         true,
-			Storage:         "memory",
-			CleanupInterval: 1 * time.Hour,
-		},
 		Security: SecurityConfig{
 			EnableJTI:       true,
 			EnableNotBefore: false,
@@ -41,12 +36,7 @@ func newTestConfig() *Config {
 
 func newTestTokenManager(t *testing.T, config *Config) TokenManager {
 	log := logger.NewCtxZapLogger("yogan")
-	tokenStore := NewMemoryTokenStore(0, log)
-	t.Cleanup(func() {
-		tokenStore.Close()
-	})
-
-	manager, err := NewTokenManager(config, tokenStore, log)
+	manager, err := NewTokenManager(config, nil, log)
 	require.NoError(t, err)
 
 	return manager
@@ -55,10 +45,8 @@ func newTestTokenManager(t *testing.T, config *Config) TokenManager {
 func TestNewTokenManager(t *testing.T) {
 	config := newTestConfig()
 	log := logger.NewCtxZapLogger("yogan")
-	tokenStore := NewMemoryTokenStore(0, log)
-	defer tokenStore.Close()
 
-	manager, err := NewTokenManager(config, tokenStore, log)
+	manager, err := NewTokenManager(config, nil, log)
 	assert.NoError(t, err)
 	assert.NotNil(t, manager)
 }
@@ -74,10 +62,8 @@ func TestNewTokenManager_InvalidConfig(t *testing.T) {
 	}
 
 	log := logger.NewCtxZapLogger("yogan")
-	tokenStore := NewMemoryTokenStore(0, log)
-	defer tokenStore.Close()
 
-	manager, err := NewTokenManager(config, tokenStore, log)
+	manager, err := NewTokenManager(config, nil, log)
 	assert.Error(t, err)
 	assert.Nil(t, manager)
 }
@@ -170,7 +156,7 @@ func TestTokenManager_VerifyToken_Success(t *testing.T) {
 func TestTokenManager_VerifyToken_ExpiredToken(t *testing.T) {
 	config := newTestConfig()
 	config.AccessToken.TTL = 10 * time.Millisecond // Very short TTL
-	config.Security.ClockSkew = 0                 // Strict expiry (no leeway)
+	config.Security.ClockSkew = 0                  // Strict expiry (no leeway)
 	manager := newTestTokenManager(t, config)
 
 	ctx := context.Background()
@@ -194,25 +180,6 @@ func TestTokenManager_VerifyToken_InvalidSignature(t *testing.T) {
 
 	claims, err := manager.VerifyToken(ctx, invalidToken)
 	assert.Error(t, err)
-	assert.Nil(t, claims)
-}
-
-func TestTokenManager_VerifyToken_BlacklistedToken(t *testing.T) {
-	config := newTestConfig()
-	config.Blacklist.Enabled = true
-	manager := newTestTokenManager(t, config)
-
-	ctx := context.Background()
-	token, err := manager.GenerateAccessToken(ctx, "user123", nil)
-	require.NoError(t, err)
-
-	// Revoke token
-	err = manager.RevokeToken(ctx, token)
-	require.NoError(t, err)
-
-	// Verify revoked token
-	claims, err := manager.VerifyToken(ctx, token)
-	assert.ErrorIs(t, err, ErrTokenBlacklisted)
 	assert.Nil(t, claims)
 }
 
@@ -275,113 +242,6 @@ func TestTokenManager_RefreshToken_NotRefreshToken(t *testing.T) {
 	assert.Empty(t, newToken)
 }
 
-func TestTokenManager_RevokeToken_Success(t *testing.T) {
-	config := newTestConfig()
-	config.Blacklist.Enabled = true
-	manager := newTestTokenManager(t, config)
-
-	ctx := context.Background()
-	token, err := manager.GenerateAccessToken(ctx, "user123", nil)
-	require.NoError(t, err)
-
-	// Revoke token
-	err = manager.RevokeToken(ctx, token)
-	assert.NoError(t, err)
-
-	// Verify revoked token
-	claims, err := manager.VerifyToken(ctx, token)
-	assert.ErrorIs(t, err, ErrTokenBlacklisted)
-	assert.Nil(t, claims)
-}
-
-func TestTokenManager_RevokeToken_ExpiredToken(t *testing.T) {
-	config := newTestConfig()
-	config.Blacklist.Enabled = true
-	config.AccessToken.TTL = 10 * time.Millisecond
-	config.Security.ClockSkew = 0 // Strict expiry (no leeway)
-	manager := newTestTokenManager(t, config)
-
-	ctx := context.Background()
-	token, err := manager.GenerateAccessToken(ctx, "user123", nil)
-	require.NoError(t, err)
-
-	// wait for expiration
-	time.Sleep(20 * time.Millisecond)
-
-	// Revoke expired tokens (should return nil directly)
-	err = manager.RevokeToken(ctx, token)
-	assert.NoError(t, err)
-}
-
-func TestTokenManager_RevokeUserTokens_Success(t *testing.T) {
-	config := newTestConfig()
-	config.Blacklist.Enabled = true
-	manager := newTestTokenManager(t, config)
-
-	ctx := context.Background()
-	subject := "user123"
-
-	// Generate two old tokens
-	token1, err := manager.GenerateAccessToken(ctx, subject, nil)
-	require.NoError(t, err)
-
-	time.Sleep(500 * time.Millisecond)
-
-	token2, err := manager.GenerateAccessToken(ctx, subject, nil)
-	require.NoError(t, err)
-
-	time.Sleep(500 * time.Millisecond)
-
-	// Revoke all user tokens
-	err = manager.RevokeUserTokens(ctx, subject)
-	assert.NoError(t, err)
-
-	// Validate old token (should be revoked)
-	claims, err := manager.VerifyToken(ctx, token1)
-	assert.ErrorIs(t, err, ErrTokenBlacklisted)
-	assert.Nil(t, claims)
-
-	claims, err = manager.VerifyToken(ctx, token2)
-	assert.ErrorIs(t, err, ErrTokenBlacklisted)
-	assert.Nil(t, claims)
-
-	// Wait long enough to ensure that a new token is generated after being blacklisted (using second-level delay)
-	time.Sleep(1100 * time.Millisecond)
-	newToken, err := manager.GenerateAccessToken(ctx, subject, nil)
-	require.NoError(t, err)
-
-	// The new token should be valid (as it was generated after being blacklisted)
-	claims, err = manager.VerifyToken(ctx, newToken)
-	assert.NoError(t, err)
-	assert.NotNil(t, claims)
-}
-
-func TestTokenManager_RevokeToken_BlacklistDisabled(t *testing.T) {
-	config := newTestConfig()
-	config.Blacklist.Enabled = false
-	manager := newTestTokenManager(t, config)
-
-	ctx := context.Background()
-	token, err := manager.GenerateAccessToken(ctx, "user123", nil)
-	require.NoError(t, err)
-
-	// Revoke token (blacklist not enabled)
-	err = manager.RevokeToken(ctx, token)
-	assert.Error(t, err)
-}
-
-func TestTokenManager_RevokeUserTokens_BlacklistDisabled(t *testing.T) {
-	config := newTestConfig()
-	config.Blacklist.Enabled = false
-	manager := newTestTokenManager(t, config)
-
-	ctx := context.Background()
-
-	// Revoke user token (blacklist not enabled)
-	err := manager.RevokeUserTokens(ctx, "user123")
-	assert.Error(t, err)
-}
-
 func TestTokenManager_DifferentAlgorithms(t *testing.T) {
 	algorithms := []string{"HS256", "HS384", "HS512"}
 
@@ -402,7 +262,6 @@ func TestTokenManager_DifferentAlgorithms(t *testing.T) {
 		})
 	}
 }
-
 
 // TestTokenManager_VerifyToken_ClockSkewLeeway regression: the configured
 // ClockSkew must be applied as parse leeway — a token expired 30s ago stays

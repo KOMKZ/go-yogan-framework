@@ -12,6 +12,9 @@ type Claims struct {
 	Issuer    string    `json:"iss,omitempty"` // issuer
 	Audience  string    `json:"aud,omitempty"` // receiver
 	JTI       string    `json:"jti,omitempty"` // Token ID (anti-replay)
+	SID       string    `json:"sid,omitempty"` // Session ID
+	ATI       string    `json:"ati,omitempty"` // Access Token ID
+	RTI       string    `json:"rti,omitempty"` // Refresh Token ID
 
 	// Custom Claims (application layer extensions)
 	UserID    int64                  `json:"user_id,omitempty"`

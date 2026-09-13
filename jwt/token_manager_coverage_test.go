@@ -15,10 +15,8 @@ func TestTokenManager_UnsupportedAlgorithm(t *testing.T) {
 	config.Algorithm = "ES256" // Unsupported algorithm
 
 	log := logger.NewCtxZapLogger("yogan")
-	tokenStore := NewMemoryTokenStore(0, log)
-	defer tokenStore.Close()
 
-	manager, err := NewTokenManager(config, tokenStore, log)
+	manager, err := NewTokenManager(config, nil, log)
 	assert.Error(t, err)
 	assert.Nil(t, manager)
 }
@@ -131,26 +129,23 @@ func TestTokenManager_RefreshTokenFlow(t *testing.T) {
 	assert.Equal(t, int64(123), accessClaims.UserID)
 }
 
-// Test validation when blacklist is not enabled
-func TestTokenManager_VerifyToken_BlacklistDisabled(t *testing.T) {
+// Test validation when session is not enabled
+func TestTokenManager_VerifyToken_SessionDisabled(t *testing.T) {
 	config := newTestConfig()
-	config.Blacklist.Enabled = false
 	manager := newTestTokenManager(t, config)
 
 	ctx := context.Background()
 	token, err := manager.GenerateAccessToken(ctx, "user123", nil)
 	require.NoError(t, err)
 
-	// Verify Token (blacklist not enabled, no check)
 	claims, err := manager.VerifyToken(ctx, token)
 	assert.NoError(t, err)
 	assert.NotNil(t, claims)
 }
 
-// Test validation when TokenStore is nil
-func TestTokenManager_VerifyToken_NilTokenStore(t *testing.T) {
+// Test validation when session store is nil and session is disabled.
+func TestTokenManager_VerifyToken_NilSessionStoreWhenSessionDisabled(t *testing.T) {
 	config := newTestConfig()
-	config.Blacklist.Enabled = true
 
 	log := logger.NewCtxZapLogger("yogan")
 	manager, err := NewTokenManager(config, nil, log)
@@ -160,7 +155,6 @@ func TestTokenManager_VerifyToken_NilTokenStore(t *testing.T) {
 	token, err := manager.GenerateAccessToken(ctx, "user123", nil)
 	require.NoError(t, err)
 
-	// Verify Token (TokenStore is nil, skip blacklist check)
 	claims, err := manager.VerifyToken(ctx, token)
 	assert.NoError(t, err)
 	assert.NotNil(t, claims)
@@ -200,8 +194,8 @@ func TestTokenManager_ParseCustomClaims_InvalidTypes(t *testing.T) {
 
 	// Generate a normal token, then verify
 	token, err := manager.GenerateAccessToken(ctx, "user123", map[string]interface{}{
-		"user_id":  "not_a_number", // Incorrect type
-		"roles":    "not_an_array",  // Incorrect type
+		"user_id": "not_a_number", // Incorrect type
+		"roles":   "not_an_array", // Incorrect type
 	})
 	require.NoError(t, err)
 
@@ -210,27 +204,7 @@ func TestTokenManager_ParseCustomClaims_InvalidTypes(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, claims)
 	assert.Equal(t, int64(0), claims.UserID) // Parsing failed, use zero value
-	assert.Nil(t, claims.Roles)               // parse failed, use nil
-}
-
-// Test TruncateToken function
-func TestTruncateToken(t *testing.T) {
-	tests := []struct {
-		name     string
-		token    string
-		expected string
-	}{
-		{"short", "abc", "abc"},
-		{"exact", "0123456789", "0123456789"},
-		{"long", "01234567890123456789", "0123456789..."},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := truncateToken(tt.token)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
+	assert.Nil(t, claims.Roles)              // parse failed, use nil
 }
 
 // Test the difference between RefreshToken and Access Token
@@ -260,4 +234,3 @@ func TestTokenManager_RefreshToken_vs_AccessToken(t *testing.T) {
 	// The TTL for the Refresh Token should be longer
 	assert.True(t, refreshClaims.ExpiresAt.After(accessClaims.ExpiresAt))
 }
-

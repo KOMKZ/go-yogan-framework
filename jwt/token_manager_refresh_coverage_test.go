@@ -139,4 +139,3 @@ func TestTokenManager_RefreshToken_OnlyTenantID(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, subject, newAccessClaims.Subject)
 }
-

@@ -2,6 +2,7 @@ package di
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/KOMKZ/go-yogan-framework/auth"
 	"github.com/KOMKZ/go-yogan-framework/breaker"
@@ -281,22 +282,25 @@ func ProvideJWTTokenManagerIndependent(i do.Injector) (jwt.TokenManager, error) 
 		log = logger.GetLogger("yogan")
 	}
 
-	// Create TokenStore
-	var tokenStore jwt.TokenStore
-	if cfg.Blacklist.Enabled && cfg.Blacklist.Storage == "redis" {
+	// Create session store. Redis clients are owned by the application-level
+	// Redis manager; JWT only consumes the named client.
+	var sessionStore jwt.SessionStore
+	if cfg.Session.Enabled && cfg.Session.Store == "redis" {
 		redisMgr, _ := do.Invoke[*redis.Manager](i)
-		if redisMgr != nil {
-			client := redisMgr.Client("main")
-			if client != nil {
-				tokenStore = jwt.NewRedisTokenStore(client, cfg.Blacklist.RedisKeyPrefix, log)
-			}
+		if redisMgr == nil {
+			return nil, fmt.Errorf("jwt session redis manager not found")
 		}
+		client := redisMgr.Client(cfg.Session.RedisClient)
+		if client == nil {
+			return nil, fmt.Errorf("jwt session redis client %q not found", cfg.Session.RedisClient)
+		}
+		sessionStore = jwt.NewRedisSessionStore(client, cfg.Session, log)
 	}
-	if tokenStore == nil && cfg.Blacklist.Enabled {
-		tokenStore = jwt.NewMemoryTokenStore(cfg.Blacklist.CleanupInterval, log)
+	if cfg.Session.Enabled && cfg.Session.Store == "memory" {
+		sessionStore = jwt.NewMemorySessionStore(cfg.Session, log)
 	}
 
-	return jwt.NewTokenManager(&cfg, tokenStore, log)
+	return jwt.NewTokenManager(&cfg, sessionStore, log)
 }
 
 // ============================================

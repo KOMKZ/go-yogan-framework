@@ -17,8 +17,8 @@ func TestConfig_Validate_RS256(t *testing.T) {
 		{
 			name: "RS256 missing private key",
 			config: &Config{
-				Enabled:   true,
-				Algorithm: "RS256",
+				Enabled:       true,
+				Algorithm:     "RS256",
 				PublicKeyPath: "/path/to/public.pem",
 				AccessToken: AccessTokenConfig{
 					TTL: 2 * time.Hour,
@@ -29,8 +29,8 @@ func TestConfig_Validate_RS256(t *testing.T) {
 		{
 			name: "RS256 missing public key",
 			config: &Config{
-				Enabled:   true,
-				Algorithm: "RS256",
+				Enabled:        true,
+				Algorithm:      "RS256",
 				PrivateKeyPath: "/path/to/private.pem",
 				AccessToken: AccessTokenConfig{
 					TTL: 2 * time.Hour,
@@ -73,7 +73,6 @@ func TestConfig_Validate_AllAlgorithms(t *testing.T) {
 	}
 }
 
-
 // TestConfig_Validate_RSNotImplemented regression: RSA algorithms pass the
 // key-path check but are not implemented in setupSigningMethod; they must be
 // rejected at config time instead of failing at runtime.
@@ -81,8 +80,8 @@ func TestConfig_Validate_RSNotImplemented(t *testing.T) {
 	for _, algo := range []string{"RS256", "RS384", "RS512"} {
 		t.Run(algo, func(t *testing.T) {
 			config := &Config{
-				Enabled:       true,
-				Algorithm:     algo,
+				Enabled:        true,
+				Algorithm:      algo,
 				PrivateKeyPath: "/path/to/private.pem",
 				PublicKeyPath:  "/path/to/public.pem",
 				AccessToken: AccessTokenConfig{

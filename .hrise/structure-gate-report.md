@@ -1,8 +1,8 @@
 # Structure Gate Report
 
 - mode: `changed`
-- files scanned: `395`
-- functions scanned: `3252`
+- files scanned: `396`
+- functions scanned: `3267`
 - issues: `28`
 - blocking: `0`
 
@@ -18,11 +18,11 @@
 | block | naming | `queue/config.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
 | block | naming | `application/config.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
 | block | naming | `auth/config.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
+| block | naming | `jwt/config.go` | `` | 1 | 0 | true | weak file name; split/new business files should use business_role.go |
 | block | naming | `cache/config.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
 | block | naming | `auth/provider.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
 | block | naming | `swagger/config.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
 | block | naming | `config/builder.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
-| block | naming | `jwt/config.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
 | block | naming | `database/repository.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
 | block | naming | `redis/config.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
 | block | naming | `grpc/config.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
