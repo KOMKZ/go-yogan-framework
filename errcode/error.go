@@ -99,6 +99,14 @@ func (e *LayeredError) WithMsg(msg string) *LayeredError {
 	return &clone
 }
 
+// WithOp replace operation field (return new instance).
+// 业务层 Wrap 时用于强制写入业务 op，避免被后续 Wrap 的 cause 覆盖。
+func (e *LayeredError) WithOp(op string) *LayeredError {
+	clone := *e
+	clone.operation = op
+	return &clone
+}
+
 // WithMsgf format replacement error message (return new instance)
 func (e *LayeredError) WithMsgf(format string, args ...interface{}) *LayeredError {
 	clone := *e
@@ -150,7 +158,11 @@ func (e *LayeredError) Wrapf(cause error, format string, args ...interface{}) *L
 func cloneOrigin(cause error, target *LayeredError) {
 	if existing, ok := cause.(*LayeredError); ok && existing.OriginStack() != "" {
 		target.originStack = existing.OriginStack()
-		target.operation = existing.Operation()
+		// wrapper 的 operation 优先：service / 业务层包装不应被 cause 的 op 覆盖，
+		// 详见 docs/framework-patterns/kernel-error-boundary.md "operation 归属" 段。
+		if target.operation == "" {
+			target.operation = existing.Operation()
+		}
 		return
 	}
 	if target.originStack == "" {

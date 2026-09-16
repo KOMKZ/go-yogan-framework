@@ -76,6 +76,20 @@ CaptureInto(&err, "scope.op"):
 
 **关键**：保留"最内层 origin"而不是"service 入口 origin"——排查时第一现场永远是 I/O 边界（DB / OSS / RPC / SDK），service 只是包装。service 入口的 `operation` 字段会稳定定位业务层。
 
+### operation 归属规则
+
+`LayeredError.Wrap(cause)` 内部 `cloneOrigin` 只在 wrapper 自己 `operation` 为空时采用 cause 的 operation——wrapper 的业务 op 永远不被覆盖。例如：
+
+```go
+// 业务层用 media-jobs/errors.Wrap(ErrCallFailed, "llm generate", providerErr)：
+//   wrapped.cause        = captured(providerErr)，ProviderError 可 errors.As 拿到
+//   wrapped.operation    = "llm generate"（业务 op，不会被 captured 的 "llm generate.cause" 覆盖）
+//   wrapped.originStack  = captured.OriginStack()（I/O 边界栈）
+//   wrapped.Error()      = "llm generate: provider=openai code=429: rate limit exceeded"
+```
+
+如果业务 op 需要进一步细分，建议在 service 入口用 `defer errcode.CaptureInto(&err, "<domain>.<sub>.<method>")` 单独设一个更精确的 op，而不是依赖 `Wrap` 时被覆盖。
+
 ## SafeMessage 语义
 
 | 输入 | 客户端返回 | 日志保留 |
