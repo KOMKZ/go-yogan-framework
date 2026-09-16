@@ -1,28 +1,40 @@
-# Framework Patterns Index
+# Yogan Framework Docs Index
 
-## 文档
+## P0
 
-| 文档 | 内容 |
+| 文档 | 用途 |
 |------|------|
-| [kernel-provider-template.md](kernel-provider-template.md) | Provider 函数模板 |
-| [kernel-provider-register.md](kernel-provider-register.md) | Provider 注册和组件依赖层级 |
-| [kernel-do.md](kernel-do.md) | samber/do 直接使用模式 |
-| [kernel-do-provide.md](kernel-do-provide.md) | do.Provide 注册应用层 Provider |
-| [kernel-do-invoke.md](kernel-do-invoke.md) | do.Invoke / do.MustInvoke 获取组件 |
-| [kernel-config.md](kernel-config.md) | 配置结构、默认值、校验和配置文件模式 |
-| [kernel-httpx-error.md](kernel-httpx-error.md) | HTTPX 统一错误出口、错误链和日志排障字段 |
-| [kernel-healthcheck.md](kernel-healthcheck.md) | HealthChecker 接口 |
-| [kernel-shutdown.md](kernel-shutdown.md) | do.Shutdownable 接口 |
-| [kernel-cache.md](kernel-cache.md) | 缓存事件驱动失效 |
-| [kernel-limiter.md](kernel-limiter.md) | HTTP 限速配置、规则限速和治理原则 |
-| [kernel-jwt.md](kernel-jwt.md) | JWT 中间件 access-only 默认边界和 refresh token 使用约束 |
-| [kernel-queue.md](kernel-queue.md) | Queue/Asynq worker 抽象、配置、注册方式 |
-| [kernel-apputil.md](kernel-apputil.md) | apputil 快捷访问内核组件 |
-| [kernel-components-list.md](kernel-components-list.md) | 内核组件清单 |
+| [../CLAUDE.md](../CLAUDE.md) | AI 开发门禁、工作区规则、验证命令 |
+| [framework-patterns/index.md](framework-patterns/index.md) | Provider、DI、配置、健康检查、关闭、缓存和组件清单 |
 
-## 使用规则
+## 文档同步门禁
 
-- 修改框架代码前，先读对应文档。
-- 文档与代码冲突时，以代码为准，同时更新文档。
-- 新增可复用模式、Provider 模式、配置规则、生命周期规则或组件清单项时，补充对应文档和本索引。
-- 删除或改名模式文档时，同步更新 `docs/index.md`。
+| 场景 | 动作 |
+|------|------|
+| 新增框架能力 | 新增或更新 `docs/` 对应文档 |
+| 修改框架行为 | 检查并更新已有文档 |
+| 新增文档 | 更新本索引和子目录索引 |
+| 不需要文档变更 | 在交付说明中写明原因 |
+
+## 开发入口
+
+| 场景 | 必读 |
+|------|------|
+| 新增内核组件 | `framework-patterns/kernel-provider-template.md`、`framework-patterns/kernel-provider-register.md`、`framework-patterns/kernel-config.md` |
+| 接入依赖注入 | `framework-patterns/kernel-do.md`、`framework-patterns/kernel-do-provide.md`、`framework-patterns/kernel-do-invoke.md` |
+| 组件生命周期 | `framework-patterns/kernel-healthcheck.md`、`framework-patterns/kernel-shutdown.md` |
+| HTTP 错误日志 | `framework-patterns/kernel-httpx-error.md` |
+| 错误捕获与安全消息（治理 ticket 000105） | `framework-patterns/kernel-error-boundary.md` |
+| 缓存失效 | `framework-patterns/kernel-cache.md` |
+| HTTP 限速 | `framework-patterns/kernel-limiter.md` |
+| JWT 鉴权 | `framework-patterns/kernel-jwt.md` |
+| 队列任务 | `framework-patterns/kernel-queue.md` |
+| 应用侧访问内核 | `framework-patterns/kernel-apputil.md` |
+| 查已有能力 | `framework-patterns/kernel-components-list.md` |
+
+## 命令
+
+```bash
+go test ./...
+go build ./...
+```

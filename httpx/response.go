@@ -38,6 +38,28 @@ func traceIDFromContext(c *gin.Context) string {
 	return ""
 }
 
+// requestContextFields 把 request_id / user_id / client_ip 从 gin ctx 抽成 zap.Field 数组。
+// 治理方案 ticket 000105 的 11 字段 schema 配套：保证错误日志能定位到具体请求上下文。
+// user_id 来自中间件 c.Set("user_id", ...)（如 jwt.go:145）。
+// client_ip 来自 c.ClientIP()（gin 标准）。
+// request_id 与 traceIDFromContext 同源。
+func requestContextFields(c *gin.Context) []zap.Field {
+	if c == nil {
+		return nil
+	}
+	fields := make([]zap.Field, 0, 3)
+	if traceID := traceIDFromContext(c); traceID != "" {
+		fields = append(fields, zap.String("request_id", traceID))
+	}
+	if v, ok := c.Get("user_id"); ok && v != nil {
+		fields = append(fields, zap.Any("user_id", v))
+	}
+	if ip := c.ClientIP(); ip != "" {
+		fields = append(fields, zap.String("client_ip", ip))
+	}
+	return fields
+}
+
 // OkJson successful response
 func OkJson(c *gin.Context, data interface{}) {
 	c.JSON(http.StatusOK, Response{
@@ -164,6 +186,10 @@ func HandleError(c *gin.Context, err error) {
 				)
 			}
 
+			// 治理 ticket 000105：把 request_id / user_id / client_ip 接进来
+			// 让 11 字段 schema 在线日志完整可见。
+			fields = append(fields, requestContextFields(c)...)
+
 			// Log according to the configured log level
 			logMessage := "业务错误"
 			switch cfg.LogLevel {
@@ -214,6 +240,8 @@ func HandleError(c *gin.Context, err error) {
 				fields = append(fields, zap.Any("error_data", data))
 			}
 		}
+		// 治理 ticket 000105：兜底分支同样带 request 上下文字段。
+		fields = append(fields, requestContextFields(c)...)
 		logger.ErrorCtx(ctx, "httpx", "general error", fields...)
 	}
 	// Return a fixed default message instead of err.Error() to avoid leaking
