@@ -147,47 +147,10 @@ func (s *Server) asynqConfig(ctx context.Context, worker BrokerWorker) asynq.Con
 	}
 }
 
+// queueErrorFields 委托 errcode.ErrorLogFields 生成统一错误日志字段
+// （治理 ticket 000128 P1-1：与 httpx / CLI 共用一个生成器，cause/root/chain 已脱敏）。
 func queueErrorFields(err error) []zap.Field {
-	fields := []zap.Field{zap.Error(err)}
-	if err == nil {
-		return fields
-	}
-	fields = append(fields, zap.String("error_chain", err.Error()))
-
-	var layeredErr *errcode.LayeredError
-	if !errors.As(err, &layeredErr) || layeredErr == nil {
-		return fields
-	}
-	if layeredErr.Code() > 0 {
-		fields = append(fields,
-			zap.Int("error_code", layeredErr.Code()),
-			zap.String("error_msg", layeredErr.Message()),
-		)
-	}
-	if data := layeredErr.Data(); len(data) > 0 {
-		fields = append(fields, zap.Any("error_data", data))
-	}
-	if originStack := layeredErr.OriginStack(); originStack != "" {
-		fields = append(fields, zap.String("error_origin_stack", originStack))
-	}
-	if operation := layeredErr.Operation(); operation != "" {
-		fields = append(fields, zap.String("error_operation", operation))
-	}
-	diagnosticCause := layeredErr.DiagnosticCause()
-	if diagnosticCause != nil {
-		fields = append(fields,
-			zap.String("error_cause_type", fmt.Sprintf("%T", diagnosticCause)),
-			zap.String("error_cause_message", diagnosticCause.Error()),
-		)
-	}
-	rootCause := layeredErr.RootCause()
-	if rootCause != nil {
-		fields = append(fields,
-			zap.String("error_root_type", fmt.Sprintf("%T", rootCause)),
-			zap.String("error_root_message", rootCause.Error()),
-		)
-	}
-	return fields
+	return errcode.ErrorLogFields(err)
 }
 
 func (s *Server) physicalQueues(logicalQueues map[string]int) map[string]int {

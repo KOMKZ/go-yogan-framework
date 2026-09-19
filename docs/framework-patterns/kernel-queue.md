@@ -207,7 +207,11 @@ the operational contract is visible in deployed configuration.
 ## Error Logs
 
 Asynq worker failures are logged by the queue framework ErrorHandler. The log
-always includes task id, task type, logical queue, `error`, and `error_chain`.
+always includes task id, task type, logical queue, and `error_chain`.
+Since ticket 000128 P1-1 the fields are produced by the shared
+`errcode.ErrorLogFields` generator (same as `httpx.HandleError` and the CLI
+exit), so the raw `error` field is gone and `error_chain` / cause / root texts
+are passed through `errcode.Redact` before being written.
 
 When the returned error chain contains `errcode.LayeredError`, queue logs also
 include the same diagnostic fields as the HTTP error exit:

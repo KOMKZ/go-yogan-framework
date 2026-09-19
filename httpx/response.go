@@ -3,7 +3,6 @@ package httpx
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/KOMKZ/go-yogan-framework/database"
@@ -158,37 +157,9 @@ func HandleError(c *gin.Context, err error) {
 	if errors.As(err, &layeredErr) && layeredErr.Code() > 0 {
 		// 1.1 Decide whether to log based on configuration
 		if shouldLogError(cfg, layeredErr) {
-			fields := []zap.Field{
-				zap.Int("error_code", layeredErr.Code()),
-				zap.String("error_msg", layeredErr.Message()),
-			}
-			if data := layeredErr.Data(); len(data) > 0 {
-				fields = append(fields, zap.Any("error_data", data))
-			}
-			if originStack := layeredErr.OriginStack(); originStack != "" {
-				fields = append(fields, zap.String("error_origin_stack", originStack))
-			}
-			if operation := layeredErr.Operation(); operation != "" {
-				fields = append(fields, zap.String("error_operation", operation))
-			}
-			diagnosticCause := layeredErr.DiagnosticCause()
-			if diagnosticCause != nil {
-				fields = append(fields,
-					zap.String("error_cause_type", fmt.Sprintf("%T", diagnosticCause)),
-					// 治理 ticket 000128 §1.2：cause/root/chain 文本统一脱敏后才写日志。
-					zap.String("error_cause_message", errcode.Redact(diagnosticCause.Error())),
-				)
-			}
-			rootCause := layeredErr.RootCause()
-			if rootCause != nil {
-				fields = append(fields,
-					zap.String("error_root_type", fmt.Sprintf("%T", rootCause)),
-					zap.String("error_root_message", errcode.Redact(rootCause.Error())),
-				)
-			}
-			if diagnosticCause != nil || rootCause != nil {
-				fields = append(fields, zap.String("error_chain", errcode.Redact(layeredErr.String())))
-			}
+			// 治理 ticket 000128 P1-1：字段生成统一走 errcode.ErrorLogFields
+			// （与 Queue / CLI 共用；cause/root/chain 已在生成器内脱敏）。
+			fields := errcode.ErrorLogFields(err)
 
 			// If the full error chain recording is configured, add details
 			if cfg.FullErrorChain {

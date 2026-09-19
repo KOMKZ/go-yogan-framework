@@ -17,7 +17,9 @@ func TestQueueErrorFieldsIncludeLayeredDiagnostics(t *testing.T) {
 
 	fields := zapFieldsMap(queueErrorFields(err))
 
-	if fields["error"] == "" || !strings.Contains(fields["error_chain"].(string), "任务执行失败") {
+	// 治理 ticket 000128 P1-1：queue 与 httpx/CLI 共用 errcode.ErrorLogFields，
+	// 裸 zap.Error 字段已收掉，chain 走统一脱敏。
+	if !strings.Contains(fields["error_chain"].(string), "任务执行失败") {
 		t.Fatalf("missing error fields: %+v", fields)
 	}
 	if fields["error_code"] != int64(910007) || fields["error_msg"] != "任务执行失败" {
@@ -39,8 +41,12 @@ func TestQueueErrorFieldsKeepPlainError(t *testing.T) {
 
 	fields := zapFieldsMap(queueErrorFields(err))
 
-	if fields["error"] != "plain failure" || fields["error_chain"] != "plain failure" {
+	// 000128 P1-1：普通 error 只保留脱敏后的 error_chain，不再有原文 error 字段。
+	if fields["error_chain"] != "plain failure" {
 		t.Fatalf("plain error fields = %+v", fields)
+	}
+	if _, ok := fields["error"]; ok {
+		t.Fatalf("raw error field must not be emitted (redacted chain only): %+v", fields)
 	}
 	if _, ok := fields["error_origin_stack"]; ok {
 		t.Fatalf("plain error should not have origin stack: %+v", fields)

@@ -1,14 +1,14 @@
 {
   "mode": "changed",
   "root": "/home/kitral/pro/happy-rise-cpy/happy-rise-devpro/go-yogan-framework",
-  "files_scanned": 405,
-  "funcs_scanned": 3322,
+  "files_scanned": 407,
+  "funcs_scanned": 3329,
   "issues": [
     {
-      "key": "naming:limiter/config.go",
+      "key": "naming:httpx/config.go",
       "kind": "naming",
       "severity": "block",
-      "path": "limiter/config.go",
+      "path": "httpx/config.go",
       "value": 1,
       "threshold": 0,
       "blocking": false,
@@ -16,10 +16,10 @@
       "reason": "weak file name; split/new business files should use business_role.go"
     },
     {
-      "key": "naming:logger/config.go",
+      "key": "naming:config/validator.go",
       "kind": "naming",
       "severity": "block",
-      "path": "logger/config.go",
+      "path": "config/validator.go",
       "value": 1,
       "threshold": 0,
       "blocking": false,
@@ -192,10 +192,10 @@
       "reason": "weak file name; split/new business files should use business_role.go"
     },
     {
-      "key": "naming:database/config.go",
+      "key": "naming:health/config.go",
       "kind": "naming",
       "severity": "block",
-      "path": "database/config.go",
+      "path": "health/config.go",
       "value": 1,
       "threshold": 0,
       "blocking": false,
@@ -225,10 +225,10 @@
       "reason": "weak file name; split/new business files should use business_role.go"
     },
     {
-      "key": "naming:httpx/config.go",
+      "key": "naming:logger/config.go",
       "kind": "naming",
       "severity": "block",
-      "path": "httpx/config.go",
+      "path": "logger/config.go",
       "value": 1,
       "threshold": 0,
       "blocking": false,
@@ -236,10 +236,10 @@
       "reason": "weak file name; split/new business files should use business_role.go"
     },
     {
-      "key": "naming:config/validator.go",
+      "key": "naming:limiter/config.go",
       "kind": "naming",
       "severity": "block",
-      "path": "config/validator.go",
+      "path": "limiter/config.go",
       "value": 1,
       "threshold": 0,
       "blocking": false,
@@ -247,10 +247,10 @@
       "reason": "weak file name; split/new business files should use business_role.go"
     },
     {
-      "key": "naming:health/config.go",
+      "key": "naming:database/config.go",
       "kind": "naming",
       "severity": "block",
-      "path": "health/config.go",
+      "path": "database/config.go",
       "value": 1,
       "threshold": 0,
       "blocking": false,
@@ -304,18 +304,6 @@
       "reason": "function line count exceeds threshold"
     },
     {
-      "key": "func:httpx/response.go:HandleError",
-      "kind": "func",
-      "severity": "warn",
-      "path": "httpx/response.go",
-      "name": "HandleError",
-      "value": 118,
-      "threshold": 110,
-      "blocking": false,
-      "changed": true,
-      "reason": "function line count exceeds threshold"
-    },
-    {
       "key": "func:retry/retry.go:DoWithData",
       "kind": "func",
       "severity": "warn",
@@ -328,223 +316,43 @@
       "reason": "function line count exceeds threshold"
     },
     {
-      "key": "errlint:LINT-ERR-004:application/base_app.go:391",
-      "kind": "errlint",
-      "severity": "warn",
-      "path": "application/base_app.go",
-      "name": "LINT-ERR-004",
-      "value": 1,
-      "threshold": 0,
-      "blocking": false,
-      "changed": false,
-      "reason": "禁止 err.Error() 直接进响应 / DB / DTO；必须 errcode.SafeMessage(err) 或 LayeredError.Message()"
-    },
-    {
-      "key": "errlint:LINT-ERR-004:auth/service.go:64",
-      "kind": "errlint",
-      "severity": "warn",
-      "path": "auth/service.go",
-      "name": "LINT-ERR-004",
-      "value": 1,
-      "threshold": 0,
-      "blocking": false,
-      "changed": false,
-      "reason": "禁止 err.Error() 直接进响应 / DB / DTO；必须 errcode.SafeMessage(err) 或 LayeredError.Message()"
-    },
-    {
-      "key": "errlint:LINT-ERR-008:auth/service.go:64",
-      "kind": "errlint",
-      "severity": "warn",
-      "path": "auth/service.go",
-      "name": "LINT-ERR-008",
-      "value": 1,
-      "threshold": 0,
-      "blocking": false,
-      "changed": false,
-      "reason": "禁止把 err.Error() 直接写入 DB 列 / DTO 字段 / CLI diagnostic：必须 errcode.SafeMessage(err) 或 LayeredError.Message()"
-    },
-    {
-      "key": "errlint:LINT-ERR-004:breaker/metrics_impl.go:95",
-      "kind": "errlint",
-      "severity": "warn",
-      "path": "breaker/metrics_impl.go",
-      "name": "LINT-ERR-004",
-      "value": 1,
-      "threshold": 0,
-      "blocking": false,
-      "changed": false,
-      "reason": "禁止 err.Error() 直接进响应 / DB / DTO；必须 errcode.SafeMessage(err) 或 LayeredError.Message()"
-    },
-    {
-      "key": "errlint:LINT-ERR-008:breaker/metrics_impl.go:95",
-      "kind": "errlint",
-      "severity": "warn",
-      "path": "breaker/metrics_impl.go",
-      "name": "LINT-ERR-008",
-      "value": 1,
-      "threshold": 0,
-      "blocking": false,
-      "changed": false,
-      "reason": "禁止把 err.Error() 直接写入 DB 列 / DTO 字段 / CLI diagnostic：必须 errcode.SafeMessage(err) 或 LayeredError.Message()"
-    },
-    {
-      "key": "errlint:LINT-ERR-006:di/component_providers.go:76",
-      "kind": "errlint",
-      "severity": "warn",
-      "path": "di/component_providers.go",
-      "name": "LINT-ERR-006",
-      "value": 1,
-      "threshold": 0,
-      "blocking": false,
-      "changed": false,
-      "reason": "禁止裸 `_ = func(...)` 吞错；除 Close/Unlock 外必须显式 logger.WarnCtx 或 defer"
-    },
-    {
-      "key": "errlint:LINT-ERR-006:di/component_providers.go:457",
-      "kind": "errlint",
-      "severity": "warn",
-      "path": "di/component_providers.go",
-      "name": "LINT-ERR-006",
-      "value": 1,
-      "threshold": 0,
-      "blocking": false,
-      "changed": false,
-      "reason": "禁止裸 `_ = func(...)` 吞错；除 Close/Unlock 外必须显式 logger.WarnCtx 或 defer"
-    },
-    {
-      "key": "errlint:LINT-ERR-004:errcode/safe_msg.go:28",
-      "kind": "errlint",
-      "severity": "warn",
-      "path": "errcode/safe_msg.go",
-      "name": "LINT-ERR-004",
-      "value": 1,
-      "threshold": 0,
-      "blocking": false,
-      "changed": false,
-      "reason": "禁止 err.Error() 直接进响应 / DB / DTO；必须 errcode.SafeMessage(err) 或 LayeredError.Message()"
-    },
-    {
-      "key": "errlint:LINT-ERR-004:errcode/safe_msg.go:60",
-      "kind": "errlint",
-      "severity": "warn",
-      "path": "errcode/safe_msg.go",
-      "name": "LINT-ERR-004",
-      "value": 1,
-      "threshold": 0,
-      "blocking": false,
-      "changed": false,
-      "reason": "禁止 err.Error() 直接进响应 / DB / DTO；必须 errcode.SafeMessage(err) 或 LayeredError.Message()"
-    },
-    {
-      "key": "errlint:LINT-ERR-006:event/dispatcher.go:321",
+      "key": "errlint:LINT-ERR-006:event/dispatcher.go",
       "kind": "errlint",
       "severity": "warn",
       "path": "event/dispatcher.go",
       "name": "LINT-ERR-006",
-      "value": 1,
+      "value": 2,
       "threshold": 0,
       "blocking": false,
       "changed": false,
-      "reason": "禁止裸 `_ = func(...)` 吞错；除 Close/Unlock 外必须显式 logger.WarnCtx 或 defer"
+      "reason": "禁止裸 `_ = func(...)` 吞错；除 Close/Unlock/Rollback/Shutdown 外必须显式处理 (lines 321,358)"
     },
     {
-      "key": "errlint:LINT-ERR-006:event/dispatcher.go:358",
+      "key": "errlint:LINT-ERR-006:logger/manager.go",
       "kind": "errlint",
       "severity": "warn",
-      "path": "event/dispatcher.go",
+      "path": "logger/manager.go",
       "name": "LINT-ERR-006",
-      "value": 1,
+      "value": 2,
       "threshold": 0,
       "blocking": false,
       "changed": false,
-      "reason": "禁止裸 `_ = func(...)` 吞错；除 Close/Unlock 外必须显式 logger.WarnCtx 或 defer"
+      "reason": "禁止裸 `_ = func(...)` 吞错；除 Close/Unlock/Rollback/Shutdown 外必须显式处理 (lines 233,266)"
     },
     {
-      "key": "errlint:LINT-ERR-004:governance/etcd_registry.go:394",
+      "key": "errlint:LINT-ERR-006:di/component_providers.go",
       "kind": "errlint",
       "severity": "warn",
-      "path": "governance/etcd_registry.go",
-      "name": "LINT-ERR-004",
-      "value": 1,
+      "path": "di/component_providers.go",
+      "name": "LINT-ERR-006",
+      "value": 2,
       "threshold": 0,
       "blocking": false,
       "changed": false,
-      "reason": "禁止 err.Error() 直接进响应 / DB / DTO；必须 errcode.SafeMessage(err) 或 LayeredError.Message()"
+      "reason": "禁止裸 `_ = func(...)` 吞错；除 Close/Unlock/Rollback/Shutdown 外必须显式处理 (lines 76,457)"
     },
     {
-      "key": "errlint:LINT-ERR-004:health/aggregator.go:101",
-      "kind": "errlint",
-      "severity": "warn",
-      "path": "health/aggregator.go",
-      "name": "LINT-ERR-004",
-      "value": 1,
-      "threshold": 0,
-      "blocking": false,
-      "changed": false,
-      "reason": "禁止 err.Error() 直接进响应 / DB / DTO；必须 errcode.SafeMessage(err) 或 LayeredError.Message()"
-    },
-    {
-      "key": "errlint:LINT-ERR-008:health/aggregator.go:101",
-      "kind": "errlint",
-      "severity": "warn",
-      "path": "health/aggregator.go",
-      "name": "LINT-ERR-008",
-      "value": 1,
-      "threshold": 0,
-      "blocking": false,
-      "changed": false,
-      "reason": "禁止把 err.Error() 直接写入 DB 列 / DTO 字段 / CLI diagnostic：必须 errcode.SafeMessage(err) 或 LayeredError.Message()"
-    },
-    {
-      "key": "errlint:LINT-ERR-004:httpx/response.go:83",
-      "kind": "errlint",
-      "severity": "warn",
-      "path": "httpx/response.go",
-      "name": "LINT-ERR-004",
-      "value": 1,
-      "threshold": 0,
-      "blocking": false,
-      "changed": false,
-      "reason": "禁止 err.Error() 直接进响应 / DB / DTO；必须 errcode.SafeMessage(err) 或 LayeredError.Message()"
-    },
-    {
-      "key": "errlint:LINT-ERR-004:httpx/response.go:234",
-      "kind": "errlint",
-      "severity": "warn",
-      "path": "httpx/response.go",
-      "name": "LINT-ERR-004",
-      "value": 1,
-      "threshold": 0,
-      "blocking": false,
-      "changed": false,
-      "reason": "禁止 err.Error() 直接进响应 / DB / DTO；必须 errcode.SafeMessage(err) 或 LayeredError.Message()"
-    },
-    {
-      "key": "errlint:LINT-ERR-004:httpx/response.go:262",
-      "kind": "errlint",
-      "severity": "warn",
-      "path": "httpx/response.go",
-      "name": "LINT-ERR-004",
-      "value": 1,
-      "threshold": 0,
-      "blocking": false,
-      "changed": false,
-      "reason": "禁止 err.Error() 直接进响应 / DB / DTO；必须 errcode.SafeMessage(err) 或 LayeredError.Message()"
-    },
-    {
-      "key": "errlint:LINT-ERR-004:httpx/sse.go:63",
-      "kind": "errlint",
-      "severity": "warn",
-      "path": "httpx/sse.go",
-      "name": "LINT-ERR-004",
-      "value": 1,
-      "threshold": 0,
-      "blocking": false,
-      "changed": false,
-      "reason": "禁止 err.Error() 直接进响应 / DB / DTO；必须 errcode.SafeMessage(err) 或 LayeredError.Message()"
-    },
-    {
-      "key": "errlint:LINT-ERR-006:jwt/session_manager.go:88",
+      "key": "errlint:LINT-ERR-006:jwt/session_manager.go",
       "kind": "errlint",
       "severity": "warn",
       "path": "jwt/session_manager.go",
@@ -553,10 +361,46 @@
       "threshold": 0,
       "blocking": false,
       "changed": false,
-      "reason": "禁止裸 `_ = func(...)` 吞错；除 Close/Unlock 外必须显式 logger.WarnCtx 或 defer"
+      "reason": "禁止裸 `_ = func(...)` 吞错；除 Close/Unlock/Rollback/Shutdown 外必须显式处理 (lines 88)"
     },
     {
-      "key": "errlint:LINT-ERR-006:jwt/session_store_memory.go:184",
+      "key": "errlint:LINT-ERR-008:breaker/metrics_impl.go",
+      "kind": "errlint",
+      "severity": "warn",
+      "path": "breaker/metrics_impl.go",
+      "name": "LINT-ERR-008",
+      "value": 1,
+      "threshold": 0,
+      "blocking": false,
+      "changed": false,
+      "reason": "禁止把 err.Error() 直接赋值 / return 进 DB 列 / record 字段 / DTO：必须 errcode.SafeMessage(err) 或 LayeredError.Message() (lines 95)"
+    },
+    {
+      "key": "errlint:LINT-ERR-008:health/aggregator.go",
+      "kind": "errlint",
+      "severity": "warn",
+      "path": "health/aggregator.go",
+      "name": "LINT-ERR-008",
+      "value": 1,
+      "threshold": 0,
+      "blocking": false,
+      "changed": false,
+      "reason": "禁止把 err.Error() 直接赋值 / return 进 DB 列 / record 字段 / DTO：必须 errcode.SafeMessage(err) 或 LayeredError.Message() (lines 101)"
+    },
+    {
+      "key": "errlint:LINT-ERR-004:auth/service.go",
+      "kind": "errlint",
+      "severity": "warn",
+      "path": "auth/service.go",
+      "name": "LINT-ERR-004",
+      "value": 1,
+      "threshold": 0,
+      "blocking": false,
+      "changed": false,
+      "reason": "禁止 err.Error() 直接进响应 / DTO / 非日志函数参数；必须 errcode.SafeMessage(err) 或 LayeredError.Message() (lines 64)"
+    },
+    {
+      "key": "errlint:LINT-ERR-006:jwt/session_store_memory.go",
       "kind": "errlint",
       "severity": "warn",
       "path": "jwt/session_store_memory.go",
@@ -565,10 +409,10 @@
       "threshold": 0,
       "blocking": false,
       "changed": false,
-      "reason": "禁止裸 `_ = func(...)` 吞错；除 Close/Unlock 外必须显式 logger.WarnCtx 或 defer"
+      "reason": "禁止裸 `_ = func(...)` 吞错；除 Close/Unlock/Rollback/Shutdown 外必须显式处理 (lines 184)"
     },
     {
-      "key": "errlint:LINT-ERR-006:jwt/session_store_redis.go:103",
+      "key": "errlint:LINT-ERR-006:jwt/session_store_redis.go",
       "kind": "errlint",
       "severity": "warn",
       "path": "jwt/session_store_redis.go",
@@ -577,22 +421,10 @@
       "threshold": 0,
       "blocking": false,
       "changed": false,
-      "reason": "禁止裸 `_ = func(...)` 吞错；除 Close/Unlock 外必须显式 logger.WarnCtx 或 defer"
+      "reason": "禁止裸 `_ = func(...)` 吞错；除 Close/Unlock/Rollback/Shutdown 外必须显式处理 (lines 103)"
     },
     {
-      "key": "errlint:LINT-ERR-004:jwt/token_manager.go:599",
-      "kind": "errlint",
-      "severity": "warn",
-      "path": "jwt/token_manager.go",
-      "name": "LINT-ERR-004",
-      "value": 1,
-      "threshold": 0,
-      "blocking": false,
-      "changed": false,
-      "reason": "禁止 err.Error() 直接进响应 / DB / DTO；必须 errcode.SafeMessage(err) 或 LayeredError.Message()"
-    },
-    {
-      "key": "errlint:LINT-ERR-008:jwt/token_manager.go:599",
+      "key": "errlint:LINT-ERR-008:jwt/token_manager.go",
       "kind": "errlint",
       "severity": "warn",
       "path": "jwt/token_manager.go",
@@ -601,22 +433,10 @@
       "threshold": 0,
       "blocking": false,
       "changed": false,
-      "reason": "禁止把 err.Error() 直接写入 DB 列 / DTO 字段 / CLI diagnostic：必须 errcode.SafeMessage(err) 或 LayeredError.Message()"
+      "reason": "禁止把 err.Error() 直接赋值 / return 进 DB 列 / record 字段 / DTO：必须 errcode.SafeMessage(err) 或 LayeredError.Message() (lines 599)"
     },
     {
-      "key": "errlint:LINT-ERR-006:limiter/algo_adaptive.go:164",
-      "kind": "errlint",
-      "severity": "warn",
-      "path": "limiter/algo_adaptive.go",
-      "name": "LINT-ERR-006",
-      "value": 1,
-      "threshold": 0,
-      "blocking": false,
-      "changed": false,
-      "reason": "禁止裸 `_ = func(...)` 吞错；除 Close/Unlock 外必须显式 logger.WarnCtx 或 defer"
-    },
-    {
-      "key": "errlint:LINT-ERR-004:logger/encoder.go:694",
+      "key": "errlint:LINT-ERR-004:logger/encoder.go",
       "kind": "errlint",
       "severity": "warn",
       "path": "logger/encoder.go",
@@ -625,46 +445,22 @@
       "threshold": 0,
       "blocking": false,
       "changed": false,
-      "reason": "禁止 err.Error() 直接进响应 / DB / DTO；必须 errcode.SafeMessage(err) 或 LayeredError.Message()"
+      "reason": "禁止 err.Error() 直接进响应 / DTO / 非日志函数参数；必须 errcode.SafeMessage(err) 或 LayeredError.Message() (lines 694)"
     },
     {
-      "key": "errlint:LINT-ERR-008:logger/encoder.go:694",
+      "key": "errlint:LINT-ERR-004:httpx/sse.go",
       "kind": "errlint",
       "severity": "warn",
-      "path": "logger/encoder.go",
-      "name": "LINT-ERR-008",
+      "path": "httpx/sse.go",
+      "name": "LINT-ERR-004",
       "value": 1,
       "threshold": 0,
       "blocking": false,
       "changed": false,
-      "reason": "禁止把 err.Error() 直接写入 DB 列 / DTO 字段 / CLI diagnostic：必须 errcode.SafeMessage(err) 或 LayeredError.Message()"
+      "reason": "禁止 err.Error() 直接进响应 / DTO / 非日志函数参数；必须 errcode.SafeMessage(err) 或 LayeredError.Message() (lines 63)"
     },
     {
-      "key": "errlint:LINT-ERR-006:logger/manager.go:233",
-      "kind": "errlint",
-      "severity": "warn",
-      "path": "logger/manager.go",
-      "name": "LINT-ERR-006",
-      "value": 1,
-      "threshold": 0,
-      "blocking": false,
-      "changed": false,
-      "reason": "禁止裸 `_ = func(...)` 吞错；除 Close/Unlock 外必须显式 logger.WarnCtx 或 defer"
-    },
-    {
-      "key": "errlint:LINT-ERR-006:logger/manager.go:266",
-      "kind": "errlint",
-      "severity": "warn",
-      "path": "logger/manager.go",
-      "name": "LINT-ERR-006",
-      "value": 1,
-      "threshold": 0,
-      "blocking": false,
-      "changed": false,
-      "reason": "禁止裸 `_ = func(...)` 吞错；除 Close/Unlock 外必须显式 logger.WarnCtx 或 defer"
-    },
-    {
-      "key": "errlint:LINT-ERR-004:middleware/jwt.go:222",
+      "key": "errlint:LINT-ERR-004:middleware/jwt.go",
       "kind": "errlint",
       "severity": "warn",
       "path": "middleware/jwt.go",
@@ -673,22 +469,10 @@
       "threshold": 0,
       "blocking": false,
       "changed": false,
-      "reason": "禁止 err.Error() 直接进响应 / DB / DTO；必须 errcode.SafeMessage(err) 或 LayeredError.Message()"
+      "reason": "禁止 err.Error() 直接进响应 / DTO / 非日志函数参数；必须 errcode.SafeMessage(err) 或 LayeredError.Message() (lines 222)"
     },
     {
-      "key": "errlint:LINT-ERR-008:middleware/jwt.go:222",
-      "kind": "errlint",
-      "severity": "warn",
-      "path": "middleware/jwt.go",
-      "name": "LINT-ERR-008",
-      "value": 1,
-      "threshold": 0,
-      "blocking": false,
-      "changed": false,
-      "reason": "禁止把 err.Error() 直接写入 DB 列 / DTO 字段 / CLI diagnostic：必须 errcode.SafeMessage(err) 或 LayeredError.Message()"
-    },
-    {
-      "key": "errlint:LINT-ERR-004:queue/capacity_guard.go:53",
+      "key": "errlint:LINT-ERR-004:queue/capacity_guard.go",
       "kind": "errlint",
       "severity": "warn",
       "path": "queue/capacity_guard.go",
@@ -697,19 +481,19 @@
       "threshold": 0,
       "blocking": false,
       "changed": false,
-      "reason": "禁止 err.Error() 直接进响应 / DB / DTO；必须 errcode.SafeMessage(err) 或 LayeredError.Message()"
+      "reason": "禁止 err.Error() 直接进响应 / DTO / 非日志函数参数；必须 errcode.SafeMessage(err) 或 LayeredError.Message() (lines 53)"
     },
     {
-      "key": "errlint:LINT-ERR-008:queue/capacity_guard.go:53",
+      "key": "errlint:LINT-ERR-008:validator/converter.go",
       "kind": "errlint",
       "severity": "warn",
-      "path": "queue/capacity_guard.go",
+      "path": "validator/converter.go",
       "name": "LINT-ERR-008",
       "value": 1,
       "threshold": 0,
       "blocking": false,
       "changed": false,
-      "reason": "禁止把 err.Error() 直接写入 DB 列 / DTO 字段 / CLI diagnostic：必须 errcode.SafeMessage(err) 或 LayeredError.Message()"
+      "reason": "禁止把 err.Error() 直接赋值 / return 进 DB 列 / record 字段 / DTO：必须 errcode.SafeMessage(err) 或 LayeredError.Message() (lines 37)"
     }
   ],
   "blocking": []
