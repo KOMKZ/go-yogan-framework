@@ -12,7 +12,9 @@ import (
 
 var (
 	// URL 携带基本凭据：postgres://user:password@host、http://key:secret@host 等。
-	redactURLCredentials = regexp.MustCompile(`([A-Za-z][A-Za-z0-9+.-]*)://([^:/@\s]+):([^@/\s]+)@`)
+	// 密码允许包含 @ 与 URL 编码（RFC 3986：最后一个 @ 分隔 userinfo 与 host），
+	// 因此这里只定位 "scheme://...@" 前缀，掩码在回调函数内完成。
+	redactURLCredentials = regexp.MustCompile(`([A-Za-z][A-Za-z0-9+.-]*)://[^\s/]*@`)
 	// Bearer / Authorization 头。
 	redactBearer = regexp.MustCompile(`(?i)\b(bearer\s+)[A-Za-z0-9._~+/=-]+`)
 	// query/form 风格 key=value（token=xxx、api_key: xxx、password = xxx）。
@@ -30,14 +32,14 @@ var (
 
 // Redact 对错误文本做统一脱敏，返回可安全写入日志/诊断的文本。
 //
-// 覆盖：URL 基本凭据（DSN）、Bearer token、query/form/JSON 风格的
-// token/secret/api_key/signature/password 等敏感键值、sk- 风格密钥、邮箱、手机号。
-// 任何 cause/root/chain 文本写日志前必须经过本函数。
+// 覆盖：URL 基本凭据（DSN，密码可含 @/冒号/URL 编码）、Bearer token、
+// query/form/JSON 风格的 token/secret/api_key/signature/password 等敏感键值、
+// sk- 风格密钥、邮箱、手机号。任何 cause/root/chain 文本写日志前必须经过本函数。
 func Redact(text string) string {
 	if text == "" {
 		return ""
 	}
-	out := redactURLCredentials.ReplaceAllString(text, "$1://$2:***@")
+	out := redactURLCredentials.ReplaceAllStringFunc(text, redactURLCredentialMatch)
 	out = redactBearer.ReplaceAllString(out, "${1}***")
 	out = redactJSONValue.ReplaceAllString(out, `${1}"***"`)
 	out = redactKeyValue.ReplaceAllString(out, "${1}${2}***")
@@ -50,4 +52,22 @@ func Redact(text string) string {
 		return match[:3] + "****" + match[7:]
 	})
 	return out
+}
+
+// redactURLCredentialMatch 掩码单个 "scheme://userinfo@" 匹配：
+// 按最后一个 @ 取 userinfo，再按第一个冒号拆 user:password——密码整段替换为 ***，
+// 无论其中包含 @、冒号还是 URL 编码都不会残留片段。
+func redactURLCredentialMatch(match string) string {
+	schemeEnd := strings.Index(match, "://")
+	at := strings.LastIndex(match, "@")
+	if schemeEnd < 0 || at < schemeEnd {
+		return match
+	}
+	userinfo := match[schemeEnd+3 : at]
+	colon := strings.Index(userinfo, ":")
+	if colon < 0 {
+		// 无密码形态（scheme://user@host）：无可掩码凭据。
+		return match
+	}
+	return match[:schemeEnd+3] + userinfo[:colon] + ":***" + match[at:]
 }

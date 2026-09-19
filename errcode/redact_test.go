@@ -24,6 +24,36 @@ func TestRedactURLCredentials(t *testing.T) {
 	}
 }
 
+// 000128 review 整改 A：密码包含 @ 时不得残留任何片段（旧正则在第一个 @ 截断，
+// `postgres://admin:p@ssw0rd@db` 会漏掉 `ssw0rd@db`）。
+func TestRedactURLCredentialsPasswordWithAtAndEncoding(t *testing.T) {
+	cases := []struct {
+		in       string
+		leakFrag []string // 任何片段出现在结果里都算泄漏
+	}{
+		{"connect dsn=postgres://admin:p@ssw0rd@db:5432/core failed", []string{"ssw0rd", "p@ss"}},
+		{"mysql://root:pa:ss@word@10.0.0.1:3306/app", []string{"pa:ss", "@word@"}},
+		{"pg://u:p%40ss%3Aw0rd@host/db", []string{"%40ss", "w0rd"}},
+		{"http://key:deadbeef@inner@api.example.com/v1", []string{"deadbeef"}},
+	}
+	for _, tc := range cases {
+		out := Redact(tc.in)
+		for _, frag := range tc.leakFrag {
+			if strings.Contains(out, frag) {
+				t.Fatalf("Redact(%q) = %q, fragment %q survived", tc.in, out, frag)
+			}
+		}
+		if !strings.Contains(out, ":***@") {
+			t.Fatalf("Redact(%q) = %q, want masked credential", tc.in, out)
+		}
+	}
+	// 无密码形态（scheme://user@host，userinfo 无冒号）不应被掩码。
+	// 注：git@github.com 这类会被邮箱规则掩码本地部分——那是邮箱 PII 规则的预期行为。
+	if out := Redact("redis://default@cache:6379/0 connection refused"); !strings.Contains(out, "redis://default@cache") {
+		t.Fatalf("password-less userinfo must stay intact, got %q", out)
+	}
+}
+
 func TestRedactBearerToken(t *testing.T) {
 	in := "Unauthorized: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.tail"
 	out := Redact(in)

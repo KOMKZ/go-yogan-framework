@@ -2,7 +2,7 @@
 
 ## 目的
 
-在 service 入口用 `defer errcode.CaptureInto(&err, "<scope>")` 给返回值补 origin stack + operation，保证错误经过统一收口（`httpx.HandleError` / `asynq ErrorHandler` / `clierrors.Handle`）时一定带可定位的现场信息。
+在 service 入口用 `defer errcode.CaptureInto(&err, "<scope>")` 给返回值补 origin stack + operation，保证错误经过统一收口（`httpx.HandleError` / `asynq ErrorHandler` / hrise-cli `main.go` 的 `fatalCLI`，三者均走 `errcode.ErrorLogFields`）时一定带可定位的现场信息。
 
 ## 框架能力
 

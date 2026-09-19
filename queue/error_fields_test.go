@@ -53,6 +53,24 @@ func TestQueueErrorFieldsKeepPlainError(t *testing.T) {
 	}
 }
 
+// review 整改 A：queue 出口同样必须脱敏含 @ 的 DSN 密码，任何片段不得残留。
+func TestQueueErrorFieldsRedactSecrets(t *testing.T) {
+	technical := errcode.Capture(errors.New("connect dsn=postgres://admin:p@ssw0rd@db:5432/core failed"), "queue.handler.db")
+	err := errcode.New(91, 8, "queue-test", "queue.test.db", "任务数据库错误", http.StatusInternalServerError).Wrap(technical)
+
+	fields := zapFieldsMap(queueErrorFields(err))
+
+	for _, key := range []string{"error_chain", "error_cause_message", "error_root_message"} {
+		value, _ := fields[key].(string)
+		if strings.Contains(value, "ssw0rd") || strings.Contains(value, "p@ss") {
+			t.Fatalf("%s leaked dsn password fragment: %q", key, value)
+		}
+		if value == "" {
+			t.Fatalf("%s must be present (redacted)", key)
+		}
+	}
+}
+
 func zapFieldsMap(fields []zap.Field) map[string]interface{} {
 	encoder := zapcore.NewMapObjectEncoder()
 	for _, field := range fields {

@@ -39,10 +39,13 @@ func TestErrorLogFieldsObserverEndToEnd(t *testing.T) {
 	if fields["error_operation"] != "storage.driver.upload" {
 		t.Fatalf("error_operation = %v", fields["error_operation"])
 	}
+	// review 整改 A：片段级断言——含 @ 的 DSN 密码与 JWT 的头/尾片段都不允许残留。
 	for _, key := range []string{"error_chain", "error_cause_message", "error_root_message"} {
 		value, _ := fields[key].(string)
-		if strings.Contains(value, "p@ssw0rd") || strings.Contains(value, "eyJhbGciOiJIUzI1NiJ9") {
-			t.Fatalf("%s leaked secret: %q", key, value)
+		for _, frag := range []string{"ssw0rd", "p@ss", "eyJhbGciOiJIUzI1NiJ9", "J9.secret"} {
+			if strings.Contains(value, frag) {
+				t.Fatalf("%s leaked secret fragment %q: %q", key, frag, value)
+			}
 		}
 		if value == "" {
 			t.Fatalf("%s must be present (redacted) in log entry", key)

@@ -137,6 +137,7 @@ func TestSafeMessageWrappedPlainErrorStillReturnsFixedMessage(t *testing.T) {
 }
 
 // 治理 ticket 000128 §1.2：诊断里的 cause/root 文本必须脱敏。
+// review 整改 A：断言升级到密码片段级——含 @ 的 DSN 密码任何片段都不允许残留。
 func TestSafeMessageRedactsDiagnostics(t *testing.T) {
 	le := New(25, 1001, "users", "error.users.not_found", "用户不存在", http.StatusNotFound).
 		Wrap(Capture(errors.New("connect dsn=postgres://admin:p@ssw0rd@db:5432/core failed"), "users.repo.find_by_id"))
@@ -144,11 +145,11 @@ func TestSafeMessageRedactsDiagnostics(t *testing.T) {
 	result := SafeMessage(le)
 
 	causeMessage, _ := result.Diagnostics["cause_message"].(string)
-	if strings.Contains(causeMessage, "p@ssw0rd") {
+	if strings.Contains(causeMessage, "ssw0rd") || strings.Contains(causeMessage, "p@ss") {
 		t.Fatalf("diagnostics.cause_message not redacted: %q", causeMessage)
 	}
 	rootMessage, _ := result.Diagnostics["root_message"].(string)
-	if strings.Contains(rootMessage, "p@ssw0rd") {
+	if strings.Contains(rootMessage, "ssw0rd") || strings.Contains(rootMessage, "p@ss") {
 		t.Fatalf("diagnostics.root_message not redacted: %q", rootMessage)
 	}
 }

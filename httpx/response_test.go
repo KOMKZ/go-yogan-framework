@@ -452,7 +452,9 @@ func TestHandleError_LogsRedactSecrets(t *testing.T) {
 		data, readErr := os.ReadFile(m)
 		require.NoError(t, readErr)
 		content := string(data)
-		assert.NotContains(t, content, "p@ssw0rd", "raw dsn credential must be redacted from logs")
+		// review 整改 A：断言升级到密码片段级。
+		assert.NotContains(t, content, "ssw0rd", "dsn password fragment must be redacted from logs")
+		assert.NotContains(t, content, "p@ss", "dsn password fragment must be redacted from logs")
 		if strings.Contains(content, "error_cause_message") {
 			found = true
 		}

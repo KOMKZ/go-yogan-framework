@@ -2,7 +2,7 @@
 
 - mode: `changed`
 - files scanned: `407`
-- functions scanned: `3329`
+- functions scanned: `3332`
 - issues: `43`
 - blocking: `0`
 
@@ -11,7 +11,7 @@
 | severity | kind | path | name | value | threshold | changed | reason |
 |---|---|---|---|---:|---:|---|---|
 | block | naming | `httpx/config.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
-| block | naming | `config/validator.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
+| block | naming | `health/config.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
 | block | naming | `kafka/config.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
 | block | naming | `telemetry/config.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
 | block | naming | `breaker/config.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
@@ -27,7 +27,7 @@
 | block | naming | `redis/config.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
 | block | naming | `grpc/config.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
 | block | naming | `auth/service.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
-| block | naming | `health/config.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
+| block | naming | `config/validator.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
 | block | naming | `swagger/provider.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
 | block | naming | `httpx/handler.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
 | block | naming | `logger/config.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
