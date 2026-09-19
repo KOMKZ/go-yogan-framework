@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/KOMKZ/go-yogan-framework/database"
@@ -98,6 +99,7 @@ func TestErrorJson(t *testing.T) {
 }
 
 // TestBadRequestJson test 400 error response
+// 治理 ticket 000128 P0-4：BadRequestJson 禁止 err.Error() 原文出响应。
 func TestBadRequestJson(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -110,7 +112,35 @@ func TestBadRequestJson(t *testing.T) {
 	err := json.Unmarshal(w.Body.Bytes(), &resp)
 	assert.NoError(t, err)
 	assert.Equal(t, 400, resp.Code)
-	assert.Equal(t, "invalid parameter", resp.Msg)
+	// 普通 error 一律固定文案，原文不出响应。
+	assert.Equal(t, "请求无效，请检查参数", resp.Msg)
+	assert.NotContains(t, resp.Msg, "invalid parameter")
+}
+
+// TestBadRequestJson_RegisteredCodeUsesRegisteredMessage：注册业务码错误使用注册文案。
+func TestBadRequestJson_RegisteredCodeUsesRegisteredMessage(t *testing.T) {
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	registered := errcode.New(10, 2, "test", "test.error.invalid", "参数格式错误", http.StatusBadRequest)
+	BadRequestJson(c, registered)
+
+	var resp Response
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.Equal(t, "参数格式错误", resp.Msg)
+}
+
+// TestBadRequestJson_SecretErrorNoLeak：泄漏形态错误（DSN）不得出响应。
+func TestBadRequestJson_SecretErrorNoLeak(t *testing.T) {
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+
+	BadRequestJson(c, errors.New("dsn=postgres://user:pass@host:5432/db"))
+
+	var resp Response
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.NotContains(t, resp.Msg, "postgres://")
+	assert.NotContains(t, resp.Msg, "dsn=")
 }
 
 // TestNotFoundJson test 404 error response
@@ -362,6 +392,72 @@ func TestHandleError_LayeredError_LogsDiagnosticCauseWithoutFullChain(t *testing
 	require.Contains(t, string(data), "error_cause_message")
 	require.Contains(t, string(data), "verify_code=F008")
 	require.Contains(t, string(data), "error_chain")
+}
+
+// TestHandleError_PrivateDataStaysOutOfResponse：私有诊断 Data() 不得写入响应，
+// 只有 WithPublicData 显式标注的数据允许出去（治理 ticket 000128 P0-4）。
+func TestHandleError_PrivateDataStaysOutOfResponse(t *testing.T) {
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request, _ = http.NewRequest("GET", "/test", nil)
+
+	layeredErr := errcode.New(10, 3, "test", "test.error.internal", "服务器内部错误", http.StatusInternalServerError).
+		WithData("internal_sql", "select * from users where token='secret'").
+		WithPublicData("request_id", "req-42")
+	HandleError(c, layeredErr)
+
+	var resp Response
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+
+	body := w.Body.String()
+	assert.NotContains(t, body, "internal_sql")
+	assert.NotContains(t, body, "secret")
+	assert.Contains(t, body, "req-42")
+}
+
+// TestHandleError_LogsRedactSecrets：cause/root/chain 写日志前必须脱敏（治理 ticket 000128 §1.2）。
+func TestHandleError_LogsRedactSecrets(t *testing.T) {
+	logDir := t.TempDir()
+	logger.MustResetManager(logger.ManagerConfig{
+		BaseLogDir:            logDir,
+		Level:                 "info",
+		Encoding:              "json",
+		EnableConsole:         false,
+		EnableLevelInFilename: true,
+		EnableDateInFilename:  false,
+		MaxSize:               10,
+	})
+	defer logger.CloseAll()
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request, _ = http.NewRequest("GET", "/test", nil)
+	c.Set(errorLoggingConfigKey, errorLoggingConfigInternal{
+		Enable:          true,
+		IgnoreStatusMap: make(map[int]bool),
+		FullErrorChain:  true,
+		LogLevel:        "error",
+	})
+
+	secret := "connect dsn=postgres://admin:p@ssw0rd@db:5432/core failed"
+	captured := errcode.Capture(errors.New(secret), "db.connect")
+	layeredErr := errcode.New(10, 4, "test", "test.error.db", "数据库错误", http.StatusInternalServerError).Wrap(captured)
+	HandleError(c, layeredErr)
+
+	matches, err := filepath.Glob(filepath.Join(logDir, "*.log"))
+	require.NoError(t, err)
+	require.NotEmpty(t, matches, "expected log files to be written")
+	found := false
+	for _, m := range matches {
+		data, readErr := os.ReadFile(m)
+		require.NoError(t, readErr)
+		content := string(data)
+		assert.NotContains(t, content, "p@ssw0rd", "raw dsn credential must be redacted from logs")
+		if strings.Contains(content, "error_cause_message") {
+			found = true
+		}
+	}
+	assert.True(t, found, "cause message must be present (redacted) in logs")
 }
 
 // TestHandleError_DatabaseNotFound test database record not found error

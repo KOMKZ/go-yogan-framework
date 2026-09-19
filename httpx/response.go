@@ -80,10 +80,20 @@ func ErrorJson(c *gin.Context, msg string) {
 }
 
 // BadRequestJson 400 error response
+// 治理 ticket 000128 P0-4：禁止 err.Error() 原文出响应。
+// 注册业务码错误使用注册文案；其余（动态 message / 普通 error）一律固定文案。
+// 需要自定义文案的调用方使用 ErrorJson 传入审核过的字符串。
 func BadRequestJson(c *gin.Context, err error) {
+	msg := "请求无效，请检查参数"
+	if errcode.HasRegisteredBusinessCode(err) {
+		var layeredErr *errcode.LayeredError
+		if errors.As(err, &layeredErr) {
+			msg = layeredErr.Message()
+		}
+	}
 	c.JSON(http.StatusBadRequest, Response{
 		Code:    400,
-		Msg:     err.Error(),
+		Msg:     msg,
 		TraceID: traceIDFromContext(c),
 	})
 }
@@ -165,24 +175,26 @@ func HandleError(c *gin.Context, err error) {
 			if diagnosticCause != nil {
 				fields = append(fields,
 					zap.String("error_cause_type", fmt.Sprintf("%T", diagnosticCause)),
-					zap.String("error_cause_message", diagnosticCause.Error()),
+					// 治理 ticket 000128 §1.2：cause/root/chain 文本统一脱敏后才写日志。
+					zap.String("error_cause_message", errcode.Redact(diagnosticCause.Error())),
 				)
 			}
 			rootCause := layeredErr.RootCause()
 			if rootCause != nil {
 				fields = append(fields,
 					zap.String("error_root_type", fmt.Sprintf("%T", rootCause)),
-					zap.String("error_root_message", rootCause.Error()),
+					zap.String("error_root_message", errcode.Redact(rootCause.Error())),
 				)
 			}
 			if diagnosticCause != nil || rootCause != nil {
-				fields = append(fields, zap.String("error_chain", layeredErr.String()))
+				fields = append(fields, zap.String("error_chain", errcode.Redact(layeredErr.String())))
 			}
 
 			// If the full error chain recording is configured, add details
 			if cfg.FullErrorChain {
 				fields = append(fields,
-					zap.Error(err), // 原始错误（支持 errors.Unwrap）
+					// 治理 ticket 000128 §1.2：原始错误链必须脱敏后写日志。
+					zap.String("error", errcode.Redact(err.Error())),
 				)
 			}
 
@@ -203,10 +215,12 @@ func HandleError(c *gin.Context, err error) {
 		}
 
 		// 1.2 Returns the HTTP status code, error code, and message of a LayeredError
+		// 治理 ticket 000128 P0-4：响应 Data 只允许显式标注的 PublicData；
+		// 私有诊断 Data()（WithState/WithFields 写入）只能留在服务端日志。
 		c.JSON(layeredErr.HTTPStatus(), Response{
 			Code:    layeredErr.Code(),
-			Msg:     layeredErr.Message(), // Use dynamically modified message (WithMsgf)
-			Data:    layeredErr.Data(),    // Optional: return additional data
+			Msg:     layeredErr.Message(),
+			Data:    layeredErr.PublicData(),
 			TraceID: traceIDFromContext(c),
 		})
 		return
@@ -215,7 +229,7 @@ func HandleError(c *gin.Context, err error) {
 	// 2. Compatibility for old error types: database record does not exist -> 404
 	if errors.Is(err, database.ErrRecordNotFound) {
 		if cfg.Enable {
-			logger.WarnCtx(ctx, "httpx", "English: Resource does not exist", zap.Error(err))
+			logger.WarnCtx(ctx, "httpx", "English: Resource does not exist", zap.String("error", errcode.Redact(err.Error())))
 		}
 		// Fixed default message: err.Error() carries gorm internals and must
 		// not be forwarded to clients (same leak pattern as branch 3).
@@ -226,8 +240,9 @@ func HandleError(c *gin.Context, err error) {
 	// 3. Unknown error (default) -> 500 (to avoid leaking internal information)
 	if cfg.Enable {
 		fields := []zap.Field{
-			zap.Error(err),
-			zap.String("error_chain", err.Error()),
+			// 治理 ticket 000128 §1.2：兜底分支同样只写脱敏后的错误文本。
+			zap.String("error", errcode.Redact(err.Error())),
+			zap.String("error_chain", errcode.Redact(err.Error())),
 		}
 		if errors.As(err, &layeredErr) {
 			if originStack := layeredErr.OriginStack(); originStack != "" {

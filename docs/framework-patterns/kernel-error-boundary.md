@@ -1,4 +1,4 @@
-# Error Boundary（治理 ticket 000105）
+# Error Boundary（治理 ticket 000105；000128 修订 public/private 边界）
 
 ## 目的
 
@@ -11,7 +11,10 @@
 | `errcode.CaptureInto(&err, op)` | `framework/errcode/boundary.go` |
 | `errcode.Capture(err, op)` | `framework/errcode/error.go` |
 | `LayeredError.Wrap / Wrapf` | `framework/errcode/error.go` |
-| `errcode.SafeMessage(err)` | `framework/errcode/safe_msg.go` |
+| `errcode.SafeMessage(err)` → `SafeMessageResult` | `framework/errcode/safe_msg.go` |
+| `errcode.Redact(text)` 统一脱敏 | `framework/errcode/redact.go` |
+| `LayeredError.WithPublicData / PublicData` | `framework/errcode/error.go` |
+| `errcode.HasRegisteredBusinessCode(err)` | `framework/errcode/error.go` |
 
 ## 模式
 
@@ -55,13 +58,16 @@ func (w *Worker) Process(ctx context.Context, job Job) (err error) {
 ### 模式 C：客户端字段错误文案
 
 ```go
-func buildDTO(err error) (dto DTO, logFields map[string]any) {
-    publicMsg, details := errcode.SafeMessage(err)
-    dto.Msg = publicMsg          // 客户端只看到安全文案
-    logFields = details         // 服务端日志保留全部排障信息
+func buildDTO(err error) (dto DTO, log loggerFields) {
+    safe := errcode.SafeMessage(err)   // typed result（000128 P0-3）
+    dto.Msg = safe.PublicMessage       // 客户端只看到安全文案
+    dto.Data = safe.PublicData         // 只有显式 WithPublicData 标注的数据
+    log = safe.Diagnostics             // 服务端日志保留脱敏后的排障信息
     return
 }
 ```
+
+**禁止** `_ = details` 式静默丢弃：typed result 让诊断丢弃必须显式写出来，review 时可直接拒绝。
 
 ## CaptureInto 语义
 
@@ -85,22 +91,31 @@ CaptureInto(&err, "scope.op"):
 //   wrapped.cause        = captured(providerErr)，ProviderError 可 errors.As 拿到
 //   wrapped.operation    = "llm generate"（业务 op，不会被 captured 的 "llm generate.cause" 覆盖）
 //   wrapped.originStack  = captured.OriginStack()（I/O 边界栈）
-//   wrapped.Error()      = "llm generate: provider=openai code=429: rate limit exceeded"
+//   wrapped.Message()    = "media job provider call failed"（注册文案，op 不再覆盖——000128 P0-2）
+//   wrapped.Error()      = "media job provider call failed: provider=openai code=429: rate limit exceeded"（仅日志）
 ```
 
 如果业务 op 需要进一步细分，建议在 service 入口用 `defer errcode.CaptureInto(&err, "<domain>.<sub>.<method>")` 单独设一个更精确的 op，而不是依赖 `Wrap` 时被覆盖。
 
-## SafeMessage 语义
+## SafeMessage 语义（000128 P0-3 修订）
 
-| 输入 | 客户端返回 | 日志保留 |
-|---|---|---|
-| `*LayeredError` | `Message()`（注册时审核过） | code / module / msg_key / http_status / operation / origin_stack / cause_type+message / root_type+message |
-| 普通 error | 固定"内部错误，请稍后再试" | cause_type + cause_message |
+`SafeMessage(err)` 返回 `SafeMessageResult{PublicMessage, PublicData, Diagnostics}`：
 
-**禁止**：`SafeMessage(err).Message()` 直接拿到的是注册文案，已无 `err.Error()` 字符串泄漏。
+| 输入 | PublicMessage | PublicData | Diagnostics |
+|---|---|---|---|
+| 注册业务码 `*LayeredError`（Code()>0 且 Module()!=""） | `Message()`（注册时审核过） | 仅 `WithPublicData` 显式标注的数据 | code / module / msg_key / http_status / operation / origin_stack / cause+root（**已 Redact 脱敏**） |
+| 裸 Capture / 未注册 LayeredError（code=0） | 固定"内部错误，请稍后再试" | nil | 同上（动态 message 只留在诊断） |
+| 普通 error | 固定"内部错误，请稍后再试" | nil | cause_type + cause_message（已脱敏） |
+
+**关键规则**：
+- 裸 `Capture` 的动态 message 含 cause 原文，永远不能作为公开文案（000128 P0-3 守卫）。
+- `Data()` 是私有诊断数据，只能进日志；响应/DTO 只允许 `PublicData()`（000128 拆分 public/private 边界）。
+- cause/root/chain 写日志前必须经过 `errcode.Redact`：覆盖 DSN/URL 凭据、Bearer token、token/api_key/signature/password 等敏感键值、sk- 密钥、邮箱、手机号。客户端安全不等于日志安全。
+
+**禁止**：`SafeMessage(err).PublicMessage` 直接拿到的是注册文案，已无 `err.Error()` 字符串泄漏。
 
 ## 关联
 
-- [kernel-httpx-error.md](kernel-httpx-error.md) — 11 字段 schema
+- [kernel-httpx-error.md](kernel-httpx-error.md) — 11 字段 schema 与 HTTP 出口 public/private data 契约
 - [kernel-queue.md](kernel-queue.md) — asynq 错误处理
-- 治理 ticket 000105
+- 治理 ticket 000105、000128

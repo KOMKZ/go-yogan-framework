@@ -3,6 +3,7 @@
 package errcode
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 )
@@ -15,7 +16,8 @@ type LayeredError struct {
 	msgKey      string                 // Message key (for internationalization, e.g., "error.user.not_found")
 	msg         string                 // Default message (Chinese)
 	httpStatus  int                    // HTTP status code
-	data        map[string]interface{} // context data
+	data        map[string]interface{} // private diagnostic data（仅服务端日志/排障，禁止出响应）
+	publicData  map[string]interface{} // explicit public data（唯一允许进入响应/DTO 的数据，治理 ticket 000128）
 	cause       error                  // Original error (error chain)
 	originStack string                 // Location where this error was wrapped
 	operation   string                 // Operation where the error was captured
@@ -78,8 +80,36 @@ func (e *LayeredError) HTTPStatus() int {
 }
 
 // Retrieve context data
+// 治理 ticket 000128：Data() 是私有诊断数据，只允许写服务端日志；
+// HTTP 响应 / DTO 只允许使用 PublicData()。
 func (e *LayeredError) Data() map[string]interface{} {
 	return e.data
+}
+
+// PublicData 返回显式标注可公开的数据；httpx / Queue / CLI 出口写响应时只允许取本字段。
+func (e *LayeredError) PublicData() map[string]interface{} {
+	if e == nil {
+		return nil
+	}
+	return e.publicData
+}
+
+// WithPublicData 添加显式公开数据（返回新实例）。
+// 只有经过审核、明确允许给前端的内容才允许放这里；技术详情继续使用 WithData/WithFields。
+func (e *LayeredError) WithPublicData(key string, value interface{}) *LayeredError {
+	clone := *e
+	clone.publicData = e.clonePublicData()
+	clone.publicData[key] = value
+	return &clone
+}
+
+// clonePublicData 深拷贝公开数据。
+func (e *LayeredError) clonePublicData() map[string]interface{} {
+	data := make(map[string]interface{}, len(e.publicData)+1)
+	for k, v := range e.publicData {
+		data[k] = v
+	}
+	return data
 }
 
 // Cause get original error
@@ -248,6 +278,14 @@ func (e *LayeredError) cloneData() map[string]interface{} {
 		data[k] = v
 	}
 	return data
+}
+
+// HasRegisteredBusinessCode 上报 err 链上是否存在注册业务码的 LayeredError
+// （Code()>0 且 Module()!=""）。出口层据此决定能否把 Message() 作为公开文案：
+// 裸 Capture / 动态 message 必须降级为固定内部文案（治理 ticket 000128 P0-3）。
+func HasRegisteredBusinessCode(err error) bool {
+	var le *LayeredError
+	return errors.As(err, &le) && le != nil && le.Code() > 0 && le.Module() != ""
 }
 
 // Set HTTP status code (return new instance)
