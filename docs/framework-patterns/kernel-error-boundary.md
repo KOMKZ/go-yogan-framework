@@ -80,6 +80,11 @@ CaptureInto(&err, "scope.op"):
   *errp is 普通 error                              → Capture(err, op)
 ```
 
+`Capture` 为普通错误建立 `LayeredError` 时会同时保留 message 与 cause。为避免同一技术错误
+在 `Error()` 中输出两遍，当 `Message() == Cause().Error()` 时只渲染一次；业务码包装的注册文案
+与 cause 不同，仍保持 `"业务文案: 技术原因"`。该规则只改变字符串渲染，不改变
+`Unwrap`、`errors.Is/As`、origin stack 或 operation。
+
 **关键**：保留"最内层 origin"而不是"service 入口 origin"——排查时第一现场永远是 I/O 边界（DB / OSS / RPC / SDK），service 只是包装。service 入口的 `operation` 字段会稳定定位业务层。
 
 ### operation 归属规则

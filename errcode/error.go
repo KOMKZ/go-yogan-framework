@@ -49,6 +49,9 @@ func New(moduleCode, businessCode int, module, msgKey, msg string, httpStatus ..
 // Implement error interface
 func (e *LayeredError) Error() string {
 	if e.cause != nil {
+		if e.msg == e.cause.Error() {
+			return e.msg
+		}
 		return fmt.Sprintf("%s: %v", e.msg, e.cause)
 	}
 	return e.msg

@@ -2,15 +2,22 @@ package application
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/KOMKZ/go-yogan-framework/config"
+	frameworkdi "github.com/KOMKZ/go-yogan-framework/di"
+	"github.com/KOMKZ/go-yogan-framework/errcode"
+	"github.com/samber/do/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+type setupResolutionRoot struct{}
+type setupResolutionMissing struct{}
 
 // TestNewBase test creating a base application instance
 func TestNewBase(t *testing.T) {
@@ -273,6 +280,31 @@ func TestBaseApplication_Setup_Error(t *testing.T) {
 	err := app.Setup()
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "onSetup failed")
+}
+
+func TestBaseApplicationSetupCompactsDIResolutionError(t *testing.T) {
+	tmpDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "config.yaml"), []byte("server:\n  port: 8080\n"), 0644))
+	app := NewBase(tmpDir, "TEST", "http", nil)
+
+	do.Provide(app.GetInjector(), func(i do.Injector) (*setupResolutionRoot, error) {
+		if _, err := do.Invoke[*setupResolutionMissing](i); err != nil {
+			return nil, err
+		}
+		return &setupResolutionRoot{}, nil
+	})
+	app.OnSetup(func(b *BaseApplication) error {
+		_, err := do.Invoke[*setupResolutionRoot](b.GetInjector())
+		return errcode.Capture(err, "test.setup.resolve")
+	})
+
+	err := app.Setup()
+	require.Error(t, err)
+	require.ErrorIs(t, err, do.ErrServiceNotFound)
+	require.NotContains(t, err.Error(), "available services:")
+	var resolutionErr *frameworkdi.ResolutionError
+	require.True(t, errors.As(err, &resolutionErr))
+	require.NotEmpty(t, resolutionErr.RegisteredServices())
 }
 
 // TestBaseApplication_Shutdown_CallsCallback Tests that Shutdown calls callback

@@ -1,8 +1,8 @@
 {
   "mode": "changed",
   "root": "/home/kitral/pro/happy-rise-cpy/happy-rise-devpro/go-yogan-framework",
-  "files_scanned": 407,
-  "funcs_scanned": 3332,
+  "files_scanned": 410,
+  "funcs_scanned": 3357,
   "issues": [
     {
       "key": "naming:httpx/config.go",
@@ -16,10 +16,10 @@
       "reason": "weak file name; split/new business files should use business_role.go"
     },
     {
-      "key": "naming:health/config.go",
+      "key": "naming:config/validator.go",
       "kind": "naming",
       "severity": "block",
-      "path": "health/config.go",
+      "path": "config/validator.go",
       "value": 1,
       "threshold": 0,
       "blocking": false,
@@ -71,10 +71,10 @@
       "reason": "weak file name; split/new business files should use business_role.go"
     },
     {
-      "key": "naming:auth/config.go",
+      "key": "naming:application/config.go",
       "kind": "naming",
       "severity": "block",
-      "path": "auth/config.go",
+      "path": "application/config.go",
       "value": 1,
       "threshold": 0,
       "blocking": false,
@@ -82,10 +82,10 @@
       "reason": "weak file name; split/new business files should use business_role.go"
     },
     {
-      "key": "naming:application/config.go",
+      "key": "naming:auth/config.go",
       "kind": "naming",
       "severity": "block",
-      "path": "application/config.go",
+      "path": "auth/config.go",
       "value": 1,
       "threshold": 0,
       "blocking": false,
@@ -192,10 +192,10 @@
       "reason": "weak file name; split/new business files should use business_role.go"
     },
     {
-      "key": "naming:config/validator.go",
+      "key": "naming:health/config.go",
       "kind": "naming",
       "severity": "block",
-      "path": "config/validator.go",
+      "path": "health/config.go",
       "value": 1,
       "threshold": 0,
       "blocking": false,
@@ -288,7 +288,7 @@
       "value": 150,
       "threshold": 130,
       "blocking": false,
-      "changed": false,
+      "changed": true,
       "reason": "function line count exceeds threshold"
     },
     {
@@ -325,7 +325,7 @@
       "threshold": 0,
       "blocking": false,
       "changed": false,
-      "reason": "禁止裸 `_ = func(...)` 吞错；除 Close/Unlock/Rollback/Shutdown 外必须显式处理 (lines 321,358)"
+      "reason": "禁止裸 _ = call() 吞错。修复：可传播→errcode.Capture 后返回；无法返回的旁路→logger.GetLogger(域).Warn 或 gin c.Error 显式告警；解码容错→if err != nil 显式降级零值；装配期错误→fail-fast panic (lines 321,358)"
     },
     {
       "key": "errlint:LINT-ERR-006:logger/manager.go",
@@ -337,7 +337,7 @@
       "threshold": 0,
       "blocking": false,
       "changed": false,
-      "reason": "禁止裸 `_ = func(...)` 吞错；除 Close/Unlock/Rollback/Shutdown 外必须显式处理 (lines 233,266)"
+      "reason": "禁止裸 _ = call() 吞错。修复：可传播→errcode.Capture 后返回；无法返回的旁路→logger.GetLogger(域).Warn 或 gin c.Error 显式告警；解码容错→if err != nil 显式降级零值；装配期错误→fail-fast panic (lines 233,266)"
     },
     {
       "key": "errlint:LINT-ERR-006:di/component_providers.go",
@@ -349,7 +349,7 @@
       "threshold": 0,
       "blocking": false,
       "changed": false,
-      "reason": "禁止裸 `_ = func(...)` 吞错；除 Close/Unlock/Rollback/Shutdown 外必须显式处理 (lines 76,457)"
+      "reason": "禁止裸 _ = call() 吞错。修复：可传播→errcode.Capture 后返回；无法返回的旁路→logger.GetLogger(域).Warn 或 gin c.Error 显式告警；解码容错→if err != nil 显式降级零值；装配期错误→fail-fast panic (lines 76,457)"
     },
     {
       "key": "errlint:LINT-ERR-006:jwt/session_manager.go",
@@ -361,7 +361,7 @@
       "threshold": 0,
       "blocking": false,
       "changed": false,
-      "reason": "禁止裸 `_ = func(...)` 吞错；除 Close/Unlock/Rollback/Shutdown 外必须显式处理 (lines 88)"
+      "reason": "禁止裸 _ = call() 吞错。修复：可传播→errcode.Capture 后返回；无法返回的旁路→logger.GetLogger(域).Warn 或 gin c.Error 显式告警；解码容错→if err != nil 显式降级零值；装配期错误→fail-fast panic (lines 88)"
     },
     {
       "key": "errlint:LINT-ERR-008:breaker/metrics_impl.go",
@@ -373,7 +373,7 @@
       "threshold": 0,
       "blocking": false,
       "changed": false,
-      "reason": "禁止把 err.Error() 直接赋值 / return 进 DB 列 / record 字段 / DTO：必须 errcode.SafeMessage(err) 或 LayeredError.Message() (lines 95)"
+      "reason": "err.Error() 不得直接赋值/return 进 DB 列/record/DTO。修复：持久化诊断 errcode.Redact(err.Error())；用户可见文案 errcode.SafeMessage(err).PublicMessage (lines 95)"
     },
     {
       "key": "errlint:LINT-ERR-008:health/aggregator.go",
@@ -385,7 +385,7 @@
       "threshold": 0,
       "blocking": false,
       "changed": false,
-      "reason": "禁止把 err.Error() 直接赋值 / return 进 DB 列 / record 字段 / DTO：必须 errcode.SafeMessage(err) 或 LayeredError.Message() (lines 101)"
+      "reason": "err.Error() 不得直接赋值/return 进 DB 列/record/DTO。修复：持久化诊断 errcode.Redact(err.Error())；用户可见文案 errcode.SafeMessage(err).PublicMessage (lines 101)"
     },
     {
       "key": "errlint:LINT-ERR-004:auth/service.go",
@@ -397,7 +397,7 @@
       "threshold": 0,
       "blocking": false,
       "changed": false,
-      "reason": "禁止 err.Error() 直接进响应 / DTO / 非日志函数参数；必须 errcode.SafeMessage(err) 或 LayeredError.Message() (lines 64)"
+      "reason": "err.Error() 不得进响应/DTO/持久化。修复：用户面 errcode.SafeMessage(err).PublicMessage 或 PublicMessageOf；运维/日志诊断面 errcode.Redact(err.Error())；内部分类改 errors.As 类型化判别 (lines 64)"
     },
     {
       "key": "errlint:LINT-ERR-006:jwt/session_store_memory.go",
@@ -409,7 +409,7 @@
       "threshold": 0,
       "blocking": false,
       "changed": false,
-      "reason": "禁止裸 `_ = func(...)` 吞错；除 Close/Unlock/Rollback/Shutdown 外必须显式处理 (lines 184)"
+      "reason": "禁止裸 _ = call() 吞错。修复：可传播→errcode.Capture 后返回；无法返回的旁路→logger.GetLogger(域).Warn 或 gin c.Error 显式告警；解码容错→if err != nil 显式降级零值；装配期错误→fail-fast panic (lines 184)"
     },
     {
       "key": "errlint:LINT-ERR-006:jwt/session_store_redis.go",
@@ -421,7 +421,7 @@
       "threshold": 0,
       "blocking": false,
       "changed": false,
-      "reason": "禁止裸 `_ = func(...)` 吞错；除 Close/Unlock/Rollback/Shutdown 外必须显式处理 (lines 103)"
+      "reason": "禁止裸 _ = call() 吞错。修复：可传播→errcode.Capture 后返回；无法返回的旁路→logger.GetLogger(域).Warn 或 gin c.Error 显式告警；解码容错→if err != nil 显式降级零值；装配期错误→fail-fast panic (lines 103)"
     },
     {
       "key": "errlint:LINT-ERR-008:jwt/token_manager.go",
@@ -433,7 +433,7 @@
       "threshold": 0,
       "blocking": false,
       "changed": false,
-      "reason": "禁止把 err.Error() 直接赋值 / return 进 DB 列 / record 字段 / DTO：必须 errcode.SafeMessage(err) 或 LayeredError.Message() (lines 599)"
+      "reason": "err.Error() 不得直接赋值/return 进 DB 列/record/DTO。修复：持久化诊断 errcode.Redact(err.Error())；用户可见文案 errcode.SafeMessage(err).PublicMessage (lines 599)"
     },
     {
       "key": "errlint:LINT-ERR-004:logger/encoder.go",
@@ -445,7 +445,7 @@
       "threshold": 0,
       "blocking": false,
       "changed": false,
-      "reason": "禁止 err.Error() 直接进响应 / DTO / 非日志函数参数；必须 errcode.SafeMessage(err) 或 LayeredError.Message() (lines 694)"
+      "reason": "err.Error() 不得进响应/DTO/持久化。修复：用户面 errcode.SafeMessage(err).PublicMessage 或 PublicMessageOf；运维/日志诊断面 errcode.Redact(err.Error())；内部分类改 errors.As 类型化判别 (lines 694)"
     },
     {
       "key": "errlint:LINT-ERR-004:httpx/sse.go",
@@ -457,7 +457,7 @@
       "threshold": 0,
       "blocking": false,
       "changed": false,
-      "reason": "禁止 err.Error() 直接进响应 / DTO / 非日志函数参数；必须 errcode.SafeMessage(err) 或 LayeredError.Message() (lines 63)"
+      "reason": "err.Error() 不得进响应/DTO/持久化。修复：用户面 errcode.SafeMessage(err).PublicMessage 或 PublicMessageOf；运维/日志诊断面 errcode.Redact(err.Error())；内部分类改 errors.As 类型化判别 (lines 63)"
     },
     {
       "key": "errlint:LINT-ERR-004:middleware/jwt.go",
@@ -469,7 +469,7 @@
       "threshold": 0,
       "blocking": false,
       "changed": false,
-      "reason": "禁止 err.Error() 直接进响应 / DTO / 非日志函数参数；必须 errcode.SafeMessage(err) 或 LayeredError.Message() (lines 222)"
+      "reason": "err.Error() 不得进响应/DTO/持久化。修复：用户面 errcode.SafeMessage(err).PublicMessage 或 PublicMessageOf；运维/日志诊断面 errcode.Redact(err.Error())；内部分类改 errors.As 类型化判别 (lines 222)"
     },
     {
       "key": "errlint:LINT-ERR-004:queue/capacity_guard.go",
@@ -481,7 +481,7 @@
       "threshold": 0,
       "blocking": false,
       "changed": false,
-      "reason": "禁止 err.Error() 直接进响应 / DTO / 非日志函数参数；必须 errcode.SafeMessage(err) 或 LayeredError.Message() (lines 53)"
+      "reason": "err.Error() 不得进响应/DTO/持久化。修复：用户面 errcode.SafeMessage(err).PublicMessage 或 PublicMessageOf；运维/日志诊断面 errcode.Redact(err.Error())；内部分类改 errors.As 类型化判别 (lines 53)"
     },
     {
       "key": "errlint:LINT-ERR-008:validator/converter.go",
@@ -493,7 +493,7 @@
       "threshold": 0,
       "blocking": false,
       "changed": false,
-      "reason": "禁止把 err.Error() 直接赋值 / return 进 DB 列 / record 字段 / DTO：必须 errcode.SafeMessage(err) 或 LayeredError.Message() (lines 37)"
+      "reason": "err.Error() 不得直接赋值/return 进 DB 列/record/DTO。修复：持久化诊断 errcode.Redact(err.Error())；用户可见文案 errcode.SafeMessage(err).PublicMessage (lines 37)"
     }
   ],
   "blocking": []

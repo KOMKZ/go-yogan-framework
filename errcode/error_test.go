@@ -57,6 +57,18 @@ func TestLayeredError_Error_WithCause(t *testing.T) {
 	}
 }
 
+func TestCaptureErrorDoesNotDuplicateCauseMessage(t *testing.T) {
+	originalErr := errors.New("DI: could not find service `example.Service`")
+	captured := Capture(originalErr, "worker.setup")
+
+	if captured.Error() != originalErr.Error() {
+		t.Fatalf("Capture(...).Error() = %q, want %q", captured.Error(), originalErr.Error())
+	}
+	if !errors.Is(captured, originalErr) {
+		t.Fatal("Capture must preserve the original error chain")
+	}
+}
+
 func TestLayeredErrorDiagnosticCauseKeepsContextualCause(t *testing.T) {
 	sentinel := errors.New("provider rejected")
 	contextual := fmt.Errorf("%w: verify_code=F008", sentinel)
