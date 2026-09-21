@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"sync/atomic"
@@ -24,6 +26,14 @@ import (
 // mockRouterRegistrar simulated router registrar
 type mockRouterRegistrar struct {
 	registered bool
+}
+
+type inProcessRouterRegistrar struct{}
+
+func (inProcessRouterRegistrar) RegisterRoutes(engine *gin.Engine, app *Application) {
+	engine.GET("/integration/ping", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"message": "pong"})
+	})
 }
 
 func (m *mockRouterRegistrar) RegisterRoutes(engine *gin.Engine, app *Application) {
@@ -550,6 +560,44 @@ func TestApplication_HTTPServer_ActualPort(t *testing.T) {
 	assert.Greater(t, server.GetActualPort(), 0, "auto-assigned port must be exposed")
 
 	require.NoError(t, app.Shutdown())
+}
+
+// TestApplication_RunInProcess_InitializesWithoutListening verifies that the
+// complete production HTTP stack is available while the configured TCP port
+// remains untouched.
+func TestApplication_RunInProcess_InitializesWithoutListening(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer listener.Close()
+	port := listener.Addr().(*net.TCPAddr).Port
+
+	tmpDir := t.TempDir()
+	configFile := filepath.Join(tmpDir, "config.yaml")
+	require.NoError(t, os.WriteFile(configFile, []byte(fmt.Sprintf(
+		"api_server:\n  host: \"127.0.0.1\"\n  port: %d\n  mode: test\n", port)), 0644))
+
+	var readyCalled bool
+	app := New(tmpDir, "TEST", nil)
+	app.RegisterRoutes(inProcessRouterRegistrar{})
+	app.OnReady(func(a *Application) error {
+		readyCalled = true
+		return nil
+	})
+
+	require.NoError(t, app.RunInProcess())
+	t.Cleanup(func() { require.NoError(t, app.Shutdown()) })
+
+	server := app.GetHTTPServer()
+	require.NotNil(t, server)
+	assert.Zero(t, server.GetActualPort(), "in-process startup must not bind a TCP listener")
+	assert.True(t, readyCalled)
+	assert.Equal(t, StateRunning, app.GetState())
+
+	request := httptest.NewRequest(http.MethodGet, "/integration/ping", nil)
+	response := httptest.NewRecorder()
+	server.GetEngine().ServeHTTP(response, request)
+	assert.Equal(t, http.StatusOK, response.Code)
+	assert.JSONEq(t, `{"message":"pong"}`, response.Body.String())
 }
 
 // TestApplication_EnvPortOverride regression: {PREFIX}_PORT environment

@@ -30,6 +30,7 @@
 | JWT 鉴权 | `framework-patterns/kernel-jwt.md` |
 | 队列任务 | `framework-patterns/kernel-queue.md` |
 | 应用侧访问内核 | `framework-patterns/kernel-apputil.md` |
+| HTTP 集成测试 | `framework-patterns/kernel-http-testing.md` |
 | 查已有能力 | `framework-patterns/kernel-components-list.md` |
 
 ## 命令

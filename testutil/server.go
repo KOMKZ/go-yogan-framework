@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/KOMKZ/go-yogan-framework/database"
@@ -37,18 +38,35 @@ type TestApp interface {
 	Shutdown()
 }
 
+// InProcessTestApp exposes the complete HTTP application lifecycle without
+// requiring a TCP listener.
+type InProcessTestApp interface {
+	RunInProcess() error
+
+	GetHTTPServer() interface {
+		GetEngine() *gin.Engine
+	}
+
+	GetDBManager() *database.Manager
+	GetRedisManager() *redis.Manager
+	Shutdown()
+}
+
 // Create test server (elegant version)
 //
 // Usage:
 //
 // // 1. Create application instance
+//
 //	userApp := app.NewWithConfig(configPath)
 //
 // // 2. Register components and callbacks
+//
 //	userApp.RegisterComponents(...)
 //	userApp.SetupCallbacks(...)
 //
 // // 3. Create test server (automatically calls RunNonBlocking)
+//
 //	server, err := testutil.NewTestServer(userApp)
 //
 // Advantages:
@@ -63,14 +81,34 @@ func NewTestServer(app TestApp) (*TestServer, error) {
 		return nil, err
 	}
 
-	// Get initialized components
-	httpServer := app.GetHTTPServer()
-	engine := httpServer.GetEngine()
-	dbManager := app.GetDBManager()
-	redisManager := app.GetRedisManager()
+	return initializedTestServer(app.GetHTTPServer(), app.GetDBManager(), app.GetRedisManager())
+}
+
+// NewInProcessTestServer initializes the real application, DI graph, routes,
+// and lifecycle callbacks while serving requests directly through Gin. It is
+// intended for HTTP integration tests that need production configuration but
+// must not reserve a TCP port.
+func NewInProcessTestServer(app InProcessTestApp) (*TestServer, error) {
+	gin.SetMode(gin.TestMode)
+
+	if err := app.RunInProcess(); err != nil {
+		return nil, err
+	}
+
+	return initializedTestServer(app.GetHTTPServer(), app.GetDBManager(), app.GetRedisManager())
+}
+
+func initializedTestServer(
+	httpServer interface{ GetEngine() *gin.Engine },
+	dbManager *database.Manager,
+	redisManager *redis.Manager,
+) (*TestServer, error) {
+	if httpServer == nil || httpServer.GetEngine() == nil {
+		return nil, fmt.Errorf("test application did not initialize an HTTP server")
+	}
 
 	return &TestServer{
-		Engine: engine,
+		Engine: httpServer.GetEngine(),
 		DB:     dbManager,
 		Redis:  redisManager,
 	}, nil

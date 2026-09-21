@@ -2,7 +2,7 @@
   "mode": "changed",
   "root": "/home/kitral/pro/happy-rise-cpy/happy-rise-devpro/go-yogan-framework",
   "files_scanned": 410,
-  "funcs_scanned": 3357,
+  "funcs_scanned": 3364,
   "issues": [
     {
       "key": "naming:httpx/config.go",
@@ -16,10 +16,10 @@
       "reason": "weak file name; split/new business files should use business_role.go"
     },
     {
-      "key": "naming:config/validator.go",
+      "key": "naming:health/config.go",
       "kind": "naming",
       "severity": "block",
-      "path": "config/validator.go",
+      "path": "health/config.go",
       "value": 1,
       "threshold": 0,
       "blocking": false,
@@ -71,10 +71,10 @@
       "reason": "weak file name; split/new business files should use business_role.go"
     },
     {
-      "key": "naming:application/config.go",
+      "key": "naming:auth/config.go",
       "kind": "naming",
       "severity": "block",
-      "path": "application/config.go",
+      "path": "auth/config.go",
       "value": 1,
       "threshold": 0,
       "blocking": false,
@@ -82,10 +82,10 @@
       "reason": "weak file name; split/new business files should use business_role.go"
     },
     {
-      "key": "naming:auth/config.go",
+      "key": "naming:application/config.go",
       "kind": "naming",
       "severity": "block",
-      "path": "auth/config.go",
+      "path": "application/config.go",
       "value": 1,
       "threshold": 0,
       "blocking": false,
@@ -192,10 +192,10 @@
       "reason": "weak file name; split/new business files should use business_role.go"
     },
     {
-      "key": "naming:health/config.go",
+      "key": "naming:config/validator.go",
       "kind": "naming",
       "severity": "block",
-      "path": "health/config.go",
+      "path": "config/validator.go",
       "value": 1,
       "threshold": 0,
       "blocking": false,

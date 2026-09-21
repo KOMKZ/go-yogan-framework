@@ -82,14 +82,31 @@ func (a *Application) Run() error {
 // RunNonBlocking starts the HTTP application in a non-blocking manner (for testing or scenarios where manual lifecycle control is needed)
 // Execute all initialization and startup logic but do not wait for shutdown signals
 func (a *Application) RunNonBlocking() error {
+	return a.runInitializedHTTPApplication(true)
+}
+
+// RunInProcess initializes the complete HTTP application lifecycle without
+// binding a TCP listener. The production Gin engine, routes, DI graph, and
+// lifecycle callbacks remain available to in-process integration tests.
+func (a *Application) RunInProcess() error {
+	return a.runInitializedHTTPApplication(false)
+}
+
+func (a *Application) runInitializedHTTPApplication(listen bool) error {
 	// 1. Setup stage (initialize components, trigger OnSetup callback)
 	if err := a.Setup(); err != nil {
 		return fmt.Errorf("setup failed: %w", err)
 	}
 
-	// 2. Start HTTP Server (if routes are registered)
-	if err := a.startHTTPServer(); err != nil {
+	// 2. Initialize the production HTTP server and routes. TCP listening is
+	// optional so integration tests can exercise the real handler stack in-process.
+	if err := a.initializeHTTPServer(); err != nil {
 		return err
+	}
+	if listen && a.httpServer != nil {
+		if err := a.httpServer.Start(); err != nil {
+			return fmt.Errorf("Failed to start HTTP Server: %w", err)
+		}
 	}
 
 	// 3. Trigger the OnReady callback (using the unified callback of BaseApplication)
@@ -115,6 +132,21 @@ func (a *Application) RunNonBlocking() error {
 
 // startHTTPServer Start HTTP Server (HTTP proprietary logic)
 func (a *Application) startHTTPServer() error {
+	if err := a.initializeHTTPServer(); err != nil {
+		return err
+	}
+	if a.httpServer == nil {
+		return nil
+	}
+	if err := a.httpServer.Start(); err != nil {
+		return fmt.Errorf("Failed to start HTTP Server: %w", err)
+	}
+	return nil
+}
+
+// initializeHTTPServer creates the production HTTP stack and registers routes
+// without deciding how requests are transported.
+func (a *Application) initializeHTTPServer() error {
 	if a.routerRegistrar == nil {
 		return nil
 	}
@@ -163,11 +195,6 @@ func (a *Application) startHTTPServer() error {
 	// 🎯 Automatically mount Swagger routes (if enabled)
 	if err := swagger.Setup(a.GetInjector(), a.httpServer.GetEngine()); err != nil {
 		logger.WarnCtx(a.ctx, "Swagger setup failed", zap.Error(err))
-	}
-
-	// Start HTTP Server (non-blocking)
-	if err := a.httpServer.Start(); err != nil {
-		return fmt.Errorf("Failed to start HTTP Server: %w", err)
 	}
 
 	return nil
