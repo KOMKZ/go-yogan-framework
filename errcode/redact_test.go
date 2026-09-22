@@ -82,6 +82,21 @@ func TestRedactSensitiveKeyValues(t *testing.T) {
 	}
 }
 
+func TestRedactSignedMediaURLQuery(t *testing.T) {
+	in := "stat https://cdn.example.test/video.mp4?auth_key=1700000000-deadbeef&OSSAccessKeyId=test-access-id&Signature=test-signature: no such file"
+	out := Redact(in)
+	for _, leaked := range []string{"1700000000-deadbeef", "test-access-id", "test-signature"} {
+		if strings.Contains(out, leaked) {
+			t.Fatalf("Redact signed URL = %q, secret %q survived", out, leaked)
+		}
+	}
+	for _, masked := range []string{"auth_key=***", "OSSAccessKeyId=***", "Signature=***"} {
+		if !strings.Contains(out, masked) {
+			t.Fatalf("Redact signed URL = %q, want %q", out, masked)
+		}
+	}
+}
+
 func TestRedactSecretKey(t *testing.T) {
 	in := `auth failed with key sk-9f8e7d6c5b4a3210fedcba`
 	out := Redact(in)

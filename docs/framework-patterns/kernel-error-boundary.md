@@ -115,7 +115,7 @@ CaptureInto(&err, "scope.op"):
 **关键规则**：
 - 裸 `Capture` 的动态 message 含 cause 原文，永远不能作为公开文案（000128 P0-3 守卫）。
 - `Data()` 是私有诊断数据，只能进日志；响应/DTO 只允许 `PublicData()`（000128 拆分 public/private 边界）。
-- cause/root/chain 写日志前必须经过 `errcode.Redact`：覆盖 DSN/URL 凭据、Bearer token、token/api_key/signature/password 等敏感键值、sk- 密钥、邮箱、手机号。客户端安全不等于日志安全。
+- cause/root/chain 写日志前必须经过 `errcode.Redact`：覆盖 DSN/URL 凭据、Bearer token、token/api_key/auth_key/OSSAccessKeyId/signature/password 等敏感键值、sk- 密钥、邮箱、手机号。客户端安全不等于日志安全。
 
 **禁止**：`SafeMessage(err).PublicMessage` 直接拿到的是注册文案，已无 `err.Error()` 字符串泄漏。
 

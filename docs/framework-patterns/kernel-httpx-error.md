@@ -22,7 +22,7 @@ For `errcode.LayeredError`, `httpx` logs these diagnostic fields when logging is
 
 ## Redaction (ticket 000128)
 
-`error_cause_message`, `error_root_message`, `error_chain`, and the full-chain `error` field are passed through `errcode.Redact` before being written to logs. The sanitizer covers URL/DSN credentials, Bearer tokens, token/api_key/signature/password-style key/value pairs (query, form, and JSON shapes), `sk-` style keys, emails, and CN mobile numbers. Client safety does not imply log safety; the redaction regression tests live in `errcode/redact_test.go` and `httpx/response_test.go`.
+`error_cause_message`, `error_root_message`, `error_chain`, and the full-chain `error` field are passed through `errcode.Redact` before being written to logs. The sanitizer covers URL/DSN credentials, Bearer tokens, token/api_key/auth_key/OSSAccessKeyId/signature/password-style key/value pairs (query, form, and JSON shapes), `sk-` style keys, emails, and CN mobile numbers. Client safety does not imply log safety; the redaction regression tests live in `errcode/redact_test.go` and `httpx/response_test.go`.
 
 ## Response Data Boundary (ticket 000128 P0-4)
 
