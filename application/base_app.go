@@ -198,7 +198,7 @@ func (b *BaseApplication) Setup() error {
 	// Trigger OnSetup callback
 	if b.onSetup != nil {
 		if err := b.onSetup(b); err != nil {
-			return fmt.Errorf("onSetup failed: %w", b.normalizeSetupError(err))
+			return fmt.Errorf("onSetup failed: %w", b.normalizeDIResolutionError(err))
 		}
 	}
 

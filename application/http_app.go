@@ -186,8 +186,11 @@ func (a *Application) initializeHTTPServer() error {
 		tokenManager,
 	)
 
-	// Register route for business application (passing Application dependencies container)
-	a.routerRegistrar.RegisterRoutes(a.httpServer.GetEngine(), a)
+	// Register route for business application (passing Application dependencies container).
+	// do.MustInvoke 在路由注册期产生的 DI panic 由专用边界转为紧凑启动错误。
+	if err := a.registerBusinessRoutes(a.httpServer.GetEngine()); err != nil {
+		return err
+	}
 
 	logger := a.MustGetLogger()
 	logger.DebugCtx(a.ctx, "✅ Routes registered")

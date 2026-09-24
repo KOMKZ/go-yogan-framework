@@ -2,6 +2,7 @@ package limiter
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -73,11 +74,17 @@ func TestConcurrencyLimiterFirstLimitWins(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Acquire() error = %v", err)
 	}
-	defer release()
-	// 同 key 再次 Acquire 更大 limit 不改变已固定容量
-	extra, err := limiter.Acquire(context.Background(), "provider_d", 100)
-	if err != nil {
-		t.Fatalf("Acquire() error = %v", err)
+	// 同 key 再次 Acquire 更大 limit 不改变已固定容量，唯一令牌被占用时必须阻塞。
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	if _, err := limiter.Acquire(ctx, "provider_d", 100); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("Acquire() error = %v, want context deadline exceeded", err)
 	}
-	extra()
+
+	release()
+	next, err := limiter.Acquire(context.Background(), "provider_d", 100)
+	if err != nil {
+		t.Fatalf("Acquire() after release error = %v", err)
+	}
+	next()
 }
