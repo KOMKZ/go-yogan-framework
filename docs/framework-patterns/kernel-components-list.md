@@ -10,7 +10,7 @@
 | di | `di/` | 依赖注入（samber/do 封装） |
 | config | `config/` | 多源配置加载 |
 | logger | `logger/` | 结构化日志（zap） |
-| database | `database/` | MySQL/PostgreSQL 多实例 |
+| database | `database/` | MySQL/PostgreSQL 多实例、可选方言注册与稳定错误分类 |
 | redis | `redis/` | Redis 多实例连接 |
 | cache | `cache/` | 缓存编排层（多后端、事件失效） |
 | jwt | `jwt/` | Token 生成/验证 |

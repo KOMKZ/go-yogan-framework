@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/KOMKZ/go-yogan-framework/database"
+	_ "github.com/KOMKZ/go-yogan-framework/database/sqlitedriver"
 	"github.com/KOMKZ/go-yogan-framework/logger"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -38,17 +39,21 @@ type CLITestOptions struct {
 // Usage:
 //
 //	func TestMain(m *testing.M) {
+//
 // // 1. Create test context (auto-complete all initialization)
-//	    ctx, cleanup := testutil.NewCLITestContext(t, testutil.CLITestOptions{
-//	        AutoMigrate: []interface{}{&model.User{}},
-//	    })
-//	    defer cleanup()
+//
+//	ctx, cleanup := testutil.NewCLITestContext(t, testutil.CLITestOptions{
+//	    AutoMigrate: []interface{}{&model.User{}},
+//	})
+//	defer cleanup()
 //
 // // 2. Use DBManager to create Service
-//	    userRepo := user.NewRepositoryImpl(ctx.DBManager.DB("master"))
-//	    userService := user.NewService(userRepo)
+//
+//	userRepo := user.NewRepositoryImpl(ctx.DBManager.DB("master"))
+//	userService := user.NewService(userRepo)
 //
 // // 3. Run tests
+//
 //	    code := m.Run()
 //	    os.Exit(code)
 //	}

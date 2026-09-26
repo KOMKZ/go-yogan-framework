@@ -8,9 +8,6 @@ import (
 
 	"github.com/KOMKZ/go-yogan-framework/logger"
 	"go.uber.org/zap"
-	"gorm.io/driver/mysql"
-	"gorm.io/driver/postgres"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
 )
@@ -20,12 +17,12 @@ type GormLoggerFactory func(cfg Config) gormlogger.Interface
 
 // Manager database manager (supports multiple instances)
 type Manager struct {
-	instances      map[string]*gorm.DB
-	configs        map[string]Config
-	loggerFactory  GormLoggerFactory    // Injected GORM Logger factory
-	logger         *logger.CtxZapLogger // Injected business logger (for connecting logs and TraceID)
-	otelPlugin     *OtelPlugin          // 🎯 OpenTelemetry plugin
-	mu             sync.RWMutex
+	instances     map[string]*gorm.DB
+	configs       map[string]Config
+	loggerFactory GormLoggerFactory    // Injected GORM Logger factory
+	logger        *logger.CtxZapLogger // Injected business logger (for connecting logs and TraceID)
+	otelPlugin    *OtelPlugin          // 🎯 OpenTelemetry plugin
+	mu            sync.RWMutex
 }
 
 // Create database manager
@@ -80,17 +77,9 @@ func NewManager(configs map[string]Config, loggerFactory GormLoggerFactory, logg
 
 // openDB Open database connection
 func (m *Manager) openDB(cfg Config) (*gorm.DB, error) {
-	// Select driver
-	var dialector gorm.Dialector
-	switch cfg.Driver {
-	case "mysql":
-		dialector = mysql.Open(cfg.DSN)
-	case "postgres":
-		dialector = postgres.Open(cfg.DSN)
-	case "sqlite":
-		dialector = sqlite.Open(cfg.DSN)
-	default:
-		return nil, fmt.Errorf("unsupported driver: %s", cfg.Driver)
+	dialector, err := resolveDialector(cfg.Driver, cfg.DSN)
+	if err != nil {
+		return nil, err
 	}
 
 	// ====================================
@@ -107,7 +96,8 @@ func (m *Manager) openDB(cfg Config) (*gorm.DB, error) {
 
 	// Open connection
 	db, err := gorm.Open(dialector, &gorm.Config{
-		Logger: gormLogger, // Use custom Logger
+		Logger:         gormLogger, // Use custom Logger
+		TranslateError: true,
 		NowFunc: func() time.Time {
 			return time.Now().Local()
 		},
@@ -216,7 +206,7 @@ func (m *Manager) Stats(name string) (sql.DBStats, error) {
 func (m *Manager) SetOtelPlugin(plugin *OtelPlugin) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	m.otelPlugin = plugin
 
 	// 🎯 Per-instance plugin configuration: copy the plugin (the struct is
@@ -244,7 +234,7 @@ func (m *Manager) SetOtelPlugin(plugin *OtelPlugin) error {
 		m.logger.Debug("OTel plugin registered",
 			zap.String("instance", name))
 	}
-	
+
 	return nil
 }
 

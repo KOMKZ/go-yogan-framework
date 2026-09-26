@@ -26,6 +26,9 @@ func (r *BaseRepository[T]) DB() *gorm.DB {
 // Create record
 func (r *BaseRepository[T]) Create(ctx context.Context, entity *T) error {
 	if err := r.db.WithContext(ctx).Create(entity).Error; err != nil {
+		if IsDuplicateKeyError(err) {
+			return fmt.Errorf("Record creation failed: %w", errors.Join(ErrDuplicateKey, err))
+		}
 		return fmt.Errorf("Record creation failed: %w", err)
 	}
 	return nil
@@ -114,4 +117,3 @@ func (r *BaseRepository[T]) Paginate(ctx context.Context, page, pageSize int) ([
 func (r *BaseRepository[T]) Transaction(ctx context.Context, fn func(tx *gorm.DB) error) error {
 	return r.db.WithContext(ctx).Transaction(fn)
 }
-
