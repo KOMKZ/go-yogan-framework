@@ -21,11 +21,12 @@ import (
 
 // HTTPServer wraps an HTTP server (supports Gin)
 type HTTPServer struct {
-	engine     *gin.Engine
-	httpServer *http.Server
-	port       int // Configured port (0 = auto-assign)
-	actualPort int // Actual listening port, resolved at bind time
-	mode       string
+	engine                *gin.Engine
+	httpServer            *http.Server
+	port                  int // Configured port (0 = auto-assign)
+	actualPort            int // Actual listening port, resolved at bind time
+	mode                  string
+	listenerBoundObserver func(port int, bindDuration time.Duration)
 }
 
 // NewHTTPServer creates an HTTP server (uniform logging solution)
@@ -184,6 +185,7 @@ func (s *HTTPServer) GetEngine() *gin.Engine {
 // (port 0 = auto-assigned, retrievable via GetActualPort) and there is no
 // TOCTOU gap between an availability pre-check and the real bind.
 func (s *HTTPServer) Start() error {
+	bindStarted := time.Now()
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", s.port))
 	if err != nil {
 		return fmt.Errorf("Port %d is not available: %w", s.port, err)
@@ -193,6 +195,9 @@ func (s *HTTPServer) Start() error {
 	s.httpServer = &http.Server{
 		Addr:    ln.Addr().String(),
 		Handler: s.engine,
+	}
+	if s.listenerBoundObserver != nil {
+		s.listenerBoundObserver(s.actualPort, time.Since(bindStarted))
 	}
 
 	// 1. Use channel to wait for startup result

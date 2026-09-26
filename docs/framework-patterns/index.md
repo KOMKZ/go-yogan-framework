@@ -32,6 +32,7 @@
 | 队列任务 | `framework-patterns/kernel-queue.md` |
 | 应用侧访问内核 | `framework-patterns/kernel-apputil.md` |
 | HTTP 集成测试 | `framework-patterns/kernel-http-testing.md` |
+| HTTP 启动分段日志 | `framework-patterns/kernel-startup-observability.md` |
 | 查已有能力 | `framework-patterns/kernel-components-list.md` |
 
 ## 命令

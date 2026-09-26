@@ -225,8 +225,13 @@ func TestHTTPServer_Start(t *testing.T) {
 	server := NewHTTPServer(cfg, nil, nil, nil)
 
 	// Start server
+	var observedPort int
+	server.listenerBoundObserver = func(port int, _ time.Duration) {
+		observedPort = port
+	}
 	err := server.Start()
 	assert.NoError(t, err)
+	assert.Equal(t, server.GetActualPort(), observedPort)
 
 	// wait for a moment
 	time.Sleep(100 * time.Millisecond)

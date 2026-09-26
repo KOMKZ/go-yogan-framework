@@ -93,29 +93,40 @@ func (a *Application) RunInProcess() error {
 }
 
 func (a *Application) runInitializedHTTPApplication(listen bool) error {
+	a.logStartupPhase("application_initialization", a.BaseApplication.startTime)
+
 	// 1. Setup stage (initialize components, trigger OnSetup callback)
+	phaseStarted := time.Now()
 	if err := a.Setup(); err != nil {
 		return fmt.Errorf("setup failed: %w", err)
 	}
+	a.logStartupPhase("setup", phaseStarted)
 
 	// 2. Initialize the production HTTP server and routes. TCP listening is
 	// optional so integration tests can exercise the real handler stack in-process.
+	phaseStarted = time.Now()
 	if err := a.initializeHTTPServer(); err != nil {
 		return err
 	}
+	a.logStartupPhase("http_routes", phaseStarted)
 	if listen && a.httpServer != nil {
+		phaseStarted = time.Now()
 		if err := a.httpServer.Start(); err != nil {
 			return fmt.Errorf("Failed to start HTTP Server: %w", err)
 		}
+		a.logStartupPhase("listener_start_confirmation", phaseStarted,
+			zap.Int("port", a.httpServer.GetActualPort()))
 	}
 
 	// 3. Trigger the OnReady callback (using the unified callback of BaseApplication)
 	a.BaseApplication.setState(StateRunning)
+	phaseStarted = time.Now()
 	if a.BaseApplication.onReady != nil {
 		if err := a.BaseApplication.onReady(a.BaseApplication); err != nil {
 			return fmt.Errorf("onReady failed: %w", err)
 		}
 	}
+	a.logStartupPhase("on_ready", phaseStarted)
 
 	logger := a.MustGetLogger()
 	fields := []zap.Field{
@@ -185,6 +196,11 @@ func (a *Application) initializeHTTPServer() error {
 		healthAgg,
 		tokenManager,
 	)
+	a.httpServer.listenerBoundObserver = func(port int, bindDuration time.Duration) {
+		a.logStartupCheckpoint("listener_bound",
+			zap.Int("port", port),
+			zap.Int64("bind_duration_ms", bindDuration.Milliseconds()))
+	}
 
 	// Register route for business application (passing Application dependencies container).
 	// do.MustInvoke 在路由注册期产生的 DI panic 由专用边界转为紧凑启动错误。

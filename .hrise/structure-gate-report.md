@@ -1,8 +1,8 @@
 # Structure Gate Report
 
 - mode: `changed`
-- files scanned: `419`
-- functions scanned: `3386`
+- files scanned: `420`
+- functions scanned: `3388`
 - issues: `43`
 - blocking: `0`
 
@@ -36,7 +36,7 @@
 | block | naming | `event/config.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
 | block | naming | `application/router.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
 | warn | func | `application/base_app.go` | `*BaseApplication.registerComponentMetrics` | 150 | 130 | true | function line count exceeds threshold |
-| warn | func | `application/http_server.go` | `newServer` | 135 | 130 | false | function line count exceeds threshold |
+| warn | func | `application/http_server.go` | `newServer` | 135 | 130 | true | function line count exceeds threshold |
 | warn | func | `retry/retry.go` | `DoWithData` | 113 | 110 | false | function line count exceeds threshold |
 | warn | errlint | `event/dispatcher.go` | `LINT-ERR-006` | 2 | 0 | false | 禁止裸 _ = call() 吞错。修复：可传播→errcode.Capture 后返回；无法返回的旁路→logger.GetLogger(域).Warn 或 gin c.Error 显式告警；解码容错→if err != nil 显式降级零值；装配期错误→fail-fast panic (lines 321,358) |
 | warn | errlint | `logger/manager.go` | `LINT-ERR-006` | 2 | 0 | false | 禁止裸 _ = call() 吞错。修复：可传播→errcode.Capture 后返回；无法返回的旁路→logger.GetLogger(域).Warn 或 gin c.Error 显式告警；解码容错→if err != nil 显式降级零值；装配期错误→fail-fast panic (lines 233,266) |

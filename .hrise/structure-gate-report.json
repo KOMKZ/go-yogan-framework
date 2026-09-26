@@ -1,8 +1,8 @@
 {
   "mode": "changed",
   "root": "/home/kitral/pro/happy-rise-cpy/happy-rise-devpro/go-yogan-framework",
-  "files_scanned": 419,
-  "funcs_scanned": 3386,
+  "files_scanned": 420,
+  "funcs_scanned": 3388,
   "issues": [
     {
       "key": "naming:httpx/config.go",
@@ -300,7 +300,7 @@
       "value": 135,
       "threshold": 130,
       "blocking": false,
-      "changed": false,
+      "changed": true,
       "reason": "function line count exceeds threshold"
     },
     {
