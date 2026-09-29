@@ -13,8 +13,9 @@ import (
 type WorkerApplication struct {
 	*BaseApplication
 
-	profile string
-	server  *queue.Server
+	profile      string
+	server       *queue.Server
+	healthServer *workerHealthServer
 }
 
 func NewWorker(configPath, configPrefix, profile string, flags interface{}) *WorkerApplication {
@@ -54,6 +55,12 @@ func (a *WorkerApplication) RunNonBlocking() error {
 	}
 
 	if err := a.startQueueServer(); err != nil {
+		return err
+	}
+
+	// 健康检查 listener（health.listen 配置时开启）：部署链路的健康门禁依赖它，
+	// 必须先于 onReady 就绪，让「容器已启动」与「可被探活」之间不留真空窗口。
+	if err := a.startWorkerHealthServer(); err != nil {
 		return err
 	}
 
@@ -129,5 +136,11 @@ func (a *WorkerApplication) startQueueServer() error {
 func (a *WorkerApplication) gracefulShutdown() error {
 	logger := a.MustGetLogger()
 	logger.DebugCtx(a.ctx, "starting worker application graceful shutdown")
+	// 先关健康 listener：探活入口先行下线，避免滚动发布期间把旧实例误判为可用。
+	shutdownCtx, cancel := context.WithTimeout(a.ctx, 5*time.Second)
+	defer cancel()
+	if err := a.healthServer.shutdown(shutdownCtx); err != nil {
+		logger.WarnCtx(a.ctx, "worker health server shutdown issue", zap.Error(err))
+	}
 	return a.BaseApplication.Shutdown(10 * time.Second)
 }

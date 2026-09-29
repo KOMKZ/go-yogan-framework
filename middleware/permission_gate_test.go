@@ -188,3 +188,46 @@ func TestPermissionGateSkipPath(t *testing.T) {
 		t.Fatalf("expected 200, got %d", resp.Code)
 	}
 }
+
+// capturingPolicyEngine 记录 Evaluate 收到的 RequestMeta，验证门禁把真实请求路径
+// 作为 ConcretePath 透传（ticket 000277 两级匹配的输入合同）。
+type capturingPolicyEngine struct {
+	meta permission.RequestMeta
+}
+
+func (s *capturingPolicyEngine) Evaluate(_ context.Context, meta permission.RequestMeta) permission.Decision {
+	s.meta = meta
+	return permission.Allow
+}
+
+func TestPermissionGatePassesConcretePath(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	engine := gin.New()
+	engine.Use(func(c *gin.Context) {
+		c.Set("user_id", int64(10))
+		c.Next()
+	})
+	capturing := &capturingPolicyEngine{}
+	engine.Use(PermissionGate(PermissionGateConfig{
+		PolicyEngine:  capturing,
+		DefaultPolicy: permission.Allow,
+	}))
+	// 注册参数化路由，使 gin FullPath 为模板而真实 URL 为具体值。
+	engine.GET("/api/system-resources/categories/:resource", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/system-resources/categories/bgm", nil)
+	resp := httptest.NewRecorder()
+	engine.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.Code)
+	}
+	if capturing.meta.Path != "/api/system-resources/categories/:resource" {
+		t.Fatalf("Path = %q, want route template", capturing.meta.Path)
+	}
+	if capturing.meta.ConcretePath != "/api/system-resources/categories/bgm" {
+		t.Fatalf("ConcretePath = %q, want concrete request path", capturing.meta.ConcretePath)
+	}
+}

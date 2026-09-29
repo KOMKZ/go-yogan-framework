@@ -454,7 +454,12 @@ func ProvideHealthAggregator(i do.Injector) (*health.Aggregator, error) {
 	// Read Health configuration
 	cfg := health.DefaultConfig()
 	if loader.IsSet("health") {
-		_ = loader.GetViper().UnmarshalKey("health", &cfg)
+		if err := loader.GetViper().UnmarshalKey("health", &cfg); err != nil {
+			return nil, fmt.Errorf("decode health config: %w", err)
+		}
+	}
+	if err := cfg.Validate(); err != nil {
+		return nil, err
 	}
 
 	if !cfg.Enabled {

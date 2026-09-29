@@ -48,9 +48,10 @@ func PermissionGate(config PermissionGateConfig) gin.HandlerFunc {
 		}
 
 		decision := config.PolicyEngine.Evaluate(c.Request.Context(), permission.RequestMeta{
-			Method: c.Request.Method,
-			Path:   path,
-			UserID: userID,
+			Method:       c.Request.Method,
+			Path:         path,
+			ConcretePath: c.Request.URL.Path,
+			UserID:       userID,
 		})
 
 		switch decision {

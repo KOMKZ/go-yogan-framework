@@ -45,6 +45,11 @@ func NewCachedPolicyEngine(
 
 func (e *CachedPolicyEngine) Evaluate(ctx context.Context, req RequestMeta) Decision {
 	requiredPerm := e.getRoutePermission(req.Method, req.Path)
+	// 两级匹配：先按路由模板精确命中参数化声明（:id 等）；miss 后按真实请求路径
+	// 兜底，命中按具体值展开的声明（如分类路由按 scope 注册的具体策略，ticket 000277）。
+	if requiredPerm == "" && req.ConcretePath != "" && req.ConcretePath != req.Path {
+		requiredPerm = e.getRoutePermission(req.Method, req.ConcretePath)
+	}
 	if requiredPerm == "" {
 		return NotConfigured
 	}

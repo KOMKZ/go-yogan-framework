@@ -1,25 +1,25 @@
 {
   "mode": "changed",
   "root": "/home/kitral/pro/happy-rise-cpy/happy-rise-devpro/go-yogan-framework",
-  "files_scanned": 420,
-  "funcs_scanned": 3388,
+  "files_scanned": 422,
+  "funcs_scanned": 3412,
   "issues": [
-    {
-      "key": "naming:httpx/config.go",
-      "kind": "naming",
-      "severity": "block",
-      "path": "httpx/config.go",
-      "value": 1,
-      "threshold": 0,
-      "blocking": false,
-      "changed": false,
-      "reason": "weak file name; split/new business files should use business_role.go"
-    },
     {
       "key": "naming:health/config.go",
       "kind": "naming",
       "severity": "block",
       "path": "health/config.go",
+      "value": 1,
+      "threshold": 0,
+      "blocking": false,
+      "changed": true,
+      "reason": "weak file name; split/new business files should use business_role.go"
+    },
+    {
+      "key": "naming:config/validator.go",
+      "kind": "naming",
+      "severity": "block",
+      "path": "config/validator.go",
       "value": 1,
       "threshold": 0,
       "blocking": false,
@@ -71,10 +71,10 @@
       "reason": "weak file name; split/new business files should use business_role.go"
     },
     {
-      "key": "naming:application/config.go",
+      "key": "naming:auth/config.go",
       "kind": "naming",
       "severity": "block",
-      "path": "application/config.go",
+      "path": "auth/config.go",
       "value": 1,
       "threshold": 0,
       "blocking": false,
@@ -82,10 +82,10 @@
       "reason": "weak file name; split/new business files should use business_role.go"
     },
     {
-      "key": "naming:auth/config.go",
+      "key": "naming:application/config.go",
       "kind": "naming",
       "severity": "block",
-      "path": "auth/config.go",
+      "path": "application/config.go",
       "value": 1,
       "threshold": 0,
       "blocking": false,
@@ -155,7 +155,7 @@
       "value": 1,
       "threshold": 0,
       "blocking": false,
-      "changed": true,
+      "changed": false,
       "reason": "weak file name; split/new business files should use business_role.go"
     },
     {
@@ -192,10 +192,10 @@
       "reason": "weak file name; split/new business files should use business_role.go"
     },
     {
-      "key": "naming:config/validator.go",
+      "key": "naming:httpx/config.go",
       "kind": "naming",
       "severity": "block",
-      "path": "config/validator.go",
+      "path": "httpx/config.go",
       "value": 1,
       "threshold": 0,
       "blocking": false,
@@ -288,7 +288,7 @@
       "value": 150,
       "threshold": 130,
       "blocking": false,
-      "changed": true,
+      "changed": false,
       "reason": "function line count exceeds threshold"
     },
     {
@@ -300,7 +300,7 @@
       "value": 135,
       "threshold": 130,
       "blocking": false,
-      "changed": true,
+      "changed": false,
       "reason": "function line count exceeds threshold"
     },
     {
@@ -340,18 +340,6 @@
       "reason": "禁止裸 _ = call() 吞错。修复：可传播→errcode.Capture 后返回；无法返回的旁路→logger.GetLogger(域).Warn 或 gin c.Error 显式告警；解码容错→if err != nil 显式降级零值；装配期错误→fail-fast panic (lines 233,266)"
     },
     {
-      "key": "errlint:LINT-ERR-006:di/component_providers.go",
-      "kind": "errlint",
-      "severity": "warn",
-      "path": "di/component_providers.go",
-      "name": "LINT-ERR-006",
-      "value": 2,
-      "threshold": 0,
-      "blocking": false,
-      "changed": false,
-      "reason": "禁止裸 _ = call() 吞错。修复：可传播→errcode.Capture 后返回；无法返回的旁路→logger.GetLogger(域).Warn 或 gin c.Error 显式告警；解码容错→if err != nil 显式降级零值；装配期错误→fail-fast panic (lines 76,457)"
-    },
-    {
       "key": "errlint:LINT-ERR-006:jwt/session_manager.go",
       "kind": "errlint",
       "severity": "warn",
@@ -362,6 +350,18 @@
       "blocking": false,
       "changed": false,
       "reason": "禁止裸 _ = call() 吞错。修复：可传播→errcode.Capture 后返回；无法返回的旁路→logger.GetLogger(域).Warn 或 gin c.Error 显式告警；解码容错→if err != nil 显式降级零值；装配期错误→fail-fast panic (lines 88)"
+    },
+    {
+      "key": "errlint:LINT-ERR-006:di/component_providers.go",
+      "kind": "errlint",
+      "severity": "warn",
+      "path": "di/component_providers.go",
+      "name": "LINT-ERR-006",
+      "value": 1,
+      "threshold": 0,
+      "blocking": false,
+      "changed": true,
+      "reason": "禁止裸 _ = call() 吞错。修复：可传播→errcode.Capture 后返回；无法返回的旁路→logger.GetLogger(域).Warn 或 gin c.Error 显式告警；解码容错→if err != nil 显式降级零值；装配期错误→fail-fast panic (lines 76)"
     },
     {
       "key": "errlint:LINT-ERR-008:breaker/metrics_impl.go",

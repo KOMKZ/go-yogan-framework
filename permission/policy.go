@@ -14,8 +14,12 @@ const (
 // RequestMeta contains normalized request metadata for policy evaluation.
 type RequestMeta struct {
 	Method string
-	Path   string
-	UserID int64
+	// Path 是路由匹配模板（如 gin FullPath，含 :param 段）；与参数化声明的策略直接精确匹配。
+	Path string
+	// ConcretePath 是真实请求路径（URL.Path）。声明策略按具体值展开（如同一路由按 scope
+	// 注册多条具体策略）时，pattern 精确匹配会 miss，引擎用它兜底二次匹配（ticket 000277）。
+	ConcretePath string
+	UserID       int64
 }
 
 // PolicyEngine evaluates whether a request should be allowed.

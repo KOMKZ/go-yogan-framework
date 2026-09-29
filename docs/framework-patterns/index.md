@@ -29,6 +29,7 @@
 | 缓存失效 | `framework-patterns/kernel-cache.md` |
 | HTTP 限速 | `framework-patterns/kernel-limiter.md` |
 | JWT 鉴权 | `framework-patterns/kernel-jwt.md` |
+| 路由权限门禁（两级匹配 / fail-open 边界 / 策略声明规范） | `framework-patterns/kernel-permission-gate.md` |
 | 队列任务 | `framework-patterns/kernel-queue.md` |
 | 应用侧访问内核 | `framework-patterns/kernel-apputil.md` |
 | HTTP 集成测试 | `framework-patterns/kernel-http-testing.md` |
