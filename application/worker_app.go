@@ -15,7 +15,7 @@ type WorkerApplication struct {
 
 	profile      string
 	server       *queue.Server
-	healthServer *workerHealthServer
+	healthServer *appHealthServer
 }
 
 func NewWorker(configPath, configPrefix, profile string, flags interface{}) *WorkerApplication {

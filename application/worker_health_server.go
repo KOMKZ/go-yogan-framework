@@ -1,7 +1,7 @@
 // 非 HTTP 应用（Worker/Cron）的独立健康检查 listener。
-// 上游由 WorkerApplication 在队列服务启动后开启，下游输出与 HTTP 应用 /health 同构的
+// 上游由 WorkerApplication/CronApplication 在各自服务启动后开启，下游输出与 HTTP 应用 /health 同构的
 // health.Response JSON（200 healthy/degraded；503 unhealthy）。
-// 设计口径（ticket hrise-server-app 000273）：worker 的健康语义是「还能干活」而非「进程活着」，
+// 设计口径（ticket hrise-server-app 000273/000290）：非 HTTP 应用的健康语义是「还能干活」而非「进程活着」，
 // readiness 含组件依赖探测（queue broker redis ping / database ping / redis ping），
 // 进程级探活（pgrep）作为唯一健康信号是被否决的反模式。
 package application
@@ -28,7 +28,7 @@ import (
 const healthReadHeaderTimeout = 5 * time.Second
 
 // workerHealthServer 是 worker/cron 应用的独立健康检查 HTTP listener。
-type workerHealthServer struct {
+type appHealthServer struct {
 	httpServer *http.Server
 	logger     *logger.CtxZapLogger
 	addr       string
@@ -48,79 +48,99 @@ func loadHealthConfig(loader *config.Loader) (health.Config, error) {
 	return cfg, nil
 }
 
-// startWorkerHealthServer 按 health.listen 配置启动独立健康 listener。
+// startWorkerHealthServer 按 health.listen 配置启动独立健康 listener（worker 入口，共享实现见 startAppHealthListener）。
 // enabled=false 或 listen 为空时静默跳过（HTTP 应用走主端口 /health 路由，无此需求）。
 func (a *WorkerApplication) startWorkerHealthServer() error {
-	loader, err := do.Invoke[*config.Loader](a.GetInjector())
+	server, err := startAppHealthListener(a.ctx, a.GetInjector(), a.MustGetLogger())
 	if err != nil {
-		return fmt.Errorf("invoke config loader for health server: %w", err)
+		return err
+	}
+	a.healthServer = server
+	return nil
+}
+
+// startAppHealthListener 是 worker/cron 共用的独立健康 listener 启动核心：
+// 读 health 配置段、按配置存在性注册组件探活项、启动 HTTP listener；
+// enabled=false 或 listen 为空时返回 (nil, nil)（HTTP 应用走主端口 /health 路由，无此需求）。
+func startAppHealthListener(ctx context.Context, injector *do.RootScope, log *logger.CtxZapLogger) (*appHealthServer, error) {
+	loader, err := do.Invoke[*config.Loader](injector)
+	if err != nil {
+		return nil, fmt.Errorf("invoke config loader for health server: %w", err)
 	}
 	cfg, err := loadHealthConfig(loader)
 	if err != nil {
-		return fmt.Errorf("health server config invalid: %w", err)
+		return nil, fmt.Errorf("health server config invalid: %w", err)
 	}
 	if !cfg.Enabled || cfg.Listen == "" {
-		a.MustGetLogger().DebugCtx(a.ctx, "worker health server disabled",
+		log.DebugCtx(ctx, "app health server disabled",
 			zap.Bool("enabled", cfg.Enabled), zap.String("listen", cfg.Listen))
-		return nil
+		return nil, nil
 	}
-	aggregator := a.resolveHealthAggregator(cfg)
-	server := &workerHealthServer{
+	aggregator := resolveAppHealthAggregator(ctx, injector, cfg)
+	server := &appHealthServer{
 		httpServer: &http.Server{
 			Addr:              cfg.Listen,
 			Handler:           newWorkerHealthMux(aggregator),
 			ReadHeaderTimeout: healthReadHeaderTimeout,
 		},
-		logger: a.MustGetLogger(),
+		logger: log,
 		addr:   cfg.Listen,
 	}
-	a.healthServer = server
 	go func() {
-		server.logger.InfoCtx(a.ctx, "worker health server listening", zap.String("addr", server.addr))
+		server.logger.InfoCtx(ctx, "app health server listening", zap.String("addr", server.addr))
 		if serveErr := server.httpServer.ListenAndServe(); serveErr != nil && !errors.Is(serveErr, http.ErrServerClosed) {
-			server.logger.ErrorCtx(a.ctx, "worker health server failed", zap.Error(serveErr))
+			server.logger.ErrorCtx(ctx, "app health server failed", zap.Error(serveErr))
 		}
 	}()
-	return nil
+	return server, nil
 }
 
-// resolveHealthAggregator 优先复用 DI 中的聚合器；缺失时按配置超时现建，
-// 两种路径都注册 worker 运行必备组件的探活项（queue broker / database / redis）。
-func (a *WorkerApplication) resolveHealthAggregator(cfg health.Config) *health.Aggregator {
-	agg, err := do.Invoke[*health.Aggregator](a.GetInjector())
+// resolveAppHealthAggregator 优先复用 DI 中的聚合器；缺失时按配置超时现建，
+// 两种路径都注册应用运行必备组件的探活项（queue broker / database / redis）。
+func resolveAppHealthAggregator(ctx context.Context, injector *do.RootScope, cfg health.Config) *health.Aggregator {
+	agg, err := do.Invoke[*health.Aggregator](injector)
 	if err != nil || agg == nil {
 		agg = health.NewAggregator(cfg.Timeout)
 	}
-	a.registerWorkerHealthCheckers(agg)
+	registerAppHealthCheckers(agg, injector)
 	return agg
 }
 
-// registerWorkerHealthCheckers 把 worker 依赖组件的探活项注册进聚合器。
+// registerAppHealthCheckers 把应用依赖组件的探活项注册进聚合器。
 // 各组件按配置存在性惰性注册：未配置的组件（nil manager）跳过，绝不让健康检查因未使用的组件而失败。
-func (a *WorkerApplication) registerWorkerHealthCheckers(agg *health.Aggregator) {
+func registerAppHealthCheckers(agg *health.Aggregator, injector *do.RootScope) {
 	if agg == nil {
 		return
 	}
-	if cfg, err := do.Invoke[*frameworkqueue.Config](a.GetInjector()); err == nil && cfg != nil {
-		agg.Register(frameworkqueue.NewHealthChecker(*cfg))
+	// queue 探活仅在应用真的配置了队列（queue 段或 worker 的 job 段）时注册：
+	// 框架 queue 配置缺省值自带 Enabled+默认 broker，无队列应用（如 cron）不注册，
+	// 否则健康检查会去 ping 一个它从不使用的 broker（ticket hrise-server-app 000290 生产实测）。
+	queueConfigured := false
+	if loader, err := do.Invoke[*config.Loader](injector); err == nil && loader != nil {
+		queueConfigured = loader.IsSet("queue") || loader.IsSet("job")
 	}
-	if mgr, err := do.Invoke[*database.Manager](a.GetInjector()); err == nil && mgr != nil {
+	if queueConfigured {
+		if cfg, err := do.Invoke[*frameworkqueue.Config](injector); err == nil && cfg != nil {
+			agg.Register(frameworkqueue.NewHealthChecker(*cfg))
+		}
+	}
+	if mgr, err := do.Invoke[*database.Manager](injector); err == nil && mgr != nil {
 		agg.Register(database.NewHealthChecker(mgr))
 	}
-	if mgr, err := do.Invoke[*frameworkredis.Manager](a.GetInjector()); err == nil && mgr != nil {
+	if mgr, err := do.Invoke[*frameworkredis.Manager](injector); err == nil && mgr != nil {
 		agg.Register(frameworkredis.NewHealthChecker(mgr))
 	}
 }
 
 // shutdown 停止独立健康 listener；未启动时为 no-op。
-func (s *workerHealthServer) shutdown(ctx context.Context) error {
+func (s *appHealthServer) shutdown(ctx context.Context) error {
 	if s == nil || s.httpServer == nil {
 		return nil
 	}
 	if err := s.httpServer.Shutdown(ctx); err != nil {
 		return fmt.Errorf("shutdown worker health server: %w", err)
 	}
-	s.logger.InfoCtx(ctx, "worker health server stopped", zap.String("addr", s.addr))
+	s.logger.InfoCtx(ctx, "app health server stopped", zap.String("addr", s.addr))
 	return nil
 }
 

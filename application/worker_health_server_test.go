@@ -13,6 +13,8 @@ import (
 
 	"github.com/KOMKZ/go-yogan-framework/config"
 	"github.com/KOMKZ/go-yogan-framework/health"
+	frameworkqueue "github.com/KOMKZ/go-yogan-framework/queue"
+	"github.com/samber/do/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -168,4 +170,35 @@ func TestWorkerApplication_FailsFastOnInvalidHealthConfig(t *testing.T) {
 func writeWorkerHealthConfigFile(t *testing.T, configDir, content string) {
 	t.Helper()
 	require.NoError(t, os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte(content), 0o644))
+}
+
+// TestRegisterAppHealthCheckers_QueueGatedOnConfiguration 回归（ticket hrise-server-app 000290 生产实测）：
+// 无 queue/job 配置的应用（如 cron）不得注册 queue 探活——框架 queue 配置缺省值自带
+// Enabled+默认 broker，会让健康检查 ping 一个它从不使用的 broker 而整体 503。
+func TestRegisterAppHealthCheckers_QueueGatedOnConfiguration(t *testing.T) {
+	buildInjector := func(t *testing.T, values map[string]any) *do.RootScope {
+		t.Helper()
+		injector := do.New()
+		loader := newHealthTestLoader(t, values)
+		do.Provide(injector, func(do.Injector) (*config.Loader, error) { return loader, nil })
+		do.Provide(injector, func(do.Injector) (*frameworkqueue.Config, error) {
+			cfg := frameworkqueue.DefaultConfig()
+			return &cfg, nil
+		})
+		return injector
+	}
+
+	// cron 形态：无 queue/job 段 → 不注册 queue 探活
+	cronInjector := buildInjector(t, map[string]any{})
+	cronAgg := health.NewAggregator(time.Second)
+	registerAppHealthCheckers(cronAgg, cronInjector)
+	assert.NotContains(t, cronAgg.Check(context.Background()).Checks, "queue")
+
+	// worker 形态：job 段存在 → 注册 queue 探活（broker 不可达只影响结果不影响注册事实）
+	workerInjector := buildInjector(t, map[string]any{
+		"job": map[string]any{"enabled": true},
+	})
+	workerAgg := health.NewAggregator(time.Second)
+	registerAppHealthCheckers(workerAgg, workerInjector)
+	assert.Contains(t, workerAgg.Check(context.Background()).Checks, "queue")
 }

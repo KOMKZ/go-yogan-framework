@@ -17,6 +17,7 @@ type CronApplication struct {
 	// Cron dedicated
 	scheduler     gocron.Scheduler
 	taskRegistrar TaskRegistrar // Task registrar
+	healthServer  *appHealthServer
 
 	// Idempotent graceful shutdown: gocron's Shutdown is not safe to run
 	// twice (its stopErrCh has a single receiver), so a manual Shutdown()
@@ -86,6 +87,12 @@ func (a *CronApplication) run(blocking bool) error {
 	// 3. Start the scheduler
 	a.scheduler.Start()
 
+	// 3.5 健康检查 listener（health.listen 配置时开启）：与 worker 同口径，
+	// 先于 OnReady 就绪，让「进程已启动」与「可被探活」之间不留真空窗口（ticket hrise-server-app 000290）。
+	if err := a.startCronHealthServer(); err != nil {
+		return fmt.Errorf("start health server: %w", err)
+	}
+
 	// 4. Trigger OnReady callback (unified callback of BaseApplication)
 	a.BaseApplication.setState(StateRunning)
 	if a.BaseApplication.onReady != nil {
@@ -121,6 +128,13 @@ func (a *CronApplication) doGracefulShutdown() error {
 	logger := a.MustGetLogger()
 	logger.DebugCtx(a.ctx, "Starting Cron application graceful shutdown...")
 
+	// 0. 先关健康 listener：探活入口先行下线，避免滚动发布期间把旧实例误判为可用。
+	shutdownCtx, cancel := context.WithTimeout(a.ctx, 5*time.Second)
+	defer cancel()
+	if err := a.healthServer.shutdown(shutdownCtx); err != nil {
+		logger.WarnCtx(a.ctx, "cron health server shutdown issue", zap.Error(err))
+	}
+
 	// 1. Shutdown scheduler (with timeout control)
 	if a.scheduler != nil {
 		if err := a.shutdownSchedulerWithTimeout(); err != nil {
@@ -133,6 +147,16 @@ func (a *CronApplication) doGracefulShutdown() error {
 	// 2. Call Base's generic shutdown logic (trigger the unified OnShutdown
 	// callback + shut down all components)
 	return a.BaseApplication.Shutdown(10 * time.Second)
+}
+
+// startCronHealthServer 按 health.listen 配置启动独立健康 listener（cron 入口，共享实现见 startAppHealthListener）。
+func (a *CronApplication) startCronHealthServer() error {
+	server, err := startAppHealthListener(a.ctx, a.GetInjector(), a.MustGetLogger())
+	if err != nil {
+		return err
+	}
+	a.healthServer = server
+	return nil
 }
 
 // shutdownSchedulerWithTimeout Shutdown scheduler (with timeout control)
