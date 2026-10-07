@@ -3,7 +3,8 @@
 // #394 结论：深层关键字段被上层 %w 包装后不会自动变成可见诊断信息，而把任意内层
 // error_data 递归合并到最外层又有泄密风险。折中方案是"词表 + 安全标量"的受控传播：
 //   - 只有词表内的键允许跨层进入统一日志的 error_data；
-//   - 值必须是安全标量（字符串脱敏并截断为短摘要、布尔、数值）；
+//   - 值必须是安全标量（受信任的短 token、布尔、数值）；字符串只做形态防御，
+//     调用方仍须证明它来自程序常量或已通过完整合同校验；
 //   - 词表外键与非安全值在写入侧（WithDiag）和传播侧（DiagnosticFields）双端丢弃。
 //
 // 词表是冻结契约：新增键必须修改本文件并说明类别，禁止各业务自造同义字段。
@@ -127,13 +128,17 @@ func CaptureWithDiag(cause error, operation string, fields map[string]any) error
 		return nil
 	}
 	if inner, isDirect := cause.(*LayeredError); isDirect {
+		var publicData map[string]interface{}
+		if inner.publicData != nil {
+			publicData = inner.clonePublicData()
+		}
 		wrapper := &LayeredError{
 			module:      inner.module,
 			code:        inner.code,
 			msgKey:      inner.msgKey,
 			msg:         inner.msg,
 			httpStatus:  inner.httpStatus,
-			publicData:  inner.clonePublicData(),
+			publicData:  publicData,
 			cause:       inner,
 			operation:   operation,
 			data:        make(map[string]interface{}),
@@ -162,7 +167,8 @@ func CaptureWithDiag(cause error, operation string, fields map[string]any) error
 
 // DiagnosticFields 汇总错误链上全部 LayeredError 的词表内安全诊断字段。
 // 键冲突时内层（首发确认边界）覆盖外层：上层只补业务语义，不覆盖首发事实。
-// 返回值只含已脱敏/已截断的安全标量，允许直接写入统一日志的 error_data。
+// 返回值只含通过结构防御的安全标量；string 的来源可信性由调用点合同保证。
+// 结果允许直接写入统一日志的 error_data。
 func DiagnosticFields(err error) map[string]any {
 	layers := layeredErrorChain(err)
 	if len(layers) == 0 {

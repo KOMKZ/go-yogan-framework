@@ -2,7 +2,7 @@
 
 - mode: `changed`
 - files scanned: `427`
-- functions scanned: `3455`
+- functions scanned: `3459`
 - issues: `43`
 - blocking: `0`
 

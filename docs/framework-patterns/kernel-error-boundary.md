@@ -123,15 +123,19 @@ output_contract / schema_version / validation_field / validation_rule / validati
 provider_key / model_key / provider_request_id / provider_error_code / temperature /
 max_tokens / storage_id / content_type / orientation / duration_ms / segment_index /
 input_bytes / output_bytes / input_sha256 / output_sha256 / item_count），
-值必须是安全标量（布尔、数值；字符串必须**整体匹配安全 token 形态**
+值必须是安全标量（布尔、数值；字符串必须**来自程序常量/程序生成值或已通过完整领域合同校验**，
+并整体匹配安全 token 形态
 `^[A-Za-z0-9._:@/+~-]{1,128}$`——空格/中文/引号/=/超长原文意味着 prompt、模型输出、
-用户正文或 provider body 片段，整值丢弃而不是截断保留，000395 整改 P1-3A）；
+用户正文或 provider body 片段，整值丢弃而不是截断保留）。字符形状只是框架末端结构防御，
+不能证明来源可信；未通过校验的 ASCII 模型/用户原值同样禁止传入（000395 二轮整改 P1-3）；
 词表外键与非安全值在写入侧即被丢弃。`ErrorLogFields` 的 `error_data` 输出
 最外层 `Data()` 全量，再叠加链上词表内诊断（`DiagnosticFields(err)`），键冲突时内层首发值覆盖外层；
 `CaptureWithDiag` 遇 cause 直接是 `*LayeredError` 时会把字段挂到新的外层实例——
-上层只能补缺失字段，不得覆盖内层首发事实（000395 整改 P1-2）。
+上层只能补缺失字段，不得覆盖内层首发事实；新外层同时继承原错误的注册 code/module、
+公开文案、HTTP status 与 `PublicData`，保持 `errors.As` 和全部公开出口语义（000395 二轮整改 P1-2）。
 链遍历（`chain.go`）与 root/cause 下钻对任意合法 error 实现（含不可比较动态值与
-自定义 Unwrap 环）安全，环在 `maxChainDepth` 截断（000395 整改 P1-1）。
+自定义 Unwrap 环）安全；整次 DFS 共享 `maxChainNodes` 节点预算，分支环和高分叉图的
+总工作量同样有界（000395 二轮整改 P1-1）。
 词表外的任意 map 不做跨层合并——禁止递归合并 `error_data`（泄密风险），禁止为绕过词表
 自造同义键；新增键必须修改 `diag.go` 词表并说明类别。
 

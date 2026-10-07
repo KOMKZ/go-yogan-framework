@@ -2,7 +2,7 @@
   "mode": "changed",
   "root": "/home/kitral/pro/happy-rise-cpy/happy-rise-devpro/go-yogan-framework",
   "files_scanned": 427,
-  "funcs_scanned": 3455,
+  "funcs_scanned": 3459,
   "issues": [
     {
       "key": "naming:health/config.go",
