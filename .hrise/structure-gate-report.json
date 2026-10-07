@@ -1,8 +1,8 @@
 {
   "mode": "changed",
   "root": "/home/kitral/pro/happy-rise-cpy/happy-rise-devpro/go-yogan-framework",
-  "files_scanned": 422,
-  "funcs_scanned": 3412,
+  "files_scanned": 427,
+  "funcs_scanned": 3455,
   "issues": [
     {
       "key": "naming:health/config.go",
@@ -12,7 +12,7 @@
       "value": 1,
       "threshold": 0,
       "blocking": false,
-      "changed": true,
+      "changed": false,
       "reason": "weak file name; split/new business files should use business_role.go"
     },
     {
@@ -360,7 +360,7 @@
       "value": 1,
       "threshold": 0,
       "blocking": false,
-      "changed": true,
+      "changed": false,
       "reason": "禁止裸 _ = call() 吞错。修复：可传播→errcode.Capture 后返回；无法返回的旁路→logger.GetLogger(域).Warn 或 gin c.Error 显式告警；解码容错→if err != nil 显式降级零值；装配期错误→fail-fast panic (lines 76)"
     },
     {

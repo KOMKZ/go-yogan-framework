@@ -102,6 +102,39 @@ CaptureInto(&err, "scope.op"):
 
 如果业务 op 需要进一步细分，建议在 service 入口用 `defer errcode.CaptureInto(&err, "<domain>.<sub>.<method>")` 单独设一个更精确的 op，而不是依赖 `Wrap` 时被覆盖。
 
+## 嵌套 %w 链的保真（000395 批次一）
+
+中间层用普通 `fmt.Errorf("...: %w", err)` 包装后，深层 `LayeredError` 不再是 cause 的直接类型。
+框架按"最内层首发边界优先"处理：
+
+- `Capture(cause, op)`：cause 是嵌套 %w 链且链上已有 `LayeredError` 时，属于重新捕获——
+  origin stack 与 operation 继承链上最内层 `LayeredError`，不被当前执行层位置覆盖；
+  链上没有 `LayeredError` 时 origin 仍是当前捕获位置。cause 直接是 `*LayeredError` 时仍原样返回。
+- `LayeredError.Wrap/Wrapf`（`cloneOrigin`）：嵌套链上的深层 origin 同样保留；
+  wrapper 自带 op 时永远不被覆盖（上述 operation 归属规则不变），wrapper 没有 op 时继承深层 op。
+- `errors.Is/As`、code/module/http status、`PublicData`、root/cause、`SafeMessage` 公开侧
+  全部不变：`ErrorLogFields` 在外层为裸 Capture（code=0）且链上存在注册业务码时，
+  会补出链上最外层注册码与注册文案（与 `errors.As` 的最外层匹配语义一致）。
+
+受控诊断字段（`errcode/diag.go`）：深层已知的安全事实用 `WithDiag(key, value)` /
+`WithDiagFields(map)` / `CaptureWithDiag(err, op, fields)` 标注，键必须在冻结词表内
+（`DiagnosticKeys()`：creation_id / stage_id / asset_id / job_id / task_id / slot_key /
+output_contract / schema_version / validation_field / validation_rule / validation_actual /
+provider_key / model_key / provider_request_id / provider_error_code / temperature /
+max_tokens / storage_id / content_type / orientation / duration_ms / segment_index /
+input_bytes / output_bytes / input_sha256 / output_sha256 / item_count），
+值必须是安全标量（布尔、数值；字符串必须**整体匹配安全 token 形态**
+`^[A-Za-z0-9._:@/+~-]{1,128}$`——空格/中文/引号/=/超长原文意味着 prompt、模型输出、
+用户正文或 provider body 片段，整值丢弃而不是截断保留，000395 整改 P1-3A）；
+词表外键与非安全值在写入侧即被丢弃。`ErrorLogFields` 的 `error_data` 输出
+最外层 `Data()` 全量，再叠加链上词表内诊断（`DiagnosticFields(err)`），键冲突时内层首发值覆盖外层；
+`CaptureWithDiag` 遇 cause 直接是 `*LayeredError` 时会把字段挂到新的外层实例——
+上层只能补缺失字段，不得覆盖内层首发事实（000395 整改 P1-2）。
+链遍历（`chain.go`）与 root/cause 下钻对任意合法 error 实现（含不可比较动态值与
+自定义 Unwrap 环）安全，环在 `maxChainDepth` 截断（000395 整改 P1-1）。
+词表外的任意 map 不做跨层合并——禁止递归合并 `error_data`（泄密风险），禁止为绕过词表
+自造同义键；新增键必须修改 `diag.go` 词表并说明类别。
+
 ## SafeMessage 语义（000128 P0-3 修订）
 
 `SafeMessage(err)` 返回 `SafeMessageResult{PublicMessage, PublicData, Diagnostics}`：

@@ -1,8 +1,8 @@
 # Structure Gate Report
 
 - mode: `changed`
-- files scanned: `422`
-- functions scanned: `3412`
+- files scanned: `427`
+- functions scanned: `3455`
 - issues: `43`
 - blocking: `0`
 
@@ -10,7 +10,7 @@
 
 | severity | kind | path | name | value | threshold | changed | reason |
 |---|---|---|---|---:|---:|---|---|
-| block | naming | `health/config.go` | `` | 1 | 0 | true | weak file name; split/new business files should use business_role.go |
+| block | naming | `health/config.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
 | block | naming | `config/validator.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
 | block | naming | `kafka/config.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
 | block | naming | `telemetry/config.go` | `` | 1 | 0 | false | weak file name; split/new business files should use business_role.go |
@@ -41,7 +41,7 @@
 | warn | errlint | `event/dispatcher.go` | `LINT-ERR-006` | 2 | 0 | false | 禁止裸 _ = call() 吞错。修复：可传播→errcode.Capture 后返回；无法返回的旁路→logger.GetLogger(域).Warn 或 gin c.Error 显式告警；解码容错→if err != nil 显式降级零值；装配期错误→fail-fast panic (lines 321,358) |
 | warn | errlint | `logger/manager.go` | `LINT-ERR-006` | 2 | 0 | false | 禁止裸 _ = call() 吞错。修复：可传播→errcode.Capture 后返回；无法返回的旁路→logger.GetLogger(域).Warn 或 gin c.Error 显式告警；解码容错→if err != nil 显式降级零值；装配期错误→fail-fast panic (lines 233,266) |
 | warn | errlint | `jwt/session_manager.go` | `LINT-ERR-006` | 1 | 0 | false | 禁止裸 _ = call() 吞错。修复：可传播→errcode.Capture 后返回；无法返回的旁路→logger.GetLogger(域).Warn 或 gin c.Error 显式告警；解码容错→if err != nil 显式降级零值；装配期错误→fail-fast panic (lines 88) |
-| warn | errlint | `di/component_providers.go` | `LINT-ERR-006` | 1 | 0 | true | 禁止裸 _ = call() 吞错。修复：可传播→errcode.Capture 后返回；无法返回的旁路→logger.GetLogger(域).Warn 或 gin c.Error 显式告警；解码容错→if err != nil 显式降级零值；装配期错误→fail-fast panic (lines 76) |
+| warn | errlint | `di/component_providers.go` | `LINT-ERR-006` | 1 | 0 | false | 禁止裸 _ = call() 吞错。修复：可传播→errcode.Capture 后返回；无法返回的旁路→logger.GetLogger(域).Warn 或 gin c.Error 显式告警；解码容错→if err != nil 显式降级零值；装配期错误→fail-fast panic (lines 76) |
 | warn | errlint | `breaker/metrics_impl.go` | `LINT-ERR-008` | 1 | 0 | false | err.Error() 不得直接赋值/return 进 DB 列/record/DTO。修复：持久化诊断 errcode.Redact(err.Error())；用户可见文案 errcode.SafeMessage(err).PublicMessage (lines 95) |
 | warn | errlint | `health/aggregator.go` | `LINT-ERR-008` | 1 | 0 | false | err.Error() 不得直接赋值/return 进 DB 列/record/DTO。修复：持久化诊断 errcode.Redact(err.Error())；用户可见文案 errcode.SafeMessage(err).PublicMessage (lines 101) |
 | warn | errlint | `auth/service.go` | `LINT-ERR-004` | 1 | 0 | false | err.Error() 不得进响应/DTO/持久化。修复：用户面 errcode.SafeMessage(err).PublicMessage 或 PublicMessageOf；运维/日志诊断面 errcode.Redact(err.Error())；内部分类改 errors.As 类型化判别 (lines 64) |

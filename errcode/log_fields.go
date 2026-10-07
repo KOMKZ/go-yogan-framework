@@ -16,9 +16,11 @@ import (
 
 // ErrorLogFields 把任意 error 转成统一 schema 的日志字段。
 //
-// LayeredError 输出：error_code（仅 >0）、error_msg（注册文案；未注册消息脱敏）、
+// LayeredError 输出：error_code（仅 >0；外层为裸 Capture 而链上有注册业务码时补出
+// 链上注册码，治理 ticket 000395）、error_msg（注册文案；未注册消息脱敏）、
 // error_operation、error_origin_stack、error_cause_type/message（脱敏）、
-// error_root_type/message（脱敏）、error_chain（脱敏）、error_data（私有诊断，仅日志）。
+// error_root_type/message（脱敏）、error_chain（脱敏）、
+// error_data（外层私有诊断全量 + 链上词表内受控诊断，仅日志）。
 // 普通 error 输出：error_chain（脱敏）。
 func ErrorLogFields(err error) []zap.Field {
 	if err == nil {
@@ -36,8 +38,15 @@ func ErrorLogFields(err error) []zap.Field {
 			zap.Int("error_code", le.Code()),
 			zap.String("error_msg", PublicMessageOf(err)),
 		)
+	} else if registered := outermostRegisteredError(err); registered != nil {
+		// 嵌套 %w 链被外层裸 Capture 遮蔽时，注册业务码是链上真实业务语义，
+		// 必须补出（注册文案本身经过审核，可安全进日志）。
+		fields = append(fields,
+			zap.Int("error_code", registered.Code()),
+			zap.String("error_msg", registered.Message()),
+		)
 	}
-	if data := le.Data(); len(data) > 0 {
+	if data := mergedErrorData(err, le); len(data) > 0 {
 		fields = append(fields, zap.Any("error_data", data))
 	}
 	if originStack := le.OriginStack(); originStack != "" {
@@ -60,6 +69,20 @@ func ErrorLogFields(err error) []zap.Field {
 	}
 	fields = append(fields, zap.String("error_chain", Redact(le.String())))
 	return fields
+}
+
+// mergedErrorData 合并出口错误数据：最外层 Data() 全量保留（治理 ticket 000128
+// 既有语义），再叠加链上词表内受控诊断（DiagnosticFields）；词表键冲突时
+// DiagnosticFields 的内层首发值覆盖外层。词表外键不做跨层合并（防泄密）。
+func mergedErrorData(err error, outer *LayeredError) map[string]any {
+	data := make(map[string]any, len(outer.Data())+8)
+	for key, value := range outer.Data() {
+		data[key] = value
+	}
+	for key, value := range DiagnosticFields(err) {
+		data[key] = value
+	}
+	return data
 }
 
 // PublicMessageOf 返回可直接给客户端/任务详情的公开文案：

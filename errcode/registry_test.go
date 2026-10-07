@@ -232,4 +232,3 @@ func TestRegistry_ConcurrentGetAll(t *testing.T) {
 		<-done
 	}
 }
-

@@ -21,6 +21,7 @@ type LayeredError struct {
 	cause       error                  // Original error (error chain)
 	originStack string                 // Location where this error was wrapped
 	operation   string                 // Operation where the error was captured
+	transparent bool                   // Diagnostic-only layer: render exactly like its cause
 }
 
 // New Create hierarchical error codes
@@ -49,6 +50,9 @@ func New(moduleCode, businessCode int, module, msgKey, msg string, httpStatus ..
 // Implement error interface
 func (e *LayeredError) Error() string {
 	if e.cause != nil {
+		if e.transparent {
+			return e.cause.Error()
+		}
 		if e.msg == e.cause.Error() {
 			return e.msg
 		}
@@ -198,6 +202,19 @@ func cloneOrigin(cause error, target *LayeredError) {
 		}
 		return
 	}
+	// 治理 ticket 000395：嵌套 %w 链上的深层 LayeredError 同样保留首发 origin，
+	// 业务层 Wrap 不得把它覆盖为包装位置；target 未显式标注 operation 时继承深层 op。
+	if nested := innermostLayeredError(cause); nested != nil {
+		if nested.OriginStack() != "" {
+			target.originStack = nested.OriginStack()
+		} else if target.originStack == "" {
+			target.originStack = errorOriginStack(cause)
+		}
+		if target.operation == "" && nested.Operation() != "" {
+			target.operation = nested.Operation()
+		}
+		return
+	}
 	if target.originStack == "" {
 		target.originStack = errorOriginStack(cause)
 	}
@@ -218,37 +235,50 @@ func (e *LayeredError) Operation() string {
 
 // RootCause returns the deepest error in the chain without changing the
 // chain's errors.Is/errors.As behavior.
+// 整改 P1-1：与链遍历同样做深度上限防护——自定义 Unwrap 环在此截断，
+// 不再无限循环（errors.Is/As 语义不变，环上错误本身即由调用方语义决定）。
 func (e *LayeredError) RootCause() error {
 	current := error(e)
-	for {
+	for nodes := 0; nodes < maxChainNodes; nodes++ {
 		unwrapper, ok := current.(interface{ Unwrap() error })
-		if !ok || unwrapper.Unwrap() == nil {
+		if !ok {
 			return current
 		}
-		current = unwrapper.Unwrap()
+		next := unwrapper.Unwrap()
+		if next == nil {
+			return current
+		}
+		current = next
 	}
+	return current
 }
 
 // DiagnosticCause returns the first non-LayeredError cause in the chain.
 // It keeps contextual typed errors (for example provider errors with codes)
 // visible in logs while RootCause remains the deepest sentinel/technical error
 // for programmatic checks.
+// 整改 P1-1：同样做深度上限防护。
 func (e *LayeredError) DiagnosticCause() error {
 	if e == nil {
 		return nil
 	}
 	current := e.cause
-	for {
+	for nodes := 0; nodes < maxChainNodes && current != nil; nodes++ {
 		layered, ok := current.(*LayeredError)
 		if !ok || layered.cause == nil {
 			return current
 		}
 		current = layered.cause
 	}
+	return current
 }
 
 // Capture turns a technical error into the framework error model at the
 // boundary where it occurred. A later business Wrap preserves this origin.
+//
+// 治理 ticket 000395：cause 是嵌套 %w 链（中间层 fmt.Errorf 包装）且链上已有
+// LayeredError 时，本次属于重新捕获——origin/operation 继承链上最内层首发边界，
+// 不被当前执行层位置覆盖；链上没有 LayeredError 时 origin 仍是当前捕获位置。
 func Capture(cause error, operation string) error {
 	if cause == nil {
 		return nil
@@ -256,13 +286,25 @@ func Capture(cause error, operation string) error {
 	if existing, ok := cause.(*LayeredError); ok {
 		return existing
 	}
-	return &LayeredError{
-		msg:         cause.Error(),
-		cause:       cause,
-		operation:   operation,
-		originStack: errorOriginStack(cause),
-		data:        make(map[string]interface{}),
+	captured := &LayeredError{
+		msg:       cause.Error(),
+		cause:     cause,
+		operation: operation,
+		data:      make(map[string]interface{}),
 	}
+	if nested := innermostLayeredError(cause); nested != nil {
+		if nested.OriginStack() != "" {
+			captured.originStack = nested.OriginStack()
+		} else {
+			captured.originStack = errorOriginStack(cause)
+		}
+		if nested.Operation() != "" {
+			captured.operation = nested.Operation()
+		}
+		return captured
+	}
+	captured.originStack = errorOriginStack(cause)
+	return captured
 }
 
 // Implements support for errors.Is() (by checking equality through code)

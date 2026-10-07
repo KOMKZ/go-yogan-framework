@@ -2,6 +2,7 @@ package queue
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
@@ -77,4 +78,50 @@ func zapFieldsMap(fields []zap.Field) map[string]interface{} {
 		field.AddTo(encoder)
 	}
 	return encoder.Fields
+}
+
+// queueNestedDeepCapture 模拟深层业务边界：错误首次在此确认并携带受控诊断。
+// origin 首帧必须固定在本函数；queue 出口不得把它覆盖为消费层位置。
+func queueNestedDeepCapture() error {
+	return errcode.Capture(errors.New("segment 3 missing narration track"), "content_creation_v3.stage.validate").(*errcode.LayeredError).
+		WithDiag("creation_id", "cr_test_0001").
+		WithDiag("asset_id", "asset_3003").
+		WithDiag("validation_field", "narration_track").
+		WithDiag("validation_rule", "required_non_empty")
+}
+
+// 治理 ticket 000395 批次一消费方回归：hrise-worker 的真实出口是
+// handleTask 返回 err → asynq ErrorHandler → queueErrorFields（asynq_server.go）。
+// 深层错误经中间层 %w 包装、执行层二次 Capture 后，queue 单条 ERROR 仍必须能
+// 定位深层源位置、operation 与受控诊断字段，且词表外内容不出现。
+func TestQueueErrorFieldsPreserveNestedChainOrigin(t *testing.T) {
+	deep := queueNestedDeepCapture()
+	executorErr := errcode.Capture(fmt.Errorf("llm execute stage: %w", deep), "content_creation_v3.executor.run")
+	taskErr := errcode.New(91, 7, "queue-test", "queue.test.failed", "任务执行失败", http.StatusInternalServerError).Wrap(executorErr)
+
+	fields := zapFieldsMap(queueErrorFields(taskErr))
+
+	if origin, _ := fields["error_origin_stack"].(string); !strings.Contains(origin, "queueNestedDeepCapture") {
+		t.Fatalf("queue origin stack lost deep site: %q", origin)
+	}
+	if fields["error_operation"] != "content_creation_v3.stage.validate" {
+		t.Fatalf("operation = %+v, want deep operation", fields["error_operation"])
+	}
+	if fields["error_code"] != int64(910007) || fields["error_msg"] != "任务执行失败" {
+		t.Fatalf("outer registered code must win: %+v", fields)
+	}
+	data, _ := fields["error_data"].(map[string]interface{})
+	for key, want := range map[string]string{
+		"creation_id":      "cr_test_0001",
+		"asset_id":         "asset_3003",
+		"validation_field": "narration_track",
+		"validation_rule":  "required_non_empty",
+	} {
+		if data[key] != want {
+			t.Fatalf("error_data[%q] = %+v, want %q", key, data[key], want)
+		}
+	}
+	if _, ok := data["prompt"]; ok {
+		t.Fatalf("non-vocabulary key must not propagate: %+v", data)
+	}
 }

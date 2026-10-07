@@ -249,6 +249,26 @@ func TestHandleError_LayeredError(t *testing.T) {
 	assert.Equal(t, "layered-trace-1", resp.TraceID)
 }
 
+// TestHandleError_CaptureWithDiagPreservesRegisteredResponse 固定诊断外层不得改变
+// 注册业务错误的 HTTP status/code/message/public data。
+func TestHandleError_CaptureWithDiagPreservesRegisteredResponse(t *testing.T) {
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/test", nil)
+
+	registered := errcode.New(10, 3, "test", "test.error.conflict", "资源冲突", http.StatusConflict).
+		WithPublicData("resource_id", "public-1")
+	captured := errcode.CaptureWithDiag(registered, "test.capture", map[string]any{"asset_id": "asset_1"})
+	HandleError(c, captured)
+
+	assert.Equal(t, http.StatusConflict, w.Code)
+	var resp Response
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.Equal(t, registered.Code(), resp.Code)
+	assert.Equal(t, "资源冲突", resp.Msg)
+	assert.Equal(t, map[string]any{"resource_id": "public-1"}, resp.Data)
+}
+
 // TestHandleError_LayeredError_WithLogging test LayeredError with logging configuration
 func TestHandleError_LayeredError_WithLogging(t *testing.T) {
 	w := httptest.NewRecorder()

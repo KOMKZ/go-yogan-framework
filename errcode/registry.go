@@ -129,4 +129,3 @@ func GetRegistryCount() int {
 func ClearGlobalRegistry() {
 	globalRegistry.Clear()
 }
-
