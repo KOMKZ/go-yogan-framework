@@ -148,6 +148,13 @@ Runtime config is the final source of truth. `TaskDefinition.ApplyTaskConfig`
 merges configured queue, mode, timeout, retention, and unique TTL over
 the code defaults.
 
+`Config.DeclaredTaskConfig(type)` returns only the explicitly declared
+per-task entry (zero value when absent), so consumers can tell an explicit
+value from an inherited default. Use it for fields that must never be
+silently defaulted — for example a task's declared `Timeout` should not be
+downgraded to `default_task.timeout` just because its route key is missing
+from config.
+
 ## Registry Dispatch
 
 `Registry.Dispatch(ctx, task)` executes the registered handler in-process. The

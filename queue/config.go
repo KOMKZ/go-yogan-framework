@@ -158,6 +158,13 @@ func (c Config) TaskConfig(taskType string) TaskConfig {
 	return taskCfg
 }
 
+// DeclaredTaskConfig 只返回为该任务类型显式声明的配置，未声明时返回零值。
+// 用于任务定义合并：显式声明 > 代码内声明值；DefaultTask 等兜底默认值不参与覆盖，
+// 避免漏配任务路由键时代码里声明的 Timeout 被默认值静默降级。
+func (c Config) DeclaredTaskConfig(taskType string) TaskConfig {
+	return c.Tasks[taskType]
+}
+
 func (c Config) Profile(name string) (ProfileConfig, error) {
 	if name == "" {
 		name = DefaultProfile

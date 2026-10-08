@@ -122,3 +122,16 @@ func TestProfileWorkersRejectsCrossBrokerQueue(t *testing.T) {
 		t.Fatal("expected cross broker queue error")
 	}
 }
+
+func TestDeclaredTaskConfigReturnsOnlyExplicitEntry(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.ApplyDefaults()
+	cfg.Tasks["export.demo"] = TaskConfig{Queue: "low", Timeout: 30 * time.Minute}
+
+	if got := cfg.DeclaredTaskConfig("export.demo"); got.Timeout != 30*time.Minute || got.Queue != "low" {
+		t.Fatalf("declared = %#v", got)
+	}
+	if got := cfg.DeclaredTaskConfig("missing.task"); got != (TaskConfig{}) {
+		t.Fatalf("undeclared task must yield zero config: %#v", got)
+	}
+}
