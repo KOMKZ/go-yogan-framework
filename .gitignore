@@ -18,3 +18,9 @@ coverage.html
 # 编译产物
 *.exe
 *.test
+
+# Media policy: generated or temporary media must never be committed.
+*.mp4
+*.MP4
+*.mp3
+*.MP3
