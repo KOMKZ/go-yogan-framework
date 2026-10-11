@@ -26,6 +26,7 @@
 | HTTP 错误日志 | `framework-patterns/kernel-httpx-error.md` |
 | 错误边界 / SafeMessage / 脱敏 | `framework-patterns/kernel-error-boundary.md` |
 | 缓存失效 | `framework-patterns/kernel-cache.md` |
+| 业务缓存策略目录（PolicyCatalog / 三级开关 / TTL） | `framework-patterns/kernel-cache.md` |
 | HTTP 限速 | `framework-patterns/kernel-limiter.md` |
 | HTTP 启动分段可观测性 | `framework-patterns/kernel-startup-observability.md` |
 | JWT 鉴权 | `framework-patterns/kernel-jwt.md` |
