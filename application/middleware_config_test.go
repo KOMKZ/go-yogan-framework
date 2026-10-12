@@ -1,9 +1,13 @@
 package application
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/KOMKZ/go-yogan-framework/config"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestMiddlewareConfig_ApplyDefaults_test_default_values_for_middleware_config
@@ -129,4 +133,48 @@ func TestApiServerConfig(t *testing.T) {
 	assert.Equal(t, "release", cfg.Mode)
 	assert.Equal(t, 30, cfg.ReadTimeout)
 	assert.Equal(t, 30, cfg.WriteTimeout)
+}
+
+// TestRequestLogConfig_SkipRulesParsing 用框架真实 config.Loader（viper +
+// mapstructure）解析 YAML，锁定 skip_rules 在配置解析链上不丢字段。
+func TestRequestLogConfig_SkipRulesParsing(t *testing.T) {
+	tmpDir := t.TempDir()
+	configFile := filepath.Join(tmpDir, "runtime.middleware.yaml")
+	configContent := `
+middleware:
+  request_log:
+    enable: true
+    skip_paths:
+      - /health
+    skip_rules:
+      - method: GET
+        path: /api/openapi/v1/render-ops/load
+        statuses: [200]
+      - method: POST
+        path: /api/openapi/v1/render-workers/claim
+        statuses: [204]
+`
+	require.NoError(t, os.WriteFile(configFile, []byte(configContent), 0644))
+
+	loader := config.NewLoader()
+	loader.AddSource(config.NewFileSource(configFile, 1))
+	require.NoError(t, loader.Load())
+
+	var appCfg AppConfig
+	require.NoError(t, loader.Unmarshal(&appCfg))
+
+	require.NotNil(t, appCfg.Middleware)
+	require.NotNil(t, appCfg.Middleware.RequestLog)
+	requestLog := appCfg.Middleware.RequestLog
+	assert.True(t, requestLog.Enable)
+	assert.Equal(t, []string{"/health"}, requestLog.SkipPaths)
+	require.Len(t, requestLog.SkipRules, 2)
+
+	assert.Equal(t, "GET", requestLog.SkipRules[0].Method)
+	assert.Equal(t, "/api/openapi/v1/render-ops/load", requestLog.SkipRules[0].Path)
+	assert.Equal(t, []int{200}, requestLog.SkipRules[0].Statuses)
+
+	assert.Equal(t, "POST", requestLog.SkipRules[1].Method)
+	assert.Equal(t, "/api/openapi/v1/render-workers/claim", requestLog.SkipRules[1].Path)
+	assert.Equal(t, []int{204}, requestLog.SkipRules[1].Statuses)
 }

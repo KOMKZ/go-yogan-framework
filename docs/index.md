@@ -24,6 +24,7 @@
 | 接入依赖注入 | `framework-patterns/kernel-do.md`、`framework-patterns/kernel-do-provide.md`、`framework-patterns/kernel-do-invoke.md` |
 | 组件生命周期 | `framework-patterns/kernel-healthcheck.md`、`framework-patterns/kernel-shutdown.md` |
 | HTTP 错误日志 | `framework-patterns/kernel-httpx-error.md` |
+| HTTP 访问日志 / 成功响应条件降噪 | `framework-patterns/kernel-request-log.md` |
 | 错误边界 / SafeMessage / 脱敏 | `framework-patterns/kernel-error-boundary.md` |
 | 缓存失效 | `framework-patterns/kernel-cache.md` |
 | 业务缓存策略目录（PolicyCatalog / 三级开关 / TTL） | `framework-patterns/kernel-cache.md` |

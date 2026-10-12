@@ -4,12 +4,18 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/KOMKZ/go-yogan-framework/httpx"
+	"github.com/KOMKZ/go-yogan-framework/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestNewHTTPServer test creating HTTP server
@@ -303,4 +309,79 @@ func TestNewHTTPServer_DebugMode(t *testing.T) {
 
 	// Revert to test mode
 	gin.SetMode(gin.TestMode)
+}
+
+// TestHTTPServer_RequestLogSkipRulesWiring 从 NewHTTPServer 装配入口验证
+// skip_rules 被完整传递到 middleware：命中成功规则的响应无访问日志，
+// 同路由错误响应仍记录。
+func TestHTTPServer_RequestLogSkipRulesWiring(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	logDir := t.TempDir()
+	fileEnabled := true
+	logger.MustResetManager(logger.ManagerConfig{
+		BaseLogDir:            logDir,
+		Level:                 "info",
+		Encoding:              "json",
+		EnableConsole:         false,
+		EnableFile:            &fileEnabled,
+		EnableLevelInFilename: true,
+		EnableDateInFilename:  false,
+	})
+	t.Cleanup(logger.CloseAll)
+
+	middlewareCfg := &MiddlewareConfig{
+		RequestLog: &RequestLogConfig{
+			Enable:    true,
+			SkipPaths: []string{"/health"},
+			SkipRules: []RequestLogSkipRuleConfig{
+				{Method: "POST", Path: "/api/poll", Statuses: []int{204}},
+			},
+		},
+	}
+	server := NewHTTPServer(ApiServerConfig{Host: "127.0.0.1", Port: 0, Mode: "test"}, middlewareCfg, nil, nil)
+	engine := server.GetEngine()
+	engine.GET("/api/poll", func(c *gin.Context) { c.Status(204) })
+	engine.POST("/api/poll", func(c *gin.Context) {
+		if c.Query("result") == "empty" {
+			c.Status(204)
+			return
+		}
+		c.JSON(401, gin.H{"error": "unauthorized"})
+	})
+
+	perform := func(method, target string) {
+		req := httptest.NewRequest(method, target, nil)
+		w := httptest.NewRecorder()
+		engine.ServeHTTP(w, req)
+	}
+	perform("POST", "/api/poll?result=empty")
+	perform("POST", "/api/poll?result=denied")
+	perform("GET", "/api/poll")
+
+	matches, err := filepath.Glob(filepath.Join(logDir, "*.log"))
+	require.NoError(t, err)
+	require.NotEmpty(t, matches)
+	var lines []string
+	for _, file := range matches {
+		data, err := os.ReadFile(file)
+		require.NoError(t, err)
+		lines = append(lines, strings.Split(strings.TrimSpace(string(data)), "\n")...)
+	}
+	hasEntry := func(method, path string, status int) bool {
+		methodField := `"method":"` + method + `"`
+		pathField := `"path":"` + path + `"`
+		statusField := `"status":` + strconv.Itoa(status)
+		for _, line := range lines {
+			if strings.Contains(line, methodField) &&
+				strings.Contains(line, pathField) &&
+				strings.Contains(line, statusField) {
+				return true
+			}
+		}
+		return false
+	}
+	assert.False(t, hasEntry("POST", "/api/poll", 204), "命中规则的响应不应输出访问日志")
+	assert.True(t, hasEntry("POST", "/api/poll", 401), "同路由 401 必须保留")
+	assert.True(t, hasEntry("GET", "/api/poll", 204), "同路径不同 method 必须保留")
 }

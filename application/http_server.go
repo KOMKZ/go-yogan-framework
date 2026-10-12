@@ -150,6 +150,13 @@ func newServer(
 			EnableBody:  middlewareCfg.RequestLog.EnableBody,
 			MaxBodySize: middlewareCfg.RequestLog.MaxBodySize,
 		}
+		for _, rule := range middlewareCfg.RequestLog.SkipRules {
+			requestLogCfg.SkipRules = append(requestLogCfg.SkipRules, middleware.RequestLogSkipRule{
+				Method:   rule.Method,
+				Path:     rule.Path,
+				Statuses: rule.Statuses,
+			})
+		}
 		engine.Use(middleware.RequestLogWithConfig(requestLogCfg))
 	}
 

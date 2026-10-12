@@ -61,6 +61,20 @@ type TraceIDConfig struct {
 	EnableResponseHeader bool `mapstructure:"enable_response_header"`
 }
 
+// RequestLogSkipRuleConfig conditional request-log skip rule: the access log
+// entry is suppressed only when method+path match exactly and the final
+// response status is one of Statuses. Error responses are never suppressed.
+type RequestLogSkipRuleConfig struct {
+	// Method HTTP method (case-insensitive comparison)
+	Method string `mapstructure:"method"`
+
+	// Path exact request path (no prefix/wildcard/regex expansion)
+	Path string `mapstructure:"path"`
+
+	// Statuses final response statuses to skip (typically a single 2xx)
+	Statuses []int `mapstructure:"statuses"`
+}
+
 // RequestLogConfig HTTP request log middleware configuration
 type RequestLogConfig struct {
 	// Enable request log middleware (default true)
@@ -68,6 +82,10 @@ type RequestLogConfig struct {
 
 	// SkipPaths list of paths to skip recording (e.g., health checks)
 	SkipPaths []string `mapstructure:"skip_paths"`
+
+	// SkipRules precise success-response skip rules, evaluated after the
+	// request completes so error responses are always recorded
+	SkipRules []RequestLogSkipRuleConfig `mapstructure:"skip_rules"`
 
 	// EnableBody whether to log request body (default false, for performance considerations)
 	EnableBody bool `mapstructure:"enable_body"`

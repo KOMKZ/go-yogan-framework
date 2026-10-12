@@ -2,7 +2,7 @@
   "mode": "changed",
   "root": "/home/kitral/pro/happy-rise-cpy/happy-rise-devpro/go-yogan-framework",
   "files_scanned": 429,
-  "funcs_scanned": 3469,
+  "funcs_scanned": 3477,
   "issues": [
     {
       "key": "naming:health/config.go",
@@ -78,7 +78,7 @@
       "value": 1,
       "threshold": 0,
       "blocking": false,
-      "changed": false,
+      "changed": true,
       "reason": "weak file name; split/new business files should use business_role.go"
     },
     {
@@ -297,10 +297,10 @@
       "severity": "warn",
       "path": "application/http_server.go",
       "name": "newServer",
-      "value": 135,
+      "value": 142,
       "threshold": 130,
       "blocking": false,
-      "changed": false,
+      "changed": true,
       "reason": "function line count exceeds threshold"
     },
     {
